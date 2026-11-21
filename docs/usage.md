@@ -34,7 +34,6 @@ transports and WASI need separate qualification. Do not expose the host Docker
 socket, Nix daemon or raw credentials to the sandbox.
 
 ```sh
-python3 scripts/check_sources.py
 cargo build -p ladyshell-cli --locked
 export PATH="$PWD/target/debug:$PATH"
 nix --extra-experimental-features 'nix-command flakes' build \
@@ -45,7 +44,7 @@ ladyshell help apply
 
 `--resources` selects trusted distribution inputs, normally the Lady root.
 Keep `config/`, `nix/` and `resources/audit/` together. Native auditing also
-requires the runtime sources, manifests, lock and bundled `vendor/nickel-util`.
+requires the runtime workspace sources, manifests, license and `Cargo.lock`.
 Installing the CLI alone does not install this complete resource tree.
 `lock` resolves the prepared evaluator offline; it does not build the evaluator
 or an image automatically. Refused isolation never falls back to host execution.

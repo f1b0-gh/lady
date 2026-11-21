@@ -109,12 +109,8 @@ also owns check execution and receipts. Removal candidates remain hypotheses.
 
 ## Retained inputs
 
-The shared `nickel-util =0.1.0` source is bundled in
-[`vendor/nickel-util`](../../vendor/nickel-util) from revision
-`9a80a323c32fdf4a3eb98b0f334ab2488e5127af`. Its source lock is
-[`sources/nickeling.json`](../../sources/nickeling.json); verify it with
-`python3 scripts/check_sources.py` from the repository root. No sibling checkout
-is required. Its evaluation module does not require Nickel for a Ladybom scan.
+The workspace pins `nickel-util =0.1.0` from crates.io. No sibling checkout or
+Nickel evaluator is required for a Ladybom scan.
 
 Fixtures in `tests/fixtures/` retain original Erwin names and digests to test
 compatibility. Native tests require explicit `LADYBOM_LADYBUG_BIN` selection.

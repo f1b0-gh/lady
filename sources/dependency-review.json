@@ -1,57 +1,33 @@
 {
   "schema_version": 1,
-  "checked_at": "2026-11-21T12:45:21.475075+00:00",
+  "checked_at": "2026-11-21T19:23:14.658459+00:00",
   "source": "https://api.osv.dev/v1/querybatch",
   "input": {
     "path": "Cargo.lock",
-    "sha256": "9cb209341742a8e1453e0e4496bcc8b80f6ce31239da7533d3093d753270d6bf"
+    "sha256": "35500d92d24c8715ad9e3eabd552f84a302b5f9126d1e0719869bebffde9a098"
   },
   "scope": "All crates.io package versions in the workspace lockfile, without platform, feature or dependency-kind filtering",
-  "package_versions_queried": 295,
+  "package_versions_queried": 296,
   "parameters": {
     "query": "package.ecosystem=crates.io, package.name, version",
     "suppressed_advisories": []
   },
-  "query_sha256": "382682b5a95cdc5efbbb44c729af7bb2123423d0999027c659a6aebc0e05f170",
-  "response_sha256": "537f43bdf944ac379c035ff96aa1a13ec7d11c09f45a469a0020d85bf9f61ca6",
+  "query_sha256": "42fa4c8cddcfcf83520ed494b7857b17207635977d157634a8ec4bcbe1128565",
+  "response_sha256": "c6523611d955c47c77e685b19cb2fb6cdcfe4f977db093a39ec8c563487e6981",
   "additions": [
     {
-      "name": "block-buffer",
-      "version": "0.12.1",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "const-oid",
-      "version": "0.10.3",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "cpufeatures",
-      "version": "0.3.1",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "crypto-common",
-      "version": "0.2.2",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "digest",
-      "version": "0.11.3",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "hybrid-array",
-      "version": "0.4.15",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "sha2",
-      "version": "0.11.1",
+      "name": "nickel-util",
+      "version": "0.1.0",
       "source": "registry+https://github.com/rust-lang/crates.io-index"
     }
   ],
-  "removals": [],
+  "removals": [
+    {
+      "name": "nickel-util",
+      "version": "0.1.0",
+      "source": null
+    }
+  ],
   "findings": [
     {
       "name": "chrono",
@@ -109,35 +85,34 @@
       "include": [
         "Cargo.toml",
         "Cargo.lock",
-        "vendor/nickel-util/Cargo.toml",
-        "crates/ladybom/Cargo.toml",
         "crates/ladybom-cli/Cargo.toml",
+        "crates/ladybom/Cargo.toml",
         "crates/ladyboot/Cargo.toml",
         "crates/ladyhost/Cargo.toml",
         "crates/ladyshell/Cargo.toml"
       ],
       "exclude": []
     },
-    "graph_digest": "b1e2d5793e54d2187dd0d069887c85aa8249794bbf5f16285b77dd890b167b39",
-    "output_sha256": "e40bf6e6162b23b45dd5fa985e259964ed77ed7daca09ee6c5d6a4e606eec91b",
+    "graph_digest": "07b2ecbbd63585e22a1636dd5f266f1d6ecb805b2715332e572285fdfcfa47a2",
+    "output_sha256": "c5eaa6c5a17e307bceaa8fd0e348bb40fe8b287dbd4346318c37b49d6d00a21c",
     "exit_code": 2,
     "aligned": false,
     "pins_compliant": false,
     "pin_lock_consistent": null,
     "coverage": {
       "activation_known": false,
-      "inventory_complete": false,
+      "inventory_complete": true,
       "inventory_components": 302,
       "pin_audit_complete": true,
       "projected_components": 302,
       "unidentified_components": 0,
       "unmapped_nodes": 0,
       "unprojected_components": 0,
-      "versions_complete": false
+      "versions_complete": true
     },
     "limitations": [
-      "Version ranges and multiple versions remain.",
-      "The static inventory has an unresolved independent resolution context for the excluded bundled helper.",
+      "Version ranges, path overrides and multiple versions remain.",
+      "Inventory and version projection cover the selected maintained Cargo manifests; platform/feature activation is not established.",
       "No verified baseline is distributed; no alignment-policy non-regression conclusion was established."
     ]
   },
@@ -158,5 +133,24 @@
         "published_advisories": []
       }
     ]
+  },
+  "migration": {
+    "kind": "local-to-registry",
+    "package": "nickel-util",
+    "version": "0.1.0",
+    "checksum": "f880fba0cbb8abd32f34d90e8463869ce1029d32c234b749ec98a5a574f66f79",
+    "published_revision": "05cae8306879dc2f9ca699525de5e2904b32fd42",
+    "package_count_before": 302,
+    "package_count_after": 302,
+    "multiversion_families_before": 15,
+    "multiversion_families_after": 15,
+    "excess_versions_before": 17,
+    "excess_versions_after": 17,
+    "transitive_version_changes": [],
+    "upstream_advisories": {
+      "source": "https://api.github.com/repos/f1b0-gh/nickeling/security-advisories",
+      "checked_at": "2026-11-21T19:25:31.421345+00:00",
+      "published_advisories": []
+    }
   }
 }

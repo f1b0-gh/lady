@@ -8,41 +8,28 @@ workspace requires stable Rust and a C compiler. Nix recipes currently select
 
 Cargo uses `target/` in Lady. If your shell sets a target directory for another
 project, unset it or set `CARGO_TARGET_DIR="$PWD/target"` from the repository root.
-The workspace includes all project source dependencies; no sibling repository
-is needed. Package downloads during a build are separate from Ladybom scanning.
+No sibling repository is needed. Package downloads during a build are separate
+from Ladybom scanning.
 
 ## Rust consumers
 
-Nickeling owns the shared `nickel-util =0.1.0` helper. Its unchanged source and
-Apache license are included in `vendor/nickel-util`. The URL, full published
-commit and file hashes are recorded in [the source lock](../sources/nickeling.json).
-With Python 3.11 or later:
+The workspace pins the published `nickel-util =0.1.0` helper from crates.io.
+`Cargo.lock` records the registry source and archive checksum. Fetch the locked
+dependencies before building offline.
 
 ```sh
-python3 scripts/check_sources.py
-cargo build --workspace --locked
+cargo fetch --locked
+cargo build --workspace --locked --offline
 ```
 
-The checker verifies the complete bundle and workspace declaration offline;
-Git commit provenance is recorded, not authenticated by hashes alone. To update,
-review a published Nickeling commit, replace the bundle with its exact crate
-files and repository license, update the source lock and Cargo lock together,
-and follow the [dependency policy](dependencies.md#dependency-maintenance). Do not
-edit bundled source locally or follow a floating branch during builds.
-
-This bundle is a temporary bridge to a published `nickel-util` crate. Once that
-release is available and reviewed, use the registry dependency and its Cargo
-lock checksum, update Nix/runtime packaging to supply the same locked source,
-and remove the bundle and its special source checker. A registry declaration
-alone does not replace the runtime's source-verification requirements.
-
-The Nix runtime copies the bundle into its source snapshot. Ladyshell hashes
-the runtime sources before preparation; building it does not use a host binary.
+Ladyshell hashes the runtime workspace, including `Cargo.lock`, before audit
+preparation. Nix vendors registry crates using the checksums in that lockfile
+and builds the runtime from source. Follow the
+[dependency policy](dependencies.md#dependency-maintenance) when updating pins.
 
 ## Required checks
 
 ```sh
-python3 scripts/check_sources.py
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo test --workspace --all-features --locked
@@ -88,7 +75,7 @@ state, exports and credentials stay outside published sources.
 
 ## Known dependency findings
 
-The 2026-11-21 OSV query of all 295 crates.io package versions in `Cargo.lock`
+The 2026-11-21 OSV query of all 296 crates.io package versions in `Cargo.lock`
 reported the following existing findings, without platform or feature filtering.
 The [review record](../sources/dependency-review.json) binds the lock digest,
 query parameters, response digest and advisory modification dates:
@@ -101,16 +88,19 @@ query parameters, response digest and advisory modification dates:
 | `thrift 0.17.0` | Unbounded allocation in binary protocol | [RUSTSEC-2026-0435](https://osv.dev/vulnerability/RUSTSEC-2026-0435), [GHSA-2f9f-gq7v-9h6m](https://osv.dev/vulnerability/GHSA-2f9f-gq7v-9h6m) |
 
 These are dependency findings, not confirmed exploitability in Lady. They remain
-maintenance work, not approved exceptions. The source bundle update adds seven
-package versions and five multiversion families; none of those additions matched
-an OSV advisory in that query. This is a portability update, not a reduction.
+maintenance work, not approved exceptions. Switching `nickel-util 0.1.0` from
+the source bundle to its registry release changes no package versions or
+transitive dependencies. That helper matched no advisory in the query. The
+workspace still has 302 packages and 15 multiversion families; this migration
+removes a source bundle, not dependencies.
 Local packages, native closures and future advisories are outside that result.
 Recheck current sources before a dependency update or release.
 
 The maintained-manifest `graph alignment --check` also exits 2: version ranges
-and multiple versions remain, and static coverage of the excluded helper's
-resolution context is incomplete. No verified baseline or non-regression gate
-is established by this publication; the review record retains the exact scope.
+and multiple versions remain. The selected maintained manifests now have complete
+inventory and version projection, while platform and feature activation remain
+unknown. No verified baseline or non-regression gate is established by this
+review; the record retains the exact scope.
 
 ## Continuous integration
 
