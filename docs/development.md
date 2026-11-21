@@ -127,17 +127,54 @@ are complete for the selected manifests; platform and feature activation remain
 unknown. No verified baseline or alignment-policy exception is established by
 this review.
 
+## Maintained update inputs
+
+Review every update candidate under the
+[dependency policy](dependencies.md#dependency-maintenance). Record current
+advisory coverage and the tested build and runtime combinations separately from
+update proposals.
+
+| Input | Update coverage and review trigger |
+| --- | --- |
+| Root `Cargo.lock` and GitHub Actions | Weekly Dependabot proposals. Cargo fixtures are excluded. |
+| `nix/flake.lock` | Weekly Dependabot proposals for the flake input. Review the resulting native closures. |
+| `nix/flake.nix` and native overrides | Manually update pinned Rust archives and native patches during catalogue, upstream release or advisory reviews. Follow the [tracked OpenSSL and network-tool reviews](dependencies.md#native-packaging-checks) and qualify affected outputs. |
+| `crates/ladyboot/flake.nix` and `flake.lock` | Coordinated manual catalogue migration on an applicable advisory or release review. Dependabot updates flake locks and cannot advance the manifest's exact SHA. Update the manifest, lock, plan provenance and affected overrides together, then verify the delivered closure and affected profile, image, kernel and lifecycle paths. |
+| Ladyboot Go overlays in `crates/ladyboot/nix/locks/` | Review the [container tools](../crates/ladyboot/nix/container-security.md) by the next release or 2026-12-15, whichever comes first. Regenerate each module pair and vendor hash from its pinned source and compiler, then verify the delivered binaries. |
+| Ladyboot native Cargo overlays | Review [bootupd](../crates/ladyboot/nix/bootupd-dependencies.md) by 2026-12-15 and [ntpd-rs](../crates/ladyboot/nix/ntpd-rs-dependencies.md) by its next release or 2026-12-18, whichever comes first. Regenerate with the pinned upstream sources and verify the affected packages. |
+| Ladyhost GitHub CLI overlay in `examples/ladyhost/tool-locks/github-cli/` | On an applicable advisory or release review, regenerate the module pair, compiler and source provenance and binary digest together. Verify host authentication with the resulting binary. |
+| Explorer npm fixture manifests and locks | Retain the synthetic inputs unchanged for reproduction. Review upstream Explorer revisions and their runtime separately when refreshing the demo. |
+
+The audit driver pins Codex CLI 0.165.0. Review an exact candidate when a
+protocol change or applicable advisory requires an update. Qualify its strict
+configuration, transcript, refusals, limits and cleanup on the reviewed
+confinement and provider configuration before changing the pin. See
+[native audit requirements](audits/usage.md#runtime-prerequisites-and-limits).
+
 ## Continuous integration
 
 [GitHub Actions](../.github/workflows/ci.yml) runs the checks above on pushes to
 `main`, pull requests and manual dispatches. It uses Ubuntu 22.04 and the pinned
 `nix#ci` development shell, prepares both Nickel evaluators, then runs Cargo
 offline after explicit dependency acquisition. It also runs the Python suites
-above. The independent Ladybom job uses the same pinned Rust toolchain and
-qualifies the archives without preparing Nickel or LadybugDB. Both jobs use
-commit-pinned actions, read-only repository permissions and checkout without
-retained credentials. They bound build and test concurrency and keep build
-output in Lady's `target/`.
+above. The independent Ladybom package job uses the same pinned Rust toolchain
+and qualifies the archives without preparing Nickel or LadybugDB.
+
+Two other jobs use the locked Nix toolchain with sandboxing enabled. The graph job
+installs the official LadybugDB 0.17.1 Linux CLI archive, verifies its pinned
+SHA-256 before extraction and checks its version. It passes the absolute executable
+path to six exact Ladybom fixtures, without compiling the engine. The dependency
+job prepares the pinned Cargo and Node tools
+and runs three exact Ladyshell fixtures for offline preparation, npm workspace
+layout and fixed-output hash refusal. The
+[`check_native_fixtures.sh` runner](../tests/check_native_fixtures.sh) checks
+each selected test reports one pass.
+
+The required `Rust and native fixtures` check succeeds only when the Rust
+workspace, Ladybom packages, native graph and Nix dependency jobs all succeed.
+Jobs use commit-pinned actions, read-only repository permissions and checkout
+without retained credentials. They limit build and test concurrency and keep
+build output in Lady's `target/`.
 
 To enter the same tool environment locally:
 
@@ -145,9 +182,7 @@ To enter the same tool environment locally:
 nix --extra-experimental-features 'nix-command flakes' develop path:./nix#ci
 ```
 
-CI does not disable isolation or run ignored tests requiring live OpenShell,
-providers, native images or VMs. A green source check is not bootc lifecycle,
-private GitHub policy or deployment qualification. Dependency advisories and
-alignment remain the separate, incomplete review described above; CI does not
-silently waive them or renew a reference. Required branch protection is a
-separate repository setting.
+Live OpenShell, providers, Docker images and VMs require separate
+qualification. Bootc lifecycle, private GitHub policy and deployment checks
+have dedicated validation paths. Keep advisory and alignment review tied to the
+exact inputs and reference described above.
