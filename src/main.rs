@@ -16,6 +16,8 @@ fn main() {
             Command::Deps(args) => {
                 ladyshell_cli::deps_cli::run(args).map(|code| exit_status = code)
             }
+            Command::Execution(args) => ladyshell_cli::execution_cli::run(args)
+                .and_then(|response| response.map_or(Ok(()), print_json)),
             Command::Artifact(args) => ladyshell_cli::artifact_cli::run(args),
             Command::List { json } => ladyshell::instances::list().and_then(|report| {
                 if report["complete"] != true {

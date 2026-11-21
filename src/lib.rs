@@ -19,5 +19,6 @@ pub mod artifact_cli;
 pub mod audit_cli;
 pub mod cli;
 pub mod deps_cli;
+pub mod execution_cli;
 
 pub mod management_cli;

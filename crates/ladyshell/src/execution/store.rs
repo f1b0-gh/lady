@@ -357,6 +357,16 @@ impl Store {
         admission: &Admission,
         now: u64,
     ) -> Result<Acceptance> {
+        self.accept_with_clock(invocation, admission, || Ok(now))
+    }
+    /// Sample the trusted host clock under the receiver lock after validation.
+    /// The callback is used only for new work and must not reenter the store.
+    pub fn accept_with_clock(
+        &self,
+        invocation: &Invocation,
+        admission: &Admission,
+        clock: impl FnOnce() -> Result<u64>,
+    ) -> Result<Acceptance> {
         invocation.validate()?;
         self.locked(true, |l| {
             if let Some(record) = self.matching(l, invocation)? {
@@ -372,6 +382,7 @@ impl Store {
                 self.catalog.definition_digest(&invocation.task)? == invocation.definition_sha256,
                 "Retained task definition mismatch"
             );
+            let now = clock()?;
             self.clock(l, now)?;
             ensure!(now < admission.admit_before, "Retained admission expired");
             ensure!(

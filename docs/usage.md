@@ -179,6 +179,9 @@ export and deletion of the owned sandbox after the session finishes, including
 after a failed command. Retained state and exports remain available. Leave it
 unset when you intend to continue using the environment.
 
+For fixed host-approved commands with reconnectable history and output,
+see [retained OpenShell execution](retained-execution.md).
+
 ## Continuous Sandboxing
 
 CS replaces source while retaining a compatible environment and caches.
