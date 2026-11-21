@@ -12,7 +12,7 @@ sha2.workspace = true
 nickel-util.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-jsonschema = { version = "=0.60.2", default-features = false }
+jsonschema = { version = "=0.61.2", default-features = false }
 cargo-lock = "10.1"
 cyclonedx-bom = "0.8.1"
 time.workspace = true
