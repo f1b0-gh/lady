@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "checked_at": "2026-11-21T22:45:40.105147+00:00",
+  "checked_at": "2026-11-22T00:02:01.297845+00:00",
   "source": "https://api.osv.dev/v1/querybatch",
   "input": {
     "path": "Cargo.lock",
-    "sha256": "f6152387e5333c090ec9c5b90cda51f833bdcf2b178c721f45c0a7b8e9ab63a2"
+    "sha256": "0540ef7b2041fd7d9052fd33743613f75c30e4d15cc82a194ecc63e050bb378b"
   },
   "scope": "All crates.io package versions in the workspace lockfile, without platform, feature or dependency-kind filtering",
   "package_versions_queried": 291,
@@ -12,7 +12,7 @@
     "query": "package.ecosystem=crates.io, package.name, version",
     "suppressed_advisories": []
   },
-  "query_sha256": "84d6f12b5dcc8007742ba1d33a3f2d51b92bd18660e1b87e1d43ab1e7727b78c",
+  "query_sha256": "3c447b177ca641fa6940119b64b62cc7a4a15992151b3b6455bf2b4ae9dc50c0",
   "response_sha256": "879efb594bbd92f61879630e5f71a1c5d30d03f70264ec03ff70f3955917dfaf",
   "additions": [],
   "removals": [],
@@ -48,8 +48,8 @@
       ],
       "exclude": []
     },
-    "graph_digest": "d7a2889f5cfdc46906508c887c3f280c371d352b8514b3c4b62dd63007b8ac8f",
-    "output_sha256": "ba275695152aff3e4d725674c4306bff1290da6ba53e810ea7aed3a6aa1887cf",
+    "graph_digest": "08d22d1c4a8762c7ef1ffce51b61ac1f822ae42313556a7c85d36ee18dd8faf0",
+    "output_sha256": "9fc82099d780555c2d8102c52a67de3a4a0f401607191ce83e20bd9f52cd3732",
     "exit_code": 2,
     "aligned": false,
     "pins_compliant": false,
@@ -181,7 +181,8 @@
       17,
       19,
       20,
-      21
+      21,
+      22
     ],
     "baseline_lock_sha256": "95e42907812cd2ad1525d2a7fd59cd13c85379a628eba042d329db7ceb2bd7dd",
     "before": {
@@ -264,6 +265,13 @@
         "before": "1.0.11",
         "after": "1.0.12",
         "checksum": "7265c9301c16a8711c992c2d8da90ee77ef54b1ed51482d6dfeb00dc756b1297"
+      },
+      {
+        "name": "cyclonedx-bom",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "before": "0.8.1",
+        "after": "0.9.0",
+        "checksum": "c7f8e9344d60bee3c88033b26d7b233815ae12855bdce5370b66368ae13ac8ac"
       }
     ],
     "interpretation": "Version updates, not dependency reduction. Exact multiversion families and source identities are unchanged; no baseline or exception renewed.",
@@ -371,6 +379,15 @@
         "rust_version": "1.71",
         "yanked": false,
         "repository": "https://github.com/rustls/webpki-roots"
+      },
+      {
+        "name": "cyclonedx-bom",
+        "version": "0.9.0",
+        "latest_stable": "0.9.0",
+        "license": "Apache-2.0",
+        "rust_version": "1.86",
+        "yanked": false,
+        "repository": "https://github.com/CycloneDX/cyclonedx-rust-cargo"
       }
     ],
     "deferred_newer_releases": [
@@ -473,6 +490,7 @@
       "review_by": "2026-12-05",
       "revisit_trigger": "Next dependency review, a relevant advisory, or the coordinated bootupd lock refresh, whichever comes first.",
       "alignment_exception": false
-    }
+    },
+    "cyclonedx_compatibility": "Use the version-parameterized API with explicit CycloneDX 1.5 for source, artifact and VEX JSON. Leave dependency.provides empty; no adoption of 1.6/1.7 output."
   }
 }

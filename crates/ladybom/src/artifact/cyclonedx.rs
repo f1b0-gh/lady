@@ -223,7 +223,7 @@ impl Write for Bounded {
 }
 fn encode(bom: Bom) -> Result<Vec<u8>> {
     let mut output = Bounded(Vec::new());
-    bom.output_as_json_v1_5(&mut output)
+    bom.output_as_json(&mut output, SpecVersion::V1_5)
         .map_err(|e| invalid(format!("CycloneDX serialization failed: {e}")))?;
     Ok(output.0)
 }
@@ -447,7 +447,7 @@ pub fn write_cyclonedx(evidence: &Evidence, mut writer: impl Write) -> Result<()
     let mut bom=Bom {serial_number:None,spec_version:SpecVersion::V1_5,metadata:Some(Metadata {component:Some(root),
         tools:Some(Tools::List(vec![Tool {name:Some(NormalizedString::new("ladybom")),version:Some(NormalizedString::new(env!("CARGO_PKG_VERSION"))),..Tool::default()}])),..Metadata::default()}),
         components:Some(Components(components.into_values().collect())),
-        dependencies:Some(Dependencies(edges.into_iter().map(|(dependency_ref,dependencies)|Dependency {dependency_ref,dependencies:dependencies.into_iter().collect()}).collect())),
+        dependencies:Some(Dependencies(edges.into_iter().map(|(dependency_ref,dependencies)|Dependency {dependency_ref,dependencies:dependencies.into_iter().collect(),provides:Vec::new()}).collect())),
         compositions:Some(Compositions(vec![Composition {bom_ref:None,aggregate:if coverage.scope_complete{AggregateType::Unknown}else{AggregateType::Incomplete},assemblies:None,dependencies:None,vulnerabilities:None,signature:None}])),
         properties:Some(Properties(vec![Property::new("ladybom:artifact:evidence-sha256",&digest(&evidence)?),
             Property::new("ladybom:artifact:coverage",&serde_json::to_string(&coverage)?),

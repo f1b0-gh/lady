@@ -292,7 +292,7 @@ fn vex_links_exact_sbom_and_preserves_review_provenance_reproducibly() -> ladybo
     vuln::vex::write_json(&a, Some(&d), &mut first)?;
     vuln::vex::write_json(&a, Some(&d), &mut second)?;
     assert_eq!(first, second);
-    let parsed = Bom::parse_from_json_v1_5(first.as_slice())
+    let parsed = Bom::parse_from_json_with_version(first.as_slice(), SpecVersion::V1_5)
         .map_err(|e| std::io::Error::other(e.to_string()))?;
     assert!(parsed.validate_version(SpecVersion::V1_5).passed());
     let json: serde_json::Value = serde_json::from_slice(&first)?;

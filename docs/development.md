@@ -103,7 +103,7 @@ installation works before a registry release.
 
 ## Known dependency findings
 
-The 2026-11-21 OSV query covers all 291 crates.io package versions in `Cargo.lock`,
+The 2026-11-22 OSV query covers all 291 crates.io package versions in `Cargo.lock`,
 without platform, feature or dependency-kind filtering. The
 [review record](../sources/dependency-review.json) binds the exact lock, query,
 response and advisory dates.
@@ -115,7 +115,7 @@ Parquet to `59.3.3` removes the affected `thrift 0.17.0` dependency and unmainta
 still required by Parquet. It remains maintenance work, not an approved exception.
 
 The workspace has 298 packages and 14 multiversion families. The reviewed
-Dependabot updates change ten crate versions without adding packages or version
+Dependabot updates change eleven crate versions without adding packages or version
 splits. The `webpki-roots` update belongs to Ladyhost’s `jjpr → ureq` HTTPS client;
 its CDLA-Permissive-2.0 license is unchanged. TLS trust configuration remains in
 `jjpr`. Extracting the local `ladybom-graph` crate added no registry packages or

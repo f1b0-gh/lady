@@ -91,7 +91,7 @@ pub fn document_serial_with_profile(report: &Report, profile: ExportProfile) -> 
 fn unsigned_serial(bom: &Bom) -> Result<String> {
     let mut bytes = Vec::new();
     bom.clone()
-        .output_as_json_v1_5(&mut bytes)
+        .output_as_json(&mut bytes, SpecVersion::V1_5)
         .map_err(json_error)?;
     // Canonical JSON object key ordering, excluding only the document's own serial.
     let content: Value = serde_json::from_slice(&bytes)?;
@@ -322,6 +322,7 @@ fn unsigned_report(report: &Report, profile: ExportProfile) -> Result<Bom> {
                 .map(|(dependency_ref, dependencies)| Dependency {
                     dependency_ref,
                     dependencies: dependencies.into_iter().collect(),
+                    provides: Vec::new(),
                 })
                 .collect(),
         )),
@@ -518,7 +519,7 @@ pub fn write_json_with_profile(
     mut writer: impl Write,
 ) -> Result<()> {
     from_report_with_profile(report, profile)?
-        .output_as_json_v1_5(&mut writer)
+        .output_as_json(&mut writer, SpecVersion::V1_5)
         .map_err(json_error)?;
     writeln!(writer)?;
     Ok(())
