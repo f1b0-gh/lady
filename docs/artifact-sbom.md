@@ -5,12 +5,47 @@ Ladybom separates explicit artifact collection from static source scanning.
 executables selected by the caller; `artifact export` runs no process and needs
 neither the original rootfs nor a Nix daemon.
 
-For Go sources, [`scan`](dependencies.md#go-source-inventory) reads `go.mod`,
-`go.work`, checksum and vendor metadata without running Go. Checksum files
-provide integrity records, not the selected build list; on their own they do
-not produce resolved components. Source inventories remain unlocked, with
-resolution and advisory coverage gaps explicit. The collection workflow below
-instead binds Go build metadata to delivered binary hashes.
+## Why Go and Nix use different evidence
+
+Ladybom distinguishes declared requirements, recorded dependency resolution and
+delivered files. The available evidence differs by format:
+
+| Ecosystem | Source evidence and what Ladybom can read statically |
+| --- | --- |
+| Cargo | [`Cargo.lock`](https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html) records selected versions, sources and dependency relationships. Ladybom reads this resolution alongside the manifests without running Cargo. |
+| npm | [`package-lock.json`](https://docs.npmjs.com/cli/v11/configuring-npm/package-lock-json/) records resolved package versions and installation locations. Ladybom can reconstruct the recorded dependency graph without running npm. |
+| Python / PyPI | [`uv.lock`](https://docs.astral.sh/uv/concepts/projects/layout/#the-lockfile) records resolved versions across supported environments. `pyproject.toml` declares requirements; flat requirements exports have less evidence and retain explicit coverage gaps. PyPI is the package registry, not a lockfile format. |
+| Go | `go.mod` declares minimum module requirements; `go.work` changes the workspace context. `go.sum` and `go.work.sum` hold integrity hashes, while `vendor/modules.txt` records vendored observations. These are not interchangeable with a resolved dependency graph. |
+| Nix | [`flake.lock`](https://nix.dev/manual/nix/2.36/command-ref/new-cli/nix3-flake.html#lock-files) pins flake inputs, such as a nixpkgs source revision. It does not enumerate the packages selected and built for a particular system configuration. |
+
+Go checksum files **are parsed**, but their entries do not become resolved SBOM
+components. A [`go.sum` file](https://go.dev/ref/mod#go-sum-files) may retain
+multiple versions, hashes of `go.mod` files alone, and versions no longer needed.
+Go selects a build list from module requirements using
+[minimal version selection](https://go.dev/ref/mod#minimal-version-selection).
+Ladybom does not run that resolver or fetch missing module metadata during
+`scan`. Its [Go source inventory](dependencies.md#go-source-inventory) therefore
+remains unlocked, with resolution and advisory coverage gaps explicit.
+
+For Nix, the selected outputs depend on evaluation, configuration and target
+system. The [closure of an output](https://nix.dev/manual/nix/2.35/glossary.html#gloss-closure)
+describes its store references; a derivation's closure instead describes build
+dependencies. Ladybom uses explicit native metadata and the delivered file
+inventory rather than treating pinned flake inputs as installed packages.
+
+The collector combines these two views for Ladyboot-built systems: it verifies
+delivered Nix outputs and reads [Go build metadata](https://pkg.go.dev/debug/buildinfo#ReadFile)
+from binaries without executing them, binding the observations to file hashes.
+This is useful when an existing Go service is shipped in a container: source
+requirements and the binary actually delivered answer different questions.
+The current workflow requires a Ladyboot inventory and matching archive; it is
+not a general scanner for arbitrary OCI images or live Kubernetes clusters.
+
+Cargo, npm and Python locks likewise do not prove what was built, installed or
+deployed. The distinction is the evidence and collector coverage available
+today, not a guarantee that those ecosystems need only source analysis.
+
+## Collect and export
 
 Build [the CLI](../crates/ladybom-cli/README.md), then invoke it from PATH or use
 `./target/debug/ladybom` from the repository root:
