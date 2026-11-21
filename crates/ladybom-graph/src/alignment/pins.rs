@@ -1,5 +1,5 @@
 //! Direct declaration pin classification, independent of graph root resolution.
-use crate::deps::{Report, Requirement};
+use ladybom::{Report, Requirement};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -276,7 +276,7 @@ fn python_pin(constraint: &str) -> Classification {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::deps::Project;
+    use ladybom::Project;
     use serde_json::{json, Value};
     use std::collections::BTreeMap;
 
@@ -292,9 +292,25 @@ mod tests {
         }
     }
 
+    fn project(ecosystem: &str, root: &str, file: &str, requirements: Vec<Requirement>) -> Project {
+        Project {
+            ecosystem: ecosystem.into(),
+            manager: ecosystem.into(),
+            root: root.into(),
+            manifest: format!("{root}/{file}"),
+            manifest_package: None,
+            lockfile: None,
+            locked: false,
+            tools: vec![],
+            requirements,
+            components: vec![],
+            components_from: None,
+            workspace: Value::Null,
+        }
+    }
+
     fn report(ecosystem: &str, requirements: Vec<Requirement>) -> Report {
-        let mut project = Project::new(ecosystem, ecosystem, "project/manifest");
-        project.requirements = requirements;
+        let project = project(ecosystem, "project", "manifest", requirements);
         Report {
             schema_version: 2,
             complete: false,
@@ -545,10 +561,12 @@ mod tests {
         declaration.extras = vec!["derive".into()];
         let mut input = report("rust", vec![declaration.clone(), declaration.clone()]);
         input.projects[0].manifest = "z/Cargo.toml".into();
-        let mut second = Project::new("npm", "npm", "a/package.json");
-        second
-            .requirements
-            .push(requirement("npm:@scope/name@2.0.0", Value::Null));
+        let second = project(
+            "npm",
+            "a",
+            "package.json",
+            vec![requirement("npm:@scope/name@2.0.0", Value::Null)],
+        );
         input.projects.push(second);
         let findings = audit_pins(&input);
         assert_eq!(findings.len(), 3);

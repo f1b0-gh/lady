@@ -86,7 +86,8 @@ Parquet to `59.3.3` removes the affected `thrift 0.17.0` dependency and unmainta
 [`chrono 0.4.45` being unmaintained](https://osv.dev/vulnerability/RUSTSEC-2026-0543),
 still required by Parquet. It remains maintenance work, not an approved exception.
 
-The workspace has 297 packages and 14 multiversion families. The security update
+The workspace has 298 packages and 14 multiversion families; extracting the local
+`ladybom-graph` crate adds no registry packages or versions. The security update
 introduces a reviewed `num-bigint 0.4.8`/`0.5.1` split while removing two other
 splits; the record names its parents, maintenance owner and review date. Reduced
 counts do not establish non-regression. Native closures, local packages and

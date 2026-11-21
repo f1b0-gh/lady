@@ -41,7 +41,7 @@ const EDGE_COLUMNS: &[&str] = &[
     "condition",
     "evidence",
 ];
-fn parquet_error(e: impl std::fmt::Display) -> crate::error::Error {
+fn parquet_error(e: impl std::fmt::Display) -> ladybom::error::Error {
     invalid(format!("Invalid Parquet: {e}"))
 }
 
@@ -255,7 +255,7 @@ pub fn write_snapshot(graph: &Graph, destination: &Path) -> Result<()> {
     Ok(())
 }
 fn read_at(root: &File, path: &str, limit: usize) -> Result<Vec<u8>> {
-    crate::config::relative_path(path)?;
+    ladybom::sources::relative_path(path)?;
     let mut directory = root.try_clone()?;
     let mut parts = path.split('/').peekable();
     while let Some(part) = parts.next() {

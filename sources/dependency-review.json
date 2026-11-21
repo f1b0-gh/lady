@@ -4,7 +4,7 @@
   "source": "https://api.osv.dev/v1/querybatch",
   "input": {
     "path": "Cargo.lock",
-    "sha256": "2781276b106607d66b2fcd987d472f97f280b6b7ba7192bd723c424719871e1e"
+    "sha256": "95e42907812cd2ad1525d2a7fd59cd13c85379a628eba042d329db7ceb2bd7dd"
   },
   "scope": "All crates.io package versions in the workspace lockfile, without platform, feature or dependency-kind filtering",
   "package_versions_queried": 291,
@@ -16,63 +16,12 @@
   "response_sha256": "879efb594bbd92f61879630e5f71a1c5d30d03f70264ec03ff70f3955917dfaf",
   "additions": [
     {
-      "name": "num-bigint",
-      "version": "0.5.1",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "parquet",
-      "version": "59.3.3",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "rustix",
-      "version": "1.1.6",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
+      "name": "ladybom-graph",
+      "version": "0.1.0",
+      "source": null
     }
   ],
-  "removals": [
-    {
-      "name": "byteorder",
-      "version": "1.5.0",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "hashbrown",
-      "version": "0.16.1",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "integer-encoding",
-      "version": "3.0.4",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "ordered-float",
-      "version": "2.10.1",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "parquet",
-      "version": "56.2.1",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "paste",
-      "version": "1.0.15",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "rustix",
-      "version": "1.1.5",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "thrift",
-      "version": "0.17.0",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    }
-  ],
+  "removals": [],
   "findings": [
     {
       "name": "chrono",
@@ -97,6 +46,7 @@
         "Cargo.toml",
         "Cargo.lock",
         "crates/ladybom-cli/Cargo.toml",
+        "crates/ladybom-graph/Cargo.toml",
         "crates/ladybom/Cargo.toml",
         "crates/ladyboot/Cargo.toml",
         "crates/ladyhost/Cargo.toml",
@@ -104,8 +54,8 @@
       ],
       "exclude": []
     },
-    "graph_digest": "26cbc085e55022569e8c61b12aa5af55f4d2d578a2a8c8bf318976e353f4b978",
-    "output_sha256": "bde1b749498172ae0072ac321cffd3849c11827c135f141c5f2bfc2be59e2282",
+    "graph_digest": "338051000ad0619eaa1b5f098e2d725c6e76fe5b14370bed67d079fe6654dcf7",
+    "output_sha256": "8ee0334cffc5ca9bfc6e62a3d9da3396bc1902de623354c61a66ee9dc31bab4e",
     "exit_code": 2,
     "aligned": false,
     "pins_compliant": false,
@@ -113,9 +63,9 @@
     "coverage": {
       "activation_known": false,
       "inventory_complete": true,
-      "inventory_components": 297,
+      "inventory_components": 298,
       "pin_audit_complete": true,
-      "projected_components": 297,
+      "projected_components": 298,
       "unidentified_components": 0,
       "unmapped_nodes": 0,
       "unprojected_components": 0,
@@ -224,5 +174,16 @@
       "revisit_trigger": "Compatible upstream numeric/schema parent releases or next dependency review",
       "alignment_exception": false
     }
+  },
+  "query_reuse": {
+    "previous_lock_sha256": "2781276b106607d66b2fcd987d472f97f280b6b7ba7192bd723c424719871e1e",
+    "reason": "Exact registry names, versions, sources and checksums are unchanged; original query timestamp and response retained."
+  },
+  "component_split": {
+    "baseline_review": "https://github.com/f1b0-gh/lady/blob/492caf2d55925114d740b934faa6003c3dbbb783/sources/dependency-review.json",
+    "package_count_before": 297,
+    "package_count_after": 298,
+    "new_local_crate": "ladybom-graph",
+    "registry_changes": []
   }
 }

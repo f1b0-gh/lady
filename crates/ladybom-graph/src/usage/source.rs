@@ -1,9 +1,9 @@
 use super::{graph, invalid};
-use crate::{
-    config::Sources,
-    error::{ensure, Error, Result},
+use crate::ensure;
+use ladybom::{
+    error::{Error, Result},
     files,
-    sources::{self, FileRecord, Snapshot},
+    sources::{self, FileRecord, Snapshot, Sources},
 };
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -43,7 +43,7 @@ impl SourcesRead {
         }
         let boundaries = result.boundaries.clone();
         for manifest in selected {
-            crate::config::relative_path(manifest)?;
+            ladybom::sources::relative_path(manifest)?;
             ensure!(
                 graph.inventory.inputs.contains_key(manifest),
                 "Manifest missing from inventory digests: {manifest}"
@@ -58,7 +58,7 @@ impl SourcesRead {
                     let text = result
                         .text(manifest)
                         .ok_or_else(|| invalid(format!("Non-UTF-8 manifest: {manifest}")))?;
-                    if super::super::parse_toml(text)?.get("package").is_none() {
+                    if ladybom::parse_toml(text)?.get("package").is_none() {
                         continue;
                     }
                 }
@@ -69,7 +69,7 @@ impl SourcesRead {
     }
     fn open(&self, name: &str) -> Result<Option<File>> {
         if !name.is_empty() {
-            crate::config::relative_path(name)?;
+            ladybom::sources::relative_path(name)?;
         }
         let mut file = self.root.try_clone()?;
         for component in Path::new(name).components() {
@@ -157,7 +157,7 @@ impl SourcesRead {
             } else {
                 format!("{base}/{child_name}")
             };
-            crate::config::relative_path(&path)?;
+            ladybom::sources::relative_path(&path)?;
             if boundaries.contains(&path) {
                 continue;
             }
@@ -280,7 +280,7 @@ pub(super) fn resolve(base: &str, path: &str) -> Result<String> {
         }
     }
     let result = parts.join("/");
-    crate::config::relative_path(&result)?;
+    ladybom::sources::relative_path(&result)?;
     Ok(result)
 }
 pub(super) fn parent(path: &str) -> &str {

@@ -308,7 +308,8 @@ fn checks_return_success_or_remote_signal_status() -> Result {
 }
 
 fn pruning_plan(fixture: &Fixture) -> std::result::Result<std::path::PathBuf, Box<dyn Error>> {
-    use ladybom::deps::{self, graph, prune_validation};
+    use ladybom::deps;
+    use ladybom_graph::{self as graph, prune_validation};
     let project = fixture.root.path().join("project");
     fs::create_dir(&project)?;
     fs::write(

@@ -8,8 +8,13 @@ edition = "2021"
 name = "ladybom"
 path = "src/main.rs"
 
+[features]
+default = ["graph"]
+graph = ["dep:ladybom-graph"]
+
 [dependencies]
-ladybom = { path = "../ladybom", features = ["graph"] }
+ladybom.workspace = true
+ladybom-graph = { workspace = true, optional = true }
 clap = { version = "4", features = ["derive"] }
 serde_json = "1"
 

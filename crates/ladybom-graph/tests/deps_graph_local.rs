@@ -1,6 +1,5 @@
-#![cfg(feature = "graph")]
-
-use ladybom::deps::{self, graph};
+use ladybom::deps;
+use ladybom_graph as graph;
 use serde_json::Value;
 use std::{fs, path::Path};
 

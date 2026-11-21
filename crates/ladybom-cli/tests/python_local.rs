@@ -1,4 +1,5 @@
-use ladybom::deps::graph;
+#[cfg(feature = "graph")]
+use ladybom_graph as graph;
 use serde_json::Value;
 use std::{fs, path::Path, process::Command};
 
@@ -66,6 +67,7 @@ fn local_manifest_evidence_is_deterministic_without_project_execution() -> TestR
     Ok(())
 }
 
+#[cfg(feature = "graph")]
 #[test]
 fn exported_local_identity_keeps_unknown_activation_and_plan_limits() -> TestResult {
     let root = tempfile::tempdir()?;

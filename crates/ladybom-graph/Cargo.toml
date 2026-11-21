@@ -1,0 +1,31 @@
+[package]
+name = "ladybom-graph"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Persist and analyze static dependency graphs from Ladybom inventories"
+
+[dependencies]
+ladybom.workspace = true
+nickel-util.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+time.workspace = true
+packageurl.workspace = true
+semver.workspace = true
+node-semver.workspace = true
+pep440_rs.workspace = true
+tempfile.workspace = true
+libc.workspace = true
+parquet = { version = "=59.3.3", default-features = false }
+bytes = "1"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"

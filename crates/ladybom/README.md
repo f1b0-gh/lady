@@ -15,8 +15,7 @@ assert_eq!(report.schema_version, 2);
 ```
 
 The library has no Clap dependency. [ladybom-cli](../ladybom-cli/README.md)
-provides the `ladybom` command. Ladyshell reuses the analyzer without the optional
-`graph` feature and independently verifies its inputs before any preparation.
+provides the `ladybom` command. Ladyshell reuses the analyzer and independently verifies its inputs before any preparation.
 An inventory grants no permission to install, connect to a network or execute.
 
 ## Inventory contract
@@ -45,7 +44,7 @@ selection is explicit. Artifact collection remains a separate operation.
 
 `cyclonedx::from_report(&report)` returns a validated CycloneDX 1.5 `Bom`;
 `cyclonedx::write_json(&report, writer)` serializes it. Neither reads sources nor
-uses the network. Both are available without `graph`, including under `deps`.
+uses the network. Both are available under the crate root and under `deps`.
 The default public projection retains accepted identities, static relationships,
 explicit licenses and coverage summaries; opaque native data is omitted.
 `from_report_with_profile` and `write_json_with_profile` accept
@@ -59,7 +58,7 @@ with deterministic identities and a hash manifest; decisions never transfer
 implicitly between reports. See [interoperability](../../docs/ladybom-interop.md).
 
 `vuln` evaluates native reports against separately supplied OSV snapshots,
-checks policy and exports CycloneDX VEX without `graph`, Clap or execution.
+checks policy and exports CycloneDX VEX without Clap or execution.
 Matches retain advisory evidence and candidate fixes; they do not establish
 exploitability. Private registries, Git sources and ambiguous identities remain
 unknown. Decisions and exceptions expire and bind exact report/snapshot digests.
@@ -67,15 +66,15 @@ For external JSON, use `vuln::parse_json` before `serde_json::from_value` so tha
 duplicate keys in nested OSV extensions are also refused.
 See [vulnerabilities](../../docs/vulnerabilities.md) for inputs and policy.
 
-## Optional graphs and removal analysis
+## Graphs and removal analysis
 
-The `graph` feature, disabled by default, adds Parquet snapshots, version
+The separate [ladybom-graph](../ladybom-graph/README.md) library adds Parquet snapshots, version
 alignment, lexical usage analysis and removal simulations. Snapshot export,
 inspection and alignment are static. Native traversal and simulation require an
 explicit absolute path to trusted LadybugDB **0.17.1**, with bounded time,
 memory and output. See [graphs](../../docs/dependency-graphs.md).
 
-`deps::graph::analyze_alignment` groups versions by identity, source and lockfile
+`ladybom_graph::analyze_alignment` groups versions by identity, source and lockfile
 and separately audits direct pins and coverage. `AlignmentAnalysis::policy_pass`
 is stricter than analysis completeness. `Ladybug::explain_alignment` adds bounded
 reverse paths; Cargo features and target conditions remain unevaluated.
@@ -87,7 +86,7 @@ external or ambiguous evidence remains incomplete. Different directories retain
 distinct source identities. Old reports without manifest evidence need a new scan.
 Local identity does not establish public advisory coverage or installability.
 
-`deps::graph::plan_alignment(&graph)` returns JSON v1 `AlignmentPlan`, bound to
+`ladybom_graph::plan_alignment(&graph)` returns JSON v1 `AlignmentPlan`, bound to
 `graph_digest`; `to_markdown()` provides an exportable rendering. Actions start
 with coverage gaps, then resolution and parent migration reviews. They preserve
 contexts, parents and indices into alignment groups/source variants. Full
@@ -95,13 +94,13 @@ transitive constraints remain unknown. `analysis_complete` is coverage only;
 `remediation_approved` is always false. JSON and Markdown are limited to 128 MiB.
 No version, exception or baseline is chosen or updated by this API.
 
-`deps::graph::check_alignment_policy` compares verified snapshots against an
+`ladybom_graph::check_alignment_policy` compares verified snapshots against an
 `AlignmentPolicy` with a versioned baseline digest and temporary exceptions.
 Inherited backlog is not approval. Pins and current advisories need separate
 checks; see the [CLI](../ladybom-cli/README.md#alignment-policy).
 
 `deps::prune_validation` exposes plan types and inventory verification without
-optional features; constructing a plan requires `graph`. `NodeRef`, `Root` and
+optional features. Construct a plan with `ladybom_graph::prune_validation::plan`. `NodeRef`, `Root` and
 `IdentifiedRoot` live in `deps::declarations`, with compatible graph reexports.
 `inventory` supplies shared bounded readers. `deps::constraints` matches Rust,
 Python and npm versions; preparation permissions belong to Ladyshell. Ladyshell

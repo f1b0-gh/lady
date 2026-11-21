@@ -15,6 +15,19 @@ Examples below assume the binary is on `PATH`; otherwise use
 outside scanned sources. Native JSON is the input to `ladyshell --ladybom`;
 CycloneDX is an exchange format and does not replace that report.
 
+## Build and install choices
+
+From this checkout, install either configuration with Cargo.
+
+| Configuration | Command | Available commands |
+| --- | --- | --- |
+| Default (`graph`) | `cargo install --locked --path crates/ladybom-cli` | All commands below |
+| Minimal | `cargo install --locked --path crates/ladybom-cli --no-default-features` | `scan` (including CycloneDX), `artifact`, `interop`, `vuln`, `vxdf` |
+
+For a minimal repository build use `cargo build -p ladybom-cli --locked --no-default-features`.
+The default `graph` feature includes the [graph library](../ladybom-graph/README.md)
+and Parquet. Clap parsing and help reflect the selected commands.
+
 ## Commands and exit status
 
 | Group | Purpose |

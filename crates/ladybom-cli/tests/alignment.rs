@@ -1,3 +1,5 @@
+#![cfg(feature = "graph")]
+
 use serde_json::{json, Value};
 use std::{fs, path::Path, process::Command};
 
@@ -134,7 +136,7 @@ fn exact_manifest_pin_with_a_different_locked_version_cannot_pass_check(
     fixture(temp.path(), &["2.0.0"])?;
     let snapshot = temp.path().join("snapshot");
     let graph = ladybom::deps::graph::project(ladybom::deps::scan_project(temp.path())?)?;
-    ladybom::deps::graph::write_snapshot(&graph, &snapshot)?;
+    ladybom_graph::write_snapshot(&graph, &snapshot)?;
     let output = Command::new(env!("CARGO_BIN_EXE_ladybom"))
         .args(["graph", "alignment", "--check", "--snapshot"])
         .arg(&snapshot)

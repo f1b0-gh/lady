@@ -53,11 +53,14 @@ fn shared_cargo_lock_is_serialized_once_and_keeps_each_members_graph_roots(
             .iter()
             .any(|r| r.manifest == manifest && r.to.purl == purl));
     }
-    let temporary = tempfile::tempdir()?;
-    let destination = temporary.path().join("graph");
-    graph::write_snapshot(&graph, &destination)?;
-    let loaded = graph::read_snapshot(&destination)?;
-    assert_eq!(serde_json::to_value(loaded)?, serde_json::to_value(graph)?);
+    #[cfg(feature = "graph")]
+    {
+        let temporary = tempfile::tempdir()?;
+        let destination = temporary.path().join("graph");
+        ladybom_graph::write_snapshot(&graph, &destination)?;
+        let loaded = ladybom_graph::read_snapshot(&destination)?;
+        assert_eq!(serde_json::to_value(loaded)?, serde_json::to_value(graph)?);
+    }
     Ok(())
 }
 

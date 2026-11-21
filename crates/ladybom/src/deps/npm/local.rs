@@ -28,7 +28,6 @@ impl Identity {
         Ok(purl.to_string())
     }
 
-    #[cfg(feature = "graph")]
     pub fn source(&self) -> Value {
         serde_json::json!({"local":self.source})
     }
@@ -177,7 +176,6 @@ impl LocalPackages {
             .then_some(identity)
     }
 
-    #[cfg(feature = "graph")]
     pub fn evidence_source(
         &self,
         lock: &str,

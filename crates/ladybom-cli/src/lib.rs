@@ -1,8 +1,12 @@
+#[cfg(feature = "graph")]
 mod alignment;
+#[cfg(feature = "graph")]
 mod alignment_plan;
+#[cfg(feature = "graph")]
 mod alignment_policy;
 mod artifact;
 mod interop;
+#[cfg(feature = "graph")]
 mod prune;
 mod vuln;
 mod vxdf;
@@ -11,11 +15,12 @@ use ladybom::{deps, error::Result, files, sources};
 use std::{io::Write, path::PathBuf};
 
 #[derive(Debug, Parser)]
-#[command(
-    name = "ladybom",
-    version,
-    about = "Static dependency analysis and removal simulations"
+#[command(name = "ladybom", version)]
+#[cfg_attr(
+    feature = "graph",
+    command(about = "Static dependency analysis and removal simulations")
 )]
+#[cfg_attr(not(feature = "graph"), command(about = "Static dependency analysis"))]
 pub struct Cli {
     #[command(subcommand)]
     pub command: DepsCommand,
@@ -43,11 +48,13 @@ pub enum DepsCommand {
         #[command(subcommand)]
         command: vuln::VulnCommand,
     },
+    #[cfg(feature = "graph")]
     /// Detect, simulate and validate dependency removals.
     Prune {
         #[command(subcommand)]
         command: prune::PruneCommand,
     },
+    #[cfg(feature = "graph")]
     /// Export and analyze conservative dependency graphs.
     Graph {
         #[command(subcommand)]
@@ -77,7 +84,9 @@ pub fn run(args: Cli) -> Result<i32> {
         DepsCommand::Interop { command } => interop::run(command),
         DepsCommand::Vxdf { command } => vxdf::run(command),
         DepsCommand::Vuln { command } => vuln::run(command),
+        #[cfg(feature = "graph")]
         DepsCommand::Prune { command } => prune::run(command),
+        #[cfg(feature = "graph")]
         DepsCommand::Graph { command } => run_graph(command),
         DepsCommand::Scan {
             project,
@@ -131,6 +140,7 @@ pub fn run(args: Cli) -> Result<i32> {
     }
 }
 
+#[cfg(feature = "graph")]
 #[derive(Debug, Subcommand)]
 pub enum GraphCommand {
     /// Publish a new immutable Parquet snapshot, without execution or network access.
@@ -166,6 +176,7 @@ pub enum GraphCommand {
         after: PathBuf,
     },
 }
+#[cfg(feature = "graph")]
 #[derive(Debug, clap::Args)]
 pub struct QueryArgs {
     #[arg(long)]
@@ -197,8 +208,9 @@ pub struct QueryArgs {
     #[arg(long)]
     unconditional_only: bool,
 }
+#[cfg(feature = "graph")]
 fn run_graph(command: GraphCommand) -> Result<i32> {
-    use deps::graph::{self, Direction, Filter, Ladybug, NodeRef, Query};
+    use ladybom_graph::{self as graph, Direction, Filter, Ladybug, NodeRef, Query};
     let command = match command {
         GraphCommand::Impact(mut args) => {
             args.reverse = true;

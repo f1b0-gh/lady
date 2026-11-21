@@ -1,9 +1,7 @@
 //! Reproducible static workspace inventory and a disposable Ladybug Explorer import.
 //! This example never invokes a project's package manager or build scripts.
-use ladybom::{
-    deps::{self, graph},
-    files, sources,
-};
+use ladybom::{deps, files, sources};
+use ladybom_graph as graph;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::{
@@ -65,7 +63,7 @@ fn main() -> Result<()> {
     let mut selected = BTreeSet::new();
     let mut members = BTreeSet::new();
     if root.join("Cargo.toml").exists() {
-        let manifest: toml::Value = toml::from_str(&String::from_utf8(files::read_limited(
+        let manifest = deps::parse_toml(&String::from_utf8(files::read_limited(
             &root.join("Cargo.toml"),
             8 * 1024 * 1024,
         )?)?)?;

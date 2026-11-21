@@ -1,4 +1,5 @@
-use ladybom::{deps::graph, error::Result};
+use ladybom::error::Result;
+use ladybom_graph as graph;
 use std::{io::Write, path::PathBuf};
 
 #[derive(Debug, clap::Args)]

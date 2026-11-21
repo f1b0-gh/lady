@@ -1,6 +1,5 @@
-#![cfg(feature = "graph")]
-
-use ladybom::deps::{self, graph, Component, Project, Report};
+use ladybom::deps::{self, Component, Project, Report};
+use ladybom_graph as graph;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 

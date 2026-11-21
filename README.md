@@ -35,6 +35,9 @@ cargo build -p ladybom-cli --locked
 ./target/debug/ladybom scan --project /absolute/path/to/project --json
 ```
 
+For the minimal build or a local Cargo installation, see the
+[CLI build choices](crates/ladybom-cli/README.md#build-and-install-choices).
+
 For a CycloneDX SBOM, write outside the scanned project:
 
 ```sh

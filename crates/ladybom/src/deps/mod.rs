@@ -5,13 +5,13 @@ pub mod declarations;
 mod go;
 pub mod graph;
 pub mod interop;
+mod local_identity;
 mod model;
 mod npm;
 pub mod prune_validation;
 mod python;
 mod rust;
-#[cfg(feature = "graph")]
-pub mod usage;
+pub use local_identity::LocalIdentities;
 pub mod vuln;
 
 pub use model::*;
@@ -193,7 +193,8 @@ fn sibling(name: &str, file: &str) -> String {
         .map_or_else(|| file.into(), |(parent, _)| format!("{parent}/{file}"))
 }
 
-fn ancestors(name: &str, file: &str) -> Vec<String> {
+/// Candidate paths from the file's directory through the source root, nearest first.
+pub fn ancestors(name: &str, file: &str) -> Vec<String> {
     let mut result = vec![sibling(name, file)];
     let mut parent = name.rsplit_once('/').map(|(parent, _)| parent);
     while let Some(path) = parent {

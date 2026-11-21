@@ -6,10 +6,12 @@ from pathlib import Path
 import subprocess
 
 
-def graph(manifest, no_default_features=False):
+def graph(manifest, no_default_features=False, all_features=False):
     command = ["cargo", "metadata", "--offline", "--locked", "--format-version=1", "--manifest-path", str(manifest)]
     if no_default_features:
         command.append("--no-default-features")
+    if all_features:
+        command.append("--all-features")
     result = subprocess.run(
         command,
         check=True, text=True, capture_output=True, timeout=60,
@@ -18,9 +20,10 @@ def graph(manifest, no_default_features=False):
     packages = {package["id"]: package for package in data["packages"]}
     nodes = {node["id"]: node for node in data["resolve"]["nodes"]}
 
-    def dependencies(name):
+    def dependencies(name, normal_only=False):
         roots = [key for key, package in packages.items() if package["name"] == name]
         assert len(roots) == 1, (name, roots)
+        edge_kinds = {None} if normal_only else {None, "build"}
         pending = roots[:]
         seen = set()
         while pending:
@@ -29,7 +32,8 @@ def graph(manifest, no_default_features=False):
                 continue
             seen.add(key)
             for dep in nodes[key]["deps"]:
-                if any(kind["kind"] != "dev" for kind in dep["dep_kinds"]):
+                kinds = {kind["kind"] for kind in dep["dep_kinds"]}
+                if kinds & edge_kinds:
                     pending.append(dep["pkg"])
         return {packages[key]["name"] for key in seen}
 
@@ -45,18 +49,32 @@ def main():
     args = parser.parse_args()
     lady = graph(Path(__file__).resolve().parents[1] / "Cargo.toml", no_default_features=True)
     common = lady("nickel-util")
-    domains = {"ladybom", "ladybom-cli", "ladyshell", "ladyshell-cli", "ladyboot", "nickel-plane", "nickel-k8s", "nickel-tf", "audit-validator"}
+    domains = {"ladybom", "ladybom-graph", "ladybom-cli", "ladyshell", "ladyshell-cli", "ladyboot", "nickel-plane", "nickel-k8s", "nickel-tf", "audit-validator"}
     assert not common & (domains | {"clap"}), f"Domain dependencies in core: {common}"
+    crates = Path(__file__).resolve().parents[1] / "crates"
+    graph_packages = {"ladybom-graph", "parquet"}
+    assert not graph_packages & lady("ladybom", normal_only=True)
     analysis = lady("ladybom")
-    assert "nickel-util" in analysis
-    assert not analysis & {"clap", "ladyshell", "ladyshell-cli", "ladyboot", "audit-validator"}
+    analysis_normal = graph(crates / "ladybom/Cargo.toml", all_features=True)("ladybom", normal_only=True)
+    assert not graph_packages & analysis_normal
+    minimal = graph(crates / "ladybom-cli/Cargo.toml", no_default_features=True)("ladybom-cli", normal_only=True)
+    full = graph(crates / "ladybom-cli/Cargo.toml")("ladybom-cli", normal_only=True)
+    assert not graph_packages & minimal
+    assert graph_packages <= full
+    extension = graph(crates / "ladybom-graph/Cargo.toml")("ladybom-graph", normal_only=True)
+    assert {"ladybom", "parquet"} <= extension
+    assert not extension & {"clap", "openshell", "ladyshell", "ladyshell-cli", "ladyboot", "ladyhost"}
+    for closure in (analysis, analysis_normal):
+        assert "nickel-util" in closure
+        assert not closure & {"clap", "ladyshell", "ladyshell-cli", "ladyboot", "audit-validator"}
     application = lady("ladyshell")
+    assert not graph_packages & lady("ladyshell", normal_only=True)
     assert {"nickel-util", "ladybom"} <= application
     assert not application & {"clap", "ladyboot", "nickel-plane", "nickel-k8s", "nickel-tf", "audit-validator"}, "Audit validation belongs to Ladyshell"
     bootc = graph(args.bootc.resolve() / "Cargo.toml", no_default_features=True)("ladyboot")
     assert "nickel-util" in bootc
     assert not bootc & {"clap", "ladyshell", "ladyshell-cli", "ladybom", "audit-validator", "nickel-plane", "nickel-k8s", "nickel-tf"}
-    result = {"core": sorted(common), "analysis": sorted(analysis), "openshell": sorted(application), "bootc": sorted(bootc)}
+    result = {"core": sorted(common), "analysis": sorted(analysis), "analysis-normal": sorted(analysis_normal), "graph": sorted(extension), "minimal-cli": sorted(minimal), "full-cli": sorted(full), "openshell": sorted(application), "bootc": sorted(bootc)}
     if args.k8s:
         k8s = graph(args.k8s.resolve() / "Cargo.toml", no_default_features=True)("nickel-k8s")
         assert "nickel-util" in k8s

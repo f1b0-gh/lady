@@ -1,6 +1,8 @@
 # Dependency graphs and LadybugDB
 
-Ladybom projects static inventories into immutable Parquet snapshots. Export,
+Ladybom projects static inventories into in-memory graphs. The
+[ladybom-graph library](../crates/ladybom-graph/README.md) persists them in
+immutable Parquet snapshots and powers the default CLI graph and prune commands. Export,
 inspection, diff and alignment need no native engine. Traversal and removal
 simulation explicitly run trusted LadybugDB **0.17.1**; they never execute the
 scanned project, install dependencies or change sandbox/network policy.
@@ -128,12 +130,15 @@ covers only those checks/configurations, not every feature or downstream user.
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo test --workspace --all-features --locked
-LADYBOM_LADYBUG_BIN=/tmp/ladybom-ladybug/bin/lbug cargo test -p ladybom-cli --locked --test deps_graph -- --ignored
-cargo run --locked -p ladybom --features graph --example deps_explorer -- /absolute/project /absolute/new-experiment
+export LADYBOM_LADYBUG_BIN=/tmp/ladybom-ladybug/bin/lbug
+cargo test -p ladybom-cli --locked --test deps_graph --test alignment -- --ignored
+cargo test -p ladybom-graph --locked --test deps_alignment_explain --test deps_prune -- --ignored
+cargo run --locked -p ladybom-graph --example deps_explorer -- /absolute/project /absolute/new-experiment
 ```
 
-The two ignored native tests exercise traversal, filters, depth and timeouts
-against an independent test-only BFS oracle. `deps_explorer` selects explicit
+The six ignored native cases cover alignment explanations, removal simulation
+and graph traversal, including filters, depth, timeouts and an independent
+test-only BFS oracle. `deps_explorer` selects explicit
 Cargo/npm workspace members, refusing globs; it exports inventory, Parquet and
 Explorer CSV without package-manager execution. Explorer databases are rebuilt
 separately; their format is not assumed compatible with the qualified CLI.

@@ -1,4 +1,3 @@
-#![cfg(feature = "graph")]
 use ladybom::deps::{self, graph};
 use serde_json::json;
 use std::fs;
@@ -51,7 +50,6 @@ fn locked_git_identity_keeps_version_repository_and_commit() -> Result {
     assert_eq!(graph.components.len(), 1);
     assert_eq!(graph.roots.len(), 1);
     assert_eq!(graph.roots[0].condition["declared_name"], "alias");
-    assert!(graph::alignment(&graph)?.coverage.versions_complete);
     Ok(())
 }
 
@@ -161,7 +159,6 @@ fn unresolved_or_unsupported_git_locations_remain_unidentified() -> Result {
         assert!(report.projects[0].components[0].purl.is_none(), "{source}");
         let graph = graph::project(report)?;
         assert!(graph.components.is_empty());
-        assert!(!graph::alignment(&graph)?.coverage.versions_complete);
     }
     Ok(())
 }
@@ -264,32 +261,7 @@ fn snapshot_validation_rechecks_git_provenance_after_public_graph_mutation() -> 
         };
         component.metadata["source"] = json!(format!("git+{REPO}#{OTHER}"));
         assert!(graph.validate().is_err(), "inventory={inventory}");
-        let dir = tempfile::tempdir()?;
-        assert!(graph::write_snapshot(&graph, &dir.path().join("forged")).is_err());
     }
-    Ok(())
-}
-
-#[test]
-fn git_source_substitution_stays_a_policy_regression_after_snapshot_roundtrip() -> Result {
-    let baseline = graph::project(scan(
-        "",
-        &package("registry+https://github.com/rust-lang/crates.io-index"),
-    )?)?;
-    let current = graph::project(scan("", &package(&format!("git+{REPO}#{COMMIT}")))?)?;
-    let dir = tempfile::tempdir()?;
-    graph::write_snapshot(&current, &dir.path().join("snapshot"))?;
-    let current = graph::read_snapshot(&dir.path().join("snapshot"))?;
-    let policy = graph::AlignmentPolicy {
-        schema_version: 1,
-        baseline_graph_digest: graph::graph_digest(&baseline)?,
-        exceptions: vec![],
-    };
-    let result =
-        graph::check_alignment_policy(&current, &baseline, &policy, "2026-11-05T12:00:00Z")?;
-    assert!(result.complete);
-    assert!(!result.non_regression_pass);
-    assert!(result.problems.iter().any(|s| s.contains("source_changed")));
     Ok(())
 }
 
