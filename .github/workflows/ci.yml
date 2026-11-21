@@ -54,13 +54,20 @@ jobs:
           cargo --version
           python3 scripts/check_sources.py
           cargo fetch --locked
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --isolated --disable-pip-version-check \
+            --index-url https://pypi.org/simple --require-hashes --only-binary=:all: \
+            -r tests/requirements-interop.txt
           export CARGO_NET_OFFLINE=true
           cargo fmt --all --check
           cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
           cargo test --workspace --all-features --locked
+          .venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+          python3 -m unittest discover -s examples/ladyhost/scenario -p 'test_*.py'
+          (cd crates/ladyboot/tests && python3 -m unittest test_assembly test_vm_drivers)
           python3 tests/check_boundaries.py --bootc crates/ladyboot
           python3 scripts/check_sources.py
           CHECKS
 
       - name: Verify that validation preserved locked inputs
-        run: git diff --exit-code -- Cargo.lock ':(glob)**/flake.lock' sources/nickeling.json vendor/nickel-util
+        run: git diff --exit-code -- Cargo.lock ':(glob)**/flake.lock' tests/requirements-interop.txt sources/nickeling.json vendor/nickel-util
