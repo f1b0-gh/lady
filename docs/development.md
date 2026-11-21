@@ -75,32 +75,28 @@ state, exports and credentials stay outside published sources.
 
 ## Known dependency findings
 
-The 2026-11-21 OSV query of all 296 crates.io package versions in `Cargo.lock`
-reported the following existing findings, without platform or feature filtering.
-The [review record](../sources/dependency-review.json) binds the lock digest,
-query parameters, response digest and advisory modification dates:
+The 2026-11-21 OSV query covers all 291 crates.io package versions in `Cargo.lock`,
+without platform, feature or dependency-kind filtering. The
+[review record](../sources/dependency-review.json) binds the exact lock, query,
+response and advisory dates.
 
-| Package | Finding | Advisory |
-| --- | --- | --- |
-| `chrono 0.4.45` | Unmaintained | [RUSTSEC-2026-0543](https://osv.dev/vulnerability/RUSTSEC-2026-0543) |
-| `paste 1.0.15` | Unmaintained | [RUSTSEC-2024-0436](https://osv.dev/vulnerability/RUSTSEC-2024-0436) |
-| `rustix 1.1.5` | Uninitialized bytes in xattr functions | [RUSTSEC-2026-0486](https://osv.dev/vulnerability/RUSTSEC-2026-0486) |
-| `thrift 0.17.0` | Unbounded allocation in binary protocol | [RUSTSEC-2026-0435](https://osv.dev/vulnerability/RUSTSEC-2026-0435), [GHSA-2f9f-gq7v-9h6m](https://osv.dev/vulnerability/GHSA-2f9f-gq7v-9h6m) |
+`rustix 1.1.6` fixes the reported extended-attribute soundness issue. Upgrading
+Parquet to `59.3.3` removes the affected `thrift 0.17.0` dependency and unmaintained
+`paste 1.0.15`. The remaining finding is
+[`chrono 0.4.45` being unmaintained](https://osv.dev/vulnerability/RUSTSEC-2026-0543),
+still required by Parquet. It remains maintenance work, not an approved exception.
 
-These are dependency findings, not confirmed exploitability in Lady. They remain
-maintenance work, not approved exceptions. Switching `nickel-util 0.1.0` from
-the source bundle to its registry release changes no package versions or
-transitive dependencies. That helper matched no advisory in the query. The
-workspace still has 302 packages and 15 multiversion families; this migration
-removes a source bundle, not dependencies.
-Local packages, native closures and future advisories are outside that result.
-Recheck current sources before a dependency update or release.
+The workspace has 297 packages and 14 multiversion families. The security update
+introduces a reviewed `num-bigint 0.4.8`/`0.5.1` split while removing two other
+splits; the record names its parents, maintenance owner and review date. Reduced
+counts do not establish non-regression. Native closures, local packages and
+future advisories are outside the Cargo query; recheck before release.
 
-The maintained-manifest `graph alignment --check` also exits 2: version ranges
-and multiple versions remain. The selected maintained manifests now have complete
-inventory and version projection, while platform and feature activation remain
-unknown. No verified baseline or non-regression gate is established by this
-review; the record retains the exact scope.
+The maintained-manifest `graph alignment --check` still exits 2: version ranges,
+path overrides and multiple versions remain. Inventory and version projection
+are complete for the selected manifests; platform and feature activation remain
+unknown. No verified baseline or alignment-policy exception is established by
+this review.
 
 ## Continuous integration
 

@@ -1,31 +1,76 @@
 {
   "schema_version": 1,
-  "checked_at": "2026-11-21T19:23:14.658459+00:00",
+  "checked_at": "2026-11-21T19:30:23.372465+00:00",
   "source": "https://api.osv.dev/v1/querybatch",
   "input": {
     "path": "Cargo.lock",
-    "sha256": "35500d92d24c8715ad9e3eabd552f84a302b5f9126d1e0719869bebffde9a098"
+    "sha256": "2781276b106607d66b2fcd987d472f97f280b6b7ba7192bd723c424719871e1e"
   },
   "scope": "All crates.io package versions in the workspace lockfile, without platform, feature or dependency-kind filtering",
-  "package_versions_queried": 296,
+  "package_versions_queried": 291,
   "parameters": {
     "query": "package.ecosystem=crates.io, package.name, version",
     "suppressed_advisories": []
   },
-  "query_sha256": "42fa4c8cddcfcf83520ed494b7857b17207635977d157634a8ec4bcbe1128565",
-  "response_sha256": "c6523611d955c47c77e685b19cb2fb6cdcfe4f977db093a39ec8c563487e6981",
+  "query_sha256": "c257f49ab9fc39b2a0dee1fa6e938b62727552af5c2bff35511ff8d4325fec83",
+  "response_sha256": "879efb594bbd92f61879630e5f71a1c5d30d03f70264ec03ff70f3955917dfaf",
   "additions": [
     {
-      "name": "nickel-util",
-      "version": "0.1.0",
+      "name": "num-bigint",
+      "version": "0.5.1",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "parquet",
+      "version": "59.3.3",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "rustix",
+      "version": "1.1.6",
       "source": "registry+https://github.com/rust-lang/crates.io-index"
     }
   ],
   "removals": [
     {
-      "name": "nickel-util",
-      "version": "0.1.0",
-      "source": null
+      "name": "byteorder",
+      "version": "1.5.0",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "hashbrown",
+      "version": "0.16.1",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "integer-encoding",
+      "version": "3.0.4",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "ordered-float",
+      "version": "2.10.1",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "parquet",
+      "version": "56.2.1",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "paste",
+      "version": "1.0.15",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "rustix",
+      "version": "1.1.5",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "thrift",
+      "version": "0.17.0",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
     }
   ],
   "findings": [
@@ -36,40 +81,6 @@
         {
           "id": "RUSTSEC-2026-0543",
           "modified": "2026-11-17T10:15:02.344223Z"
-        }
-      ]
-    },
-    {
-      "name": "paste",
-      "version": "1.0.15",
-      "advisories": [
-        {
-          "id": "RUSTSEC-2024-0436",
-          "modified": "2026-01-27T22:03:15.694766Z"
-        }
-      ]
-    },
-    {
-      "name": "rustix",
-      "version": "1.1.5",
-      "advisories": [
-        {
-          "id": "RUSTSEC-2026-0486",
-          "modified": "2026-11-11T08:45:02.466292Z"
-        }
-      ]
-    },
-    {
-      "name": "thrift",
-      "version": "0.17.0",
-      "advisories": [
-        {
-          "id": "GHSA-2f9f-gq7v-9h6m",
-          "modified": "2026-11-02T12:10:42.318149Z"
-        },
-        {
-          "id": "RUSTSEC-2026-0435",
-          "modified": "2026-11-02T12:10:42.318149Z"
         }
       ]
     }
@@ -93,8 +104,8 @@
       ],
       "exclude": []
     },
-    "graph_digest": "07b2ecbbd63585e22a1636dd5f266f1d6ecb805b2715332e572285fdfcfa47a2",
-    "output_sha256": "c5eaa6c5a17e307bceaa8fd0e348bb40fe8b287dbd4346318c37b49d6d00a21c",
+    "graph_digest": "26cbc085e55022569e8c61b12aa5af55f4d2d578a2a8c8bf318976e353f4b978",
+    "output_sha256": "bde1b749498172ae0072ac321cffd3849c11827c135f141c5f2bfc2be59e2282",
     "exit_code": 2,
     "aligned": false,
     "pins_compliant": false,
@@ -102,9 +113,9 @@
     "coverage": {
       "activation_known": false,
       "inventory_complete": true,
-      "inventory_components": 302,
+      "inventory_components": 297,
       "pin_audit_complete": true,
-      "projected_components": 302,
+      "projected_components": 297,
       "unidentified_components": 0,
       "unmapped_nodes": 0,
       "unprojected_components": 0,
@@ -134,23 +145,84 @@
       }
     ]
   },
-  "migration": {
-    "kind": "local-to-registry",
-    "package": "nickel-util",
-    "version": "0.1.0",
-    "checksum": "f880fba0cbb8abd32f34d90e8463869ce1029d32c234b749ec98a5a574f66f79",
-    "published_revision": "05cae8306879dc2f9ca699525de5e2904b32fd42",
-    "package_count_before": 302,
-    "package_count_after": 302,
-    "multiversion_families_before": 15,
-    "multiversion_families_after": 15,
-    "excess_versions_before": 17,
-    "excess_versions_after": 17,
-    "transitive_version_changes": [],
-    "upstream_advisories": {
-      "source": "https://api.github.com/repos/f1b0-gh/nickeling/security-advisories",
-      "checked_at": "2026-11-21T19:25:31.421345+00:00",
-      "published_advisories": []
+  "security_update": {
+    "baseline_review": "https://github.com/f1b0-gh/lady/blob/e39b2fd6c2a91f615a54f87284cb744d164e9ae0/sources/dependency-review.json",
+    "baseline_lock_sha256": "35500d92d24c8715ad9e3eabd552f84a302b5f9126d1e0719869bebffde9a098",
+    "before": {
+      "packages": 302,
+      "multiversion_families": 15,
+      "excess_versions": 17
+    },
+    "after": {
+      "packages": 297,
+      "multiversion_families": 14,
+      "excess_versions": 16
+    },
+    "fixed_paths": [
+      "rustix 1.1.5 replaced by 1.1.6",
+      "parquet 56.2.1 replaced by 59.3.3, removing thrift 0.17.0 and paste 1.0.15"
+    ],
+    "previous_findings_resolved": [
+      {
+        "name": "paste",
+        "version": "1.0.15",
+        "advisories": [
+          {
+            "id": "RUSTSEC-2024-0436",
+            "modified": "2026-01-27T22:03:15.694766Z"
+          }
+        ]
+      },
+      {
+        "name": "rustix",
+        "version": "1.1.5",
+        "advisories": [
+          {
+            "id": "RUSTSEC-2026-0486",
+            "modified": "2026-11-11T08:45:02.466292Z"
+          }
+        ]
+      },
+      {
+        "name": "thrift",
+        "version": "0.17.0",
+        "advisories": [
+          {
+            "id": "GHSA-2f9f-gq7v-9h6m",
+            "modified": "2026-11-02T12:10:42.318149Z"
+          },
+          {
+            "id": "RUSTSEC-2026-0435",
+            "modified": "2026-11-02T12:10:42.318149Z"
+          }
+        ]
+      }
+    ],
+    "remaining_maintenance": "chrono 0.4.45 remains required by parquet 59.3.3; no exception or clean security claim",
+    "new_divergence": {
+      "name": "num-bigint",
+      "versions": [
+        "0.4.8",
+        "0.5.1"
+      ],
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "scope": "All locked Cargo platform, feature and dependency-kind contexts",
+      "parents": {
+        "0.4.8": [
+          "fraction 0.17.0",
+          "num 0.4.3",
+          "num-rational 0.4.2"
+        ],
+        "0.5.1": [
+          "parquet 59.3.3"
+        ]
+      },
+      "reason": "The reviewed Parquet security upgrade requires the newer incompatible minor; existing numeric/schema dependencies retain 0.4.",
+      "maintenance_owner": "f1b0-gh",
+      "review_by": "2026-12-21",
+      "maintenance_cost": "Retain both numeric library versions in advisory and compatibility checks; no local fork or adapter.",
+      "revisit_trigger": "Compatible upstream numeric/schema parent releases or next dependency review",
+      "alignment_exception": false
     }
   }
 }

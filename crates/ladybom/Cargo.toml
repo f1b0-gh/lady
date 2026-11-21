@@ -24,7 +24,7 @@ globset = "0.4"
 semver = "1"
 node-semver = "2"
 pep440_rs = "0.7"
-parquet = { version = "56.2", default-features = false, optional = true }
+parquet = { version = "=59.3.3", default-features = false, optional = true }
 bytes = { version = "1", optional = true }
 tempfile = { version = "3", optional = true }
 libc = { version = "0.2", optional = true }
