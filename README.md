@@ -61,14 +61,19 @@ Nix/Go artifacts use a separate,
 
 Ladyboot is a separate system-build path: Nickel validates needs, Nix selects
 pinned packages and assembles the image, and Rust locks inputs and verifies
-artifact receipts. Ladyshell can invoke its CLI, but has no Cargo dependency on
-Ladyboot. A report never grants installation or network permission.
+artifact receipts. Invoke `ladyboot` directly for this workflow; the retired
+`ladyshell artifact` command only provides migration guidance. Ladyshell has no
+Cargo dependency on Ladyboot. A report never grants installation or network
+permission.
 
 ## Build and contribute
 
 ```sh
 cargo build --workspace --locked
 ```
+
+This builds the tools as separate executables. For a first sandbox, follow the
+[Ladyshell starting path](docs/usage.md#first-run).
 
 The repository includes an unchanged, commit-pinned `nickel-util` source bundle
 from [Nickeling](https://github.com/f1b0-gh/nickeling). No sibling checkout is

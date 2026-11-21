@@ -7,9 +7,22 @@ Git credentials, signing keys and publication authority stay on the host.
 
 Use `ladyshell help COMMAND [SUBCOMMAND]` for exact syntax, or add `--help`
 to a command. Help does not load configuration, credentials or sandbox state.
-`--version` prints the installed version. The `artifact` forwarding command is
-the exception: use `ladyshell help artifact` for local help; `artifact --help`
-starts the separately installed Ladyboot executable.
+`--version` prints the installed version. The retired `artifact` command provides
+local help through `ladyshell help artifact`, `ladyshell artifact --help` or
+`ladyshell artifact -h`. Other invocations exit with status 2 and guidance to use
+`ladyboot` directly; they never start an external executable.
+
+## First run
+
+1. Prepare the [native tools and trusted resources](#prerequisites).
+2. [Create an environment](#create-an-environment): select your project, private
+   state, mission and existing OpenShell gateway/workspace/provider, then follow
+   `lock → plan → apply`. Inspect the plan before applying it.
+3. [Run and retain work](#run-inspect-and-recover-work) using that same state
+   directory. Start with `status`, then a configured `check` or explicit `run`.
+
+The [glossary](#glossary) explains the configuration terms. For an inventory
+without a sandbox, start with [Ladybom](../crates/ladybom-cli/README.md).
 
 ## Prerequisites
 
@@ -399,10 +412,11 @@ ladyshell deps prune validate --state "$STATE_DIR" \
   --plan /absolute/private/prune-plan.json --output /absolute/private/prune-receipt.json
 ```
 
-`artifact` forwards every argument unchanged to `ladyboot` from `PATH`, or to
-the executable selected by `LADYSHELL_BOOTC_BIN`. Install Ladyboot separately and
-use its [command guide](../crates/ladyboot/README.md) for profiles, locks and bootc
-image construction. This forwarding command does not build an OpenShell sandbox.
+Use `ladyboot` directly for profiles, locks and bootc image construction; see its
+[command guide](../crates/ladyboot/README.md). `ladyshell artifact` no longer
+forwards commands or reads `LADYSHELL_BOOTC_BIN`. Update existing scripts to invoke
+the trusted Ladyboot executable directly. Ladyboot builds system images;
+Ladyshell's `apply` prepares OpenShell sandboxes.
 
 ## Audits and development checks
 
@@ -427,3 +441,15 @@ cargo test --workspace --all-features --locked
 
 Native Nickel tests require Nix and Bubblewrap; missing prerequisites are failures,
 not passing skips. Fixture tests do not establish a live gateway qualification.
+
+## Glossary
+
+| Term | Meaning here |
+| --- | --- |
+| Mission | A named selection of tools, source additions, dependencies on other missions and checks in the Nickel configuration. |
+| State | The private host directory retaining an environment's identities, operation journals and exports. Reuse it for later commands. |
+| Resources | The trusted Lady configuration, Nix recipes and runtime inputs selected by `--resources`. |
+| Lock | A receipt binding configuration, recipes and binary identities. It records inputs; it does not authorize execution. |
+| Gateway / workspace | The explicitly selected OpenShell context in which Ladyshell manages the sandbox. |
+| Provider | The configured OpenShell provider supplying access to the model service; its credentials stay on the host/gateway. |
+| Export | Retained sandbox changes for inspection or application to the host checkout. An export alone does not change that checkout. |
