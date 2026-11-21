@@ -114,9 +114,16 @@ Parquet to `59.3.3` removes the affected `thrift 0.17.0` dependency and unmainta
 [`chrono 0.4.45` being unmaintained](https://osv.dev/vulnerability/RUSTSEC-2026-0543),
 still required by Parquet. It remains maintenance work, not an approved exception.
 
-The workspace has 298 packages and 14 multiversion families; extracting the local
-`ladybom-graph` crate adds no registry packages or versions. The security update
-introduces a reviewed `num-bigint 0.4.8`/`0.5.1` split while removing two other
+The workspace has 298 packages and 14 multiversion families. The reviewed
+Dependabot updates change ten crate versions without adding packages or version
+splits. The `webpki-roots` update belongs to Ladyhost’s `jjpr → ureq` HTTPS client;
+its CDLA-Permissive-2.0 license is unchanged. TLS trust configuration remains in
+`jjpr`. Extracting the local `ladybom-graph` crate added no registry packages or
+versions. Ladyboot’s separate bootupd lock retains older regex packages, so the
+combined maintained Cargo inventory gains two version splits; the review record
+tracks their follow-up.
+
+The earlier security update introduces a reviewed `num-bigint 0.4.8`/`0.5.1` split while removing two other
 splits; the record names its parents, maintenance owner and review date. Reduced
 counts do not establish non-regression. Native closures, local packages and
 future advisories are outside the Cargo query; recheck before release.
