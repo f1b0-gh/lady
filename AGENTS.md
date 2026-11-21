@@ -2,6 +2,9 @@
 
 - Read [README.md](README.md) and the affected component's guide first.
 - Keep published documentation, code and identifiers in English.
+- Use Jujutsu for version-control changes and publication.
+- Keep discussions, plans and session reports in ignored `.local/`; publish only
+  maintained project documentation.
 - Build with stable Rust in this repository's `target/`. Override an inherited
   `CARGO_TARGET_DIR` if necessary; never use or recreate `../erwin`.
 - Required checks: `cargo fmt --all --check`,

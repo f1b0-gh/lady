@@ -9,6 +9,7 @@ __pycache__/
 *.pyc
 
 # Local tooling and version-control metadata
+/.local/
 /.jj/
 /.superpowers/
 /.publication/
