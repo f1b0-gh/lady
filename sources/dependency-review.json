@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "checked_at": "2026-11-21T19:30:23.372465+00:00",
+  "checked_at": "2026-11-21T22:45:40.105147+00:00",
   "source": "https://api.osv.dev/v1/querybatch",
   "input": {
     "path": "Cargo.lock",
-    "sha256": "95e42907812cd2ad1525d2a7fd59cd13c85379a628eba042d329db7ceb2bd7dd"
+    "sha256": "f6152387e5333c090ec9c5b90cda51f833bdcf2b178c721f45c0a7b8e9ab63a2"
   },
   "scope": "All crates.io package versions in the workspace lockfile, without platform, feature or dependency-kind filtering",
   "package_versions_queried": 291,
@@ -12,15 +12,9 @@
     "query": "package.ecosystem=crates.io, package.name, version",
     "suppressed_advisories": []
   },
-  "query_sha256": "c257f49ab9fc39b2a0dee1fa6e938b62727552af5c2bff35511ff8d4325fec83",
+  "query_sha256": "84d6f12b5dcc8007742ba1d33a3f2d51b92bd18660e1b87e1d43ab1e7727b78c",
   "response_sha256": "879efb594bbd92f61879630e5f71a1c5d30d03f70264ec03ff70f3955917dfaf",
-  "additions": [
-    {
-      "name": "ladybom-graph",
-      "version": "0.1.0",
-      "source": null
-    }
-  ],
+  "additions": [],
   "removals": [],
   "findings": [
     {
@@ -54,8 +48,8 @@
       ],
       "exclude": []
     },
-    "graph_digest": "8d7b12787049a669f8c62560caa0984514afb7d8995d4100c7b6818c74ef5bc5",
-    "output_sha256": "d3aaf177d450cf25cbe74287c705cb64acdfab83210e867a3fbabd1bc36cefec",
+    "graph_digest": "d7a2889f5cfdc46906508c887c3f280c371d352b8514b3c4b62dd63007b8ac8f",
+    "output_sha256": "ba275695152aff3e4d725674c4306bff1290da6ba53e810ea7aed3a6aa1887cf",
     "exit_code": 2,
     "aligned": false,
     "pins_compliant": false,
@@ -175,15 +169,310 @@
       "alignment_exception": false
     }
   },
-  "query_reuse": {
-    "previous_lock_sha256": "2781276b106607d66b2fcd987d472f97f280b6b7ba7192bd723c424719871e1e",
-    "reason": "Exact registry names, versions, sources and checksums are unchanged; original query timestamp and response retained."
-  },
   "component_split": {
     "baseline_review": "https://github.com/f1b0-gh/lady/blob/492caf2d55925114d740b934faa6003c3dbbb783/sources/dependency-review.json",
     "package_count_before": 297,
     "package_count_after": 298,
     "new_local_crate": "ladybom-graph",
     "registry_changes": []
+  },
+  "dependency_updates": {
+    "pull_requests": [
+      17,
+      19,
+      20,
+      21
+    ],
+    "baseline_lock_sha256": "95e42907812cd2ad1525d2a7fd59cd13c85379a628eba042d329db7ceb2bd7dd",
+    "before": {
+      "packages": 298,
+      "multiversion_families": 14,
+      "excess_versions": 16
+    },
+    "after": {
+      "packages": 298,
+      "multiversion_families": 14,
+      "excess_versions": 16
+    },
+    "changes": [
+      {
+        "name": "fancy-regex",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "before": "0.19.2",
+        "after": "0.20.2",
+        "checksum": "0a2e16b9a584b602f1e0e5e22c30ca0906786088c27500653e432d086def8b53"
+      },
+      {
+        "name": "jsonschema",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "before": "0.60.2",
+        "after": "0.61.2",
+        "checksum": "0e37f27df77c7887edbc5f5a59ecd8e5ec4a669319266ec1b61068667a603183"
+      },
+      {
+        "name": "jsonschema-regex",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "before": "0.60.2",
+        "after": "0.61.2",
+        "checksum": "7e41151614b6c927e21982be8bef5a26741ae5a0ae6a781eedee2aa930a980e6"
+      },
+      {
+        "name": "jsonschema-value",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "before": "0.60.2",
+        "after": "0.61.2",
+        "checksum": "1515b9a91134ef67d7bac95c2d76fbc7e383c4c55ee544204ceec8088f881fef"
+      },
+      {
+        "name": "nix",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "before": "0.31.3",
+        "after": "0.31.4",
+        "checksum": "2bc81ce8148d3b4f3274da811f11cdd824ae661ee4ef732cdb229825cf5be7f7"
+      },
+      {
+        "name": "referencing",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "before": "0.60.2",
+        "after": "0.61.2",
+        "checksum": "a028057ef852c58a42d75e09da87b5e733f4030f4c7411728955e4f87203a577"
+      },
+      {
+        "name": "regex",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "before": "1.13.1",
+        "after": "1.13.2",
+        "checksum": "9807af0e638c12e753aa1b4e601791bf2a8f71274023c8bbeec12fc149950857"
+      },
+      {
+        "name": "regex-automata",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "before": "0.4.18",
+        "after": "0.4.19",
+        "checksum": "41d60ef07df457506a0a1a2073112eb4aae5733dbd2813c3da77d1b0fd441158"
+      },
+      {
+        "name": "regex-syntax",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "before": "0.8.11",
+        "after": "0.8.12",
+        "checksum": "d902046e6a28a1e4c3cab97258a0ce11e994903f01c2d97a9447a0b3df85f4f6"
+      },
+      {
+        "name": "webpki-roots",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "before": "1.0.11",
+        "after": "1.0.12",
+        "checksum": "7265c9301c16a8711c992c2d8da90ee77ef54b1ed51482d6dfeb00dc756b1297"
+      }
+    ],
+    "interpretation": "Version updates, not dependency reduction. Exact multiversion families and source identities are unchanged; no baseline or exception renewed.",
+    "webpki_roots": {
+      "dependency_path": [
+        "ladyhost",
+        "jjpr 0.45.1",
+        "ureq 3.5.1",
+        "webpki-roots 1.0.12"
+      ],
+      "configuration_owner": "jjpr::forge::http::ForgeClient::new",
+      "license": "CDLA-Permissive-2.0",
+      "license_unchanged": true,
+      "license_sha256": "e271993808fec50ab29350b39539cdec611a9103f827e0aa26d61da70e2d33f8",
+      "release_notes": "https://github.com/rustls/webpki-roots/releases/tag/v/1.0.12",
+      "change": "Remove six certificate authorities from the bundled TLS trust roots; no direct Lady dependency or TLS configuration change."
+    },
+    "candidate_metadata": [
+      {
+        "name": "fancy-regex",
+        "version": "0.20.2",
+        "latest_stable": "0.20.2",
+        "license": "MIT",
+        "rust_version": "1.66",
+        "yanked": false,
+        "repository": "https://github.com/fancy-regex/fancy-regex"
+      },
+      {
+        "name": "jsonschema",
+        "version": "0.61.2",
+        "latest_stable": "0.62.0",
+        "license": "MIT",
+        "rust_version": "1.85.0",
+        "yanked": false,
+        "repository": "https://github.com/Stranger6667/jsonschema"
+      },
+      {
+        "name": "jsonschema-regex",
+        "version": "0.61.2",
+        "latest_stable": "0.62.0",
+        "license": "MIT",
+        "rust_version": "1.85.0",
+        "yanked": false,
+        "repository": "https://github.com/Stranger6667/jsonschema"
+      },
+      {
+        "name": "jsonschema-value",
+        "version": "0.61.2",
+        "latest_stable": "0.62.0",
+        "license": "MIT",
+        "rust_version": "1.85.0",
+        "yanked": false,
+        "repository": "https://github.com/Stranger6667/jsonschema"
+      },
+      {
+        "name": "nix",
+        "version": "0.31.4",
+        "latest_stable": "0.32.0",
+        "license": "MIT",
+        "rust_version": "1.69",
+        "yanked": false,
+        "repository": "https://github.com/nix-rust/nix"
+      },
+      {
+        "name": "referencing",
+        "version": "0.61.2",
+        "latest_stable": "0.62.0",
+        "license": "MIT",
+        "rust_version": "1.85.0",
+        "yanked": false,
+        "repository": "https://github.com/Stranger6667/jsonschema"
+      },
+      {
+        "name": "regex",
+        "version": "1.13.2",
+        "latest_stable": "1.13.2",
+        "license": "MIT OR Apache-2.0",
+        "rust_version": "1.65",
+        "yanked": false,
+        "repository": "https://github.com/rust-lang/regex"
+      },
+      {
+        "name": "regex-automata",
+        "version": "0.4.19",
+        "latest_stable": "0.4.19",
+        "license": "MIT OR Apache-2.0",
+        "rust_version": "1.65",
+        "yanked": false,
+        "repository": "https://github.com/rust-lang/regex"
+      },
+      {
+        "name": "regex-syntax",
+        "version": "0.8.12",
+        "latest_stable": "0.8.12",
+        "license": "MIT OR Apache-2.0",
+        "rust_version": "1.65",
+        "yanked": false,
+        "repository": "https://github.com/rust-lang/regex"
+      },
+      {
+        "name": "webpki-roots",
+        "version": "1.0.12",
+        "latest_stable": "1.0.12",
+        "license": "CDLA-Permissive-2.0",
+        "rust_version": "1.71",
+        "yanked": false,
+        "repository": "https://github.com/rustls/webpki-roots"
+      }
+    ],
+    "deferred_newer_releases": [
+      {
+        "package": "nix",
+        "selected": "0.31.4",
+        "latest": "0.32.0",
+        "reason": "ctrlc 3.5.2 requires the 0.31 line; 0.32 changes file-descriptor APIs. Wait for a supported parent update, without forcing a fork or adapter.",
+        "owner": "f1b0-gh",
+        "revisit_trigger": "Compatible ctrlc release or next dependency review",
+        "review_by": "2026-12-05",
+        "maintenance_cost": "Review parent feature/API changes, regenerate the lock and run workspace checks."
+      },
+      {
+        "package": "jsonschema family",
+        "selected": "0.61.2",
+        "latest": "0.62.0",
+        "reason": "Keep this reviewed Dependabot update bounded. Version 0.62.0 adds schema semantics and fixes including macro/canonicalization denial-of-service paths; Lady currently uses runtime validation of the pinned 2020-12 VXDF schema with external retrieval denied and does not call those APIs. No current OSV match was returned for either family; this is not a claim that every newer fix is irrelevant.",
+        "owner": "f1b0-gh",
+        "revisit_trigger": "Next dependency review, newly applicable advisory or changed schema/API usage",
+        "review_by": "2026-12-05",
+        "maintenance_cost": "Qualify schema behavior and refusal cases, then regenerate manifests/lock and run workspace and package checks."
+      }
+    ],
+    "scope": "Workspace Cargo.lock; the maintained native Cargo lock union is reviewed separately below.",
+    "maintained_context_comparison": {
+      "scope": [
+        "Cargo.lock",
+        "crates/ladyboot/nix/bootupd-Cargo.lock",
+        "crates/ladyboot/nix/ntpd-rs-Cargo.lock"
+      ],
+      "native_input_sha256": {
+        "crates/ladyboot/nix/bootupd-Cargo.lock": "e3f72138e869e8deef2687407972d03e7e2f903803ae6a5c2adc94a81a52aae5",
+        "crates/ladyboot/nix/ntpd-rs-Cargo.lock": "02776bae7f5c32ad00762d304025d4a5c1e761fb3d529e48af5a31f3ffc8153b"
+      },
+      "before": {
+        "identities": 430,
+        "identity_version_pairs": 590,
+        "multiversion_families": 120,
+        "excess_versions": 160
+      },
+      "after": {
+        "identities": 430,
+        "identity_version_pairs": 592,
+        "multiversion_families": 122,
+        "excess_versions": 162
+      },
+      "changed_multiversion_sets": [
+        {
+          "name": "nix",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "before": [
+            "0.29.0",
+            "0.31.3"
+          ],
+          "after": [
+            "0.29.0",
+            "0.31.4"
+          ]
+        },
+        {
+          "name": "regex",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "before": [
+            "1.13.1"
+          ],
+          "after": [
+            "1.13.1",
+            "1.13.2"
+          ]
+        },
+        {
+          "name": "regex-automata",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "before": [
+            "0.4.16",
+            "0.4.18"
+          ],
+          "after": [
+            "0.4.16",
+            "0.4.19"
+          ]
+        },
+        {
+          "name": "regex-syntax",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "before": [
+            "0.8.11"
+          ],
+          "after": [
+            "0.8.11",
+            "0.8.12"
+          ]
+        }
+      ],
+      "interpretation": "The workspace counts are unchanged, but the union of these maintained Cargo locks gains two version pairs and two multiversion families. This is reviewed cross-context maintenance debt, not a reduction or an alignment-policy pass.",
+      "owner": "f1b0-gh",
+      "reason": "The workspace adopts current regex correctness fixes and the supported ctrlc/nix patch. Bootupd has its own upstream lock, parent constraints and native recipe qualification; this merge does not silently regenerate that separate build input.",
+      "maintenance_cost": "Track the old and new versions across workspace and bootupd security checks; qualify the bootupd parent and native recipe when refreshing its lock.",
+      "review_by": "2026-12-05",
+      "revisit_trigger": "Next dependency review, a relevant advisory, or the coordinated bootupd lock refresh, whichever comes first.",
+      "alignment_exception": false
+    }
   }
 }
