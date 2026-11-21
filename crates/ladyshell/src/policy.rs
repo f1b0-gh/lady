@@ -18,17 +18,17 @@ pub fn native_policy(binary: &str) -> Result<Value> {
     let suffix = binary
         .strip_prefix("/nix/store/")
         .and_then(|s| s.strip_suffix("/bin/codex"))
-        .ok_or_else(|| invalid("Chemin Codex Nix requis".into()))?;
+        .ok_or_else(|| invalid("A Codex Nix path is required".into()))?;
     let (hash, name) = suffix
         .split_once('-')
-        .ok_or_else(|| invalid("Identité Nix invalide".into()))?;
+        .ok_or_else(|| invalid("Invalid Nix identity".into()))?;
     ensure!(
         hash.len() == 32
             && hash
                 .bytes()
                 .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
             && ["ladyshell-codex", "lab-codex"].contains(&name),
-        "Chemin Codex Nix exact requis"
+        "An exact Codex Nix path is required"
     );
     Ok(
         json!({"version":1,"landlock":{"compatibility":"hard_requirement"},"process":{"run_as_user":"sandbox","run_as_group":"sandbox"},"filesystem_policy":{"include_workdir":false,"read_only":READ_ONLY,"read_write":READ_WRITE},"network_policies":{"openai_codex":{"endpoints":HOSTS.iter().map(|host|json!({"host":host,"port":443,"protocol":"rest","enforcement":"enforce","access":"full"})).collect::<Vec<_>>(),"binaries":[{"path":binary}]}}}),
@@ -37,11 +37,11 @@ pub fn native_policy(binary: &str) -> Result<Value> {
 fn strings(value: &Value) -> Result<BTreeSet<&str>> {
     value
         .as_array()
-        .ok_or_else(|| invalid("Liste de chemins requise".into()))?
+        .ok_or_else(|| invalid("A list of paths is required".into()))?
         .iter()
         .map(|v| {
             v.as_str()
-                .ok_or_else(|| invalid("Chemin texte requis".into()))
+                .ok_or_else(|| invalid("Path must be a string".into()))
         })
         .collect()
 }
@@ -50,18 +50,18 @@ pub fn validate_effective(actual: &Value, binary: &str) -> Result<()> {
     for field in ["version", "landlock", "process"] {
         ensure!(
             actual.get(field) == expected.get(field),
-            "Politique divergente : {field}"
+            "Policy mismatch: {field}"
         );
     }
     let filesystem = &actual["filesystem_policy"];
     ensure!(
         filesystem["include_workdir"] == false,
-        "include_workdir doit rester false"
+        "include_workdir must remain false"
     );
     ensure!(
         strings(&filesystem["read_write"])?
             == strings(&expected["filesystem_policy"]["read_write"])?,
-        "Accès écriture divergent"
+        "Write access mismatch"
     );
     let read = strings(&filesystem["read_only"])?;
     let required: BTreeSet<_> = READ_ONLY.iter().copied().collect();
@@ -72,34 +72,34 @@ pub fn validate_effective(actual: &Value, binary: &str) -> Result<()> {
         .collect();
     ensure!(
         required.is_subset(&read) && read.is_subset(&allowed),
-        "Accès lecture divergent"
+        "Read access mismatch"
     );
     ensure!(
         actual.get("network_middlewares").is_none_or(|v| v.is_null()
             || v.as_object().is_some_and(|m| m.is_empty())
             || v.as_array().is_some_and(|a| a.is_empty())),
-        "Middleware réseau non autorisé"
+        "Unauthorized network middleware"
     );
     let rules = actual["network_policies"]
         .as_object()
-        .ok_or_else(|| invalid("Règles réseau absentes".into()))?;
-    ensure!(rules.contains_key("openai_codex"), "Règle Codex absente");
+        .ok_or_else(|| invalid("Missing network rules".into()))?;
+    ensure!(rules.contains_key("openai_codex"), "Missing Codex rule");
     for rule in rules.values() {
         let binaries = rule["binaries"]
             .as_array()
-            .ok_or_else(|| invalid("Identité réseau absente".into()))?;
-        ensure!(!binaries.is_empty(), "Identité réseau absente");
+            .ok_or_else(|| invalid("Missing network identity".into()))?;
+        ensure!(!binaries.is_empty(), "Missing network identity");
         for value in binaries {
             ensure!(
                 *value == json!({"path":binary})
                     || *value == json!({"path":"/usr/local/bin/codex"}),
-                "Binaire réseau non autorisé"
+                "Unauthorized network binary"
             );
         }
         let endpoints = rule["endpoints"]
             .as_array()
-            .ok_or_else(|| invalid("Endpoints absents".into()))?;
-        ensure!(!endpoints.is_empty(), "Endpoints absents");
+            .ok_or_else(|| invalid("Missing endpoints".into()))?;
+        ensure!(!endpoints.is_empty(), "Missing endpoints");
         for endpoint in endpoints {
             ensure!(
                 endpoint["host"]
@@ -108,7 +108,7 @@ pub fn validate_effective(actual: &Value, binary: &str) -> Result<()> {
                     && endpoint["port"] == 443
                     && endpoint["protocol"] == "rest"
                     && endpoint["enforcement"] == "enforce",
-                "Endpoint non autorisé"
+                "Unauthorized endpoint"
             );
         }
     }

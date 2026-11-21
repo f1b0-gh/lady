@@ -49,7 +49,7 @@ pub fn collect_target(
     let name = stage
         .path()
         .file_name()
-        .ok_or_else(|| invalid("Dossier temporaire absent"))?;
+        .ok_or_else(|| invalid("Missing temporary directory"))?;
     let stage_root = files::open_child(&retained, name, true)?;
     for item in &validated {
         write_new(&stage_root, &item.relative_path, &item.bytes)?;
@@ -71,7 +71,7 @@ pub fn retain_agent(
     config::identifier(producer)?;
     validate_command(command)?;
     if bytes.len() > TRANSCRIPT_LIMIT {
-        return Err(invalid("Transcript d’agent supérieur à 4 Mio"));
+        return Err(invalid("Agent transcript exceeds 4 MiB"));
     }
     let id = format!("{producer}-transcript");
     config::identifier(&id)?;
@@ -90,7 +90,7 @@ pub fn retain_agent(
     let name = temporary
         .path()
         .file_name()
-        .ok_or_else(|| invalid("Fichier temporaire absent"))?;
+        .ok_or_else(|| invalid("Missing temporary file"))?;
     publish(&retained, name, "transcript.jsonl".as_ref())?;
     Ok(artifact)
 }
@@ -116,7 +116,7 @@ fn validate_target(
         || receipt.artifacts.len() >= 1024
     {
         return Err(invalid(
-            "Reçu de cible incompatible, divergent ou hors limites",
+            "Target receipt is incompatible, mismatched or exceeds limits",
         ));
     }
     let mut allowed = BTreeMap::from([
@@ -129,7 +129,7 @@ fn validate_target(
             || artifact.path.starts_with("execution.json/")
         {
             return Err(invalid(
-                "Identifiant ou chemin réservé au reçu d’exécution du contrôleur",
+                "ID or path reserved for the controller's execution receipt",
             ));
         }
         allowed.insert(
@@ -139,7 +139,7 @@ fn validate_target(
     }
     if receipt.artifacts.len() != allowed.len() {
         return Err(invalid(
-            "Artefacts requis manquants ou artefacts supplémentaires",
+            "Required artifacts missing or unexpected artifacts present",
         ));
     }
     let mut seen = BTreeSet::new();
@@ -149,35 +149,31 @@ fn validate_target(
         config::identifier(&entry.id)?;
         let &(path, limit) = allowed
             .get(entry.id.as_str())
-            .ok_or_else(|| invalid("Artefact non déclaré"))?;
+            .ok_or_else(|| invalid("Undeclared artifact"))?;
         if entry.path != path || !seen.insert(entry.id.clone()) {
-            return Err(invalid(
-                "Chemin d’artefact divergent ou identifiant dupliqué",
-            ));
+            return Err(invalid("Artifact path mismatch or duplicate ID"));
         }
         validate_path(&entry.path)?;
         if entry.size > limit
             || entry.size > ARTIFACT_LIMIT
             || entry.content_base64.len() as u64 != entry.size.div_ceil(3) * 4
         {
-            return Err(invalid("Taille d’artefact ou contenu encodé hors limites"));
+            return Err(invalid("Artifact size or encoded content exceeds limits"));
         }
         total = total
             .checked_add(entry.size)
-            .ok_or_else(|| invalid("Volume d’artefacts débordant"))?;
+            .ok_or_else(|| invalid("Artifact volume overflow"))?;
         if total > COLLECTION_LIMIT {
-            return Err(invalid("Volume cumulé de collecte excessif"));
+            return Err(invalid("Aggregate collection volume exceeds limit"));
         }
         let bytes = STANDARD
             .decode(&entry.content_base64)
-            .map_err(|_| invalid("Contenu base64 d’artefact invalide"))?;
+            .map_err(|_| invalid("Invalid base64 artifact content"))?;
         if bytes.len() as u64 != entry.size
             || STANDARD.encode(&bytes) != entry.content_base64
             || files::hash(&bytes) != entry.sha256
         {
-            return Err(invalid(
-                "Taille, encodage ou empreinte d’artefact divergent",
-            ));
+            return Err(invalid("Artifact size, encoding or hash mismatch"));
         }
         let id = format!("{producer}-{check_id}-{}", entry.id);
         config::identifier(&id)?;
@@ -194,9 +190,11 @@ fn validate_target(
         // size too, so many artifacts cannot amplify bounded command input.
         total = total
             .checked_add(serde_json::to_vec(&artifact)?.len() as u64)
-            .ok_or_else(|| invalid("Métadonnées de collecte débordantes"))?;
+            .ok_or_else(|| invalid("Collection metadata overflow"))?;
         if total > COLLECTION_LIMIT {
-            return Err(invalid("Collecte et métadonnées au-delà du plafond cumulé"));
+            return Err(invalid(
+                "Collection and metadata exceed the aggregate limit",
+            ));
         }
         output.push(ValidatedArtifact {
             relative_path: entry.path,
@@ -241,9 +239,9 @@ fn validate_target(
     total = total
         .checked_add(execution.size)
         .and_then(|size| size.checked_add(execution_metadata_size))
-        .ok_or_else(|| invalid("Volume du reçu d’exécution débordant"))?;
+        .ok_or_else(|| invalid("Execution receipt volume overflow"))?;
     if execution.size > ARTIFACT_LIMIT || total > COLLECTION_LIMIT {
-        return Err(invalid("Reçu d’exécution au-delà du plafond de collecte"));
+        return Err(invalid("Execution receipt exceeds collection limit"));
     }
     output.push(ValidatedArtifact {
         relative_path: "execution.json".into(),
@@ -261,7 +259,7 @@ fn validate_command(command: &[String]) -> Result<()> {
             .iter()
             .any(|argument| argument.is_empty() || argument.len() > 4096 || argument.contains('\0'))
     {
-        return Err(invalid("Commande d’artefact absente ou hors limites"));
+        return Err(invalid("Artifact command is missing or exceeds limits"));
     }
     Ok(())
 }
@@ -269,7 +267,7 @@ fn validate_command(command: &[String]) -> Result<()> {
 fn validate_path(path: &str) -> Result<()> {
     config::relative_path(path)?;
     if path.len() > 4096 || path.split('/').any(|component| component.len() > 255) {
-        return Err(invalid("Chemin d’artefact trop long"));
+        return Err(invalid("Artifact path too long"));
     }
     Ok(())
 }
@@ -286,7 +284,7 @@ fn private_directory(directory: &File) -> Result<()> {
         || metadata.mode() & 0o077 != 0
     {
         return Err(invalid(
-            "Répertoire de preuves non privé ou propriétaire divergent",
+            "Evidence directory is not private or has a different owner",
         ));
     }
     Ok(())
@@ -350,7 +348,7 @@ fn write_new(root: &File, path: &str, bytes: &[u8]) -> Result<()> {
             file.write_all(bytes)?;
             let metadata = file.metadata()?;
             if !metadata.is_file() || metadata.nlink() != 1 || metadata.mode() & 0o077 != 0 {
-                return Err(invalid("Fichier de preuve partagé ou non privé"));
+                return Err(invalid("Evidence file is shared or not private"));
             }
             file.sync_all()?;
             parent.sync_all()?;

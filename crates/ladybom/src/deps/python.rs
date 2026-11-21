@@ -37,7 +37,7 @@ pub(super) fn is_requirements_file(name: &str) -> bool {
 fn requirement(text: &str, kind: &str) -> Result<Requirement> {
     let parsed: PepRequirement<VerbatimUrl> = text
         .parse()
-        .map_err(|e| invalid(format!("Exigence PEP 508 invalide : {e}")))?;
+        .map_err(|e| invalid(format!("Invalid PEP 508 requirement: {e}")))?;
     let (constraint, source) = match parsed.version_or_url {
         Some(VersionOrUrl::VersionSpecifier(spec)) => (spec.to_string(), Value::Null),
         Some(VersionOrUrl::Url(url)) => (String::new(), Value::String(url.to_string())),
@@ -58,7 +58,7 @@ fn add_requirements(project: &mut Project, values: Option<&toml::Value>, kind: &
     if let Some(values) = values {
         let values = values
             .as_array()
-            .ok_or_else(|| invalid(format!("Liste de dépendances Python requise : {kind}")))?;
+            .ok_or_else(|| invalid(format!("Python dependency list required: {kind}")))?;
         for value in values {
             if let Some(group) = value.get("include-group").and_then(toml::Value::as_str) {
                 project.requirements.push(Requirement {
@@ -74,7 +74,7 @@ fn add_requirements(project: &mut Project, values: Option<&toml::Value>, kind: &
                 project.requirements.push(requirement(
                     value
                         .as_str()
-                        .ok_or_else(|| invalid("Exigence Python textuelle requise".into()))?,
+                        .ok_or_else(|| invalid("Python requirement must be a string".into()))?,
                     kind,
                 )?);
             }
@@ -111,7 +111,7 @@ pub(super) fn parse(
     if let Some(groups) = declared.and_then(|v| v.get("optional-dependencies")) {
         let groups = groups
             .as_table()
-            .ok_or_else(|| invalid("Table optional-dependencies requise".into()))?;
+            .ok_or_else(|| invalid("optional-dependencies table required".into()))?;
         for (extra, values) in groups {
             add_requirements(&mut project, Some(values), &format!("extra:{extra}"))?;
         }
@@ -119,7 +119,7 @@ pub(super) fn parse(
     if let Some(groups) = manifest.get("dependency-groups") {
         let groups = groups
             .as_table()
-            .ok_or_else(|| invalid("Table dependency-groups requise".into()))?;
+            .ok_or_else(|| invalid("dependency-groups table required".into()))?;
         for (group, values) in groups {
             add_requirements(&mut project, Some(values), &format!("group:{group}"))?;
         }
@@ -160,7 +160,7 @@ pub(super) fn parse(
             diagnostics,
             "dynamic_dependencies",
             name,
-            "Métadonnées dynamiques : préparation confinée nécessaire",
+            "Dynamic metadata: confined preparation required",
             true,
         );
     }
@@ -169,7 +169,7 @@ pub(super) fn parse(
             diagnostics,
             "unsupported_manifest",
             name,
-            "Métadonnées Poetry historiques non encore prises en charge",
+            "Legacy Poetry metadata is not yet supported",
             true,
         );
     }
@@ -177,7 +177,7 @@ pub(super) fn parse(
     if let Some(content) = inputs.get(&lock_name) {
         let lock = parse_toml(content)?;
         if lock.get("version").and_then(toml::Value::as_integer) != Some(1) {
-            return Err(invalid("Version uv.lock non prise en charge".into()));
+            return Err(invalid("Unsupported uv.lock version".into()));
         }
         if let Some(value) = lock.get("requires-python").and_then(toml::Value::as_str) {
             project.tool("python", value, &lock_name);
@@ -185,12 +185,12 @@ pub(super) fn parse(
         let packages = lock
             .get("package")
             .and_then(toml::Value::as_array)
-            .ok_or_else(|| invalid("Liste package absente de uv.lock".into()))?;
+            .ok_or_else(|| invalid("package list missing from uv.lock".into()))?;
         for package in packages {
             let package_name = package
                 .get("name")
                 .and_then(toml::Value::as_str)
-                .ok_or_else(|| invalid("Nom de paquet Python absent".into()))?;
+                .ok_or_else(|| invalid("Missing Python package name".into()))?;
             let version = package
                 .get("version")
                 .and_then(toml::Value::as_str)
@@ -243,7 +243,7 @@ pub(super) fn parse(
                     diagnostics,
                     "unsupported_lockfile",
                     &path,
-                    "Adaptateur de verrou non encore qualifié",
+                    "Lockfile adapter is not yet qualified",
                     true,
                 );
             }
@@ -272,7 +272,7 @@ pub(super) fn requirements(
                 diagnostics,
                 "unsupported_requirement_option",
                 name,
-                "Directive pip conservée dans la source ; résolution explicite nécessaire",
+                "Pip directive retained in source; explicit resolution required",
                 true,
             );
             continue;

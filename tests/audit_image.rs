@@ -320,7 +320,7 @@ fn image_rejects_changed_runtime_recipe_or_codex_before_builder() -> Result<(), 
         let dir = tempfile::tempdir()?;
         let (current, expected) = current(dir.path())?;
         fs::write(dir.path().join(name), b"\x7fELFmodified input\n")?;
-        rejected(dir.path(), &current, &expected, "verrou")?;
+        rejected(dir.path(), &current, &expected, "lock")?;
     }
     Ok(())
 }
@@ -333,7 +333,7 @@ fn image_rejects_source_bytes_changed_after_plan() -> Result<(), Box<dyn Error>>
         dir.path().join("project/src/main.rs"),
         "changed since audit plan\n",
     )?;
-    rejected(dir.path(), &current, &expected, "Sources modifiées")
+    rejected(dir.path(), &current, &expected, "Sources changed")
 }
 
 #[test]
@@ -350,7 +350,7 @@ fn image_rejects_audit_tool_version_conflict_before_builder() -> Result<(), Box<
         &dir.path().join("codex"),
         &dir.path().join("codex"),
     )?)?;
-    rejected(dir.path(), &current, &expected, "Conflit de toolchain")
+    rejected(dir.path(), &current, &expected, "toolchain conflict")
 }
 
 #[test]
@@ -366,7 +366,7 @@ fn image_rejects_legacy_audit_lock_before_builder() -> Result<(), Box<dyn Error>
                 && key != "audit-image.nix"
                 && key != "runtime.nix"
         });
-    rejected(dir.path(), &current, &expected, "verrou")
+    rejected(dir.path(), &current, &expected, "lock")
 }
 
 #[test]

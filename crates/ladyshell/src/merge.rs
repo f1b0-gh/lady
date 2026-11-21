@@ -32,7 +32,7 @@ pub fn merge_files(
         } else {
             return Err(Error::InvalidInput {
                 message: format!(
-                    "Conflit hôte/sandbox : {name} ; export conservé, remplacement refusé"
+                    "Host/sandbox conflict: {name}; export retained, replacement refused"
                 ),
             });
         };

@@ -42,7 +42,7 @@ impl Registry {
         let previous = last_refresh(&tx)?;
         ensure!(
             previous.as_ref().is_none_or(|r| r.registry == source),
-            "Source du catalogue différente ; utiliser une base distincte"
+            "Catalog source differs; use a separate database"
         );
         let inventory = instances::inventory_at(&source, true)?;
         let observations: Vec<Observation> =
@@ -55,7 +55,7 @@ impl Registry {
             let id = identifier(observation)?;
             ensure!(
                 seen.insert(id.clone()),
-                "Identité dupliquée dans l’inventaire ; import annulé"
+                "Duplicate identity in inventory; import canceled"
             );
             let old = get_optional(&tx, &id)?;
             let metadata = old.as_ref().map(|i| i.metadata.clone()).unwrap_or_default();
@@ -163,14 +163,14 @@ impl Registry {
         }
         ensure!(
             update.note.as_ref().is_none_or(|v| v.len() <= 4096),
-            "Note limitée à 4096 octets"
+            "Note is limited to 4096 bytes"
         );
         ensure!(
             !update
                 .remove_labels
                 .iter()
                 .any(|k| update.labels.contains_key(k)),
-            "Label à la fois ajouté et retiré"
+            "Label is both added and removed"
         );
         let mut connection = store::connect(&self.path, true, false)?;
         let tx = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
@@ -182,7 +182,7 @@ impl Registry {
         record.metadata.labels.extend(update.labels.clone());
         ensure!(
             record.metadata.labels.len() <= 32,
-            "32 labels maximum par instance"
+            "At most 32 labels are allowed per instance"
         );
         if let Some(note) = &update.note {
             record.metadata.note.clone_from(note);
@@ -211,7 +211,7 @@ impl Registry {
     pub fn history(&self, id: &str, after: i64, limit: u32) -> Result<History> {
         validate_id(id)?;
         page_limit(limit)?;
-        ensure!(after >= 0, "Curseur négatif interdit");
+        ensure!(after >= 0, "Negative cursor is not allowed");
         let connection = store::connect(&self.path, false, false)?;
         required(&connection, id)?;
         let mut statement = connection.prepare(
@@ -247,7 +247,7 @@ impl Registry {
 pub fn default_path() -> Result<PathBuf> {
     Ok(associations::registry()?
         .parent()
-        .ok_or_else(|| invalid("Dossier des associations absent".into()))?
+        .ok_or_else(|| invalid("Missing associations directory".into()))?
         .join("management/catalog.sqlite3"))
 }
 fn identifier(o: &Observation) -> Result<String> {
@@ -266,7 +266,7 @@ fn get_optional(c: &Connection, id: &str) -> Result<Option<Instance>> {
     rows.next()?.map(instance).transpose()
 }
 fn required(c: &Connection, id: &str) -> Result<Instance> {
-    get_optional(c, id)?.ok_or_else(|| invalid(format!("Instance inconnue : {id}")))
+    get_optional(c, id)?.ok_or_else(|| invalid(format!("Unknown instance: {id}")))
 }
 fn instance(row: &rusqlite::Row<'_>) -> Result<Instance> {
     Ok(Instance {
@@ -312,12 +312,12 @@ fn status_text(status: RecordedStatus) -> &'static str {
 fn now() -> Result<i64> {
     let duration = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map_err(|_| invalid("Horloge antérieure à Unix".into()))?;
-    i64::try_from(duration.as_secs()).map_err(|_| invalid("Horloge hors limites".into()))
+        .map_err(|_| invalid("Clock is earlier than the Unix epoch".into()))?;
+    i64::try_from(duration.as_secs()).map_err(|_| invalid("Clock is out of range".into()))
 }
 fn path_text(path: &Path) -> Result<&str> {
     path.to_str()
-        .ok_or_else(|| invalid("Chemin UTF-8 requis".into()))
+        .ok_or_else(|| invalid("A UTF-8 path is required".into()))
 }
 fn validate_id(id: &str) -> Result<()> {
     ensure!(
@@ -325,15 +325,12 @@ fn validate_id(id: &str) -> Result<()> {
             && id
                 .bytes()
                 .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase()),
-        "Identifiant de catalogue invalide"
+        "Invalid catalog identifier"
     );
     Ok(())
 }
 fn page_limit(limit: u32) -> Result<()> {
-    ensure!(
-        (1..=1000).contains(&limit),
-        "Limite de page requise : 1..1000"
-    );
+    ensure!((1..=1000).contains(&limit), "Page limit must be in 1..1000");
     Ok(())
 }
 fn validate_label(key: &str, value: &str) -> Result<()> {
@@ -344,7 +341,7 @@ fn validate_label(key: &str, value: &str) -> Result<()> {
                 .bytes()
                 .all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b))
             && value.len() <= 256,
-        "Label invalide : clé ASCII 1..64 (lettres, chiffres, ._-), valeur <=256 octets"
+        "Invalid label: ASCII key of 1..64 characters (letters, digits, ._-), value <=256 bytes"
     );
     Ok(())
 }

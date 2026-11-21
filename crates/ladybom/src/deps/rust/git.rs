@@ -12,9 +12,9 @@ use serde_json::Value;
 fn source_url(source: &str) -> Result<SourceId> {
     let url = source
         .strip_prefix("git+")
-        .ok_or_else(|| invalid("Source Git Cargo requise".into()))?;
+        .ok_or_else(|| invalid("Cargo Git source required".into()))?;
     let parsed = SourceId::from_url(&format!("registry+{url}"))
-        .map_err(|_| invalid("URL de source Git Cargo invalide".into()))?;
+        .map_err(|_| invalid("Invalid Cargo Git source URL".into()))?;
     let mut pairs = parsed.url().query_pairs();
     let first = pairs.next();
     ensure!(
@@ -22,7 +22,7 @@ fn source_url(source: &str) -> Result<SourceId> {
             && first.is_none_or(|(key, value)| {
                 matches!(key.as_ref(), "branch" | "ref" | "tag" | "rev") && !value.is_empty()
             }),
-        "Sélecteur de source Git Cargo ambigu ou non pris en charge"
+        "Ambiguous or unsupported Cargo Git source selector"
     );
     Ok(parsed)
 }
@@ -90,7 +90,7 @@ pub(crate) fn validate_component(component: &crate::deps::Component) -> Result<(
     {
         ensure!(
             component.metadata["source"] == component.source,
-            "Source Git divergente des métadonnées Cargo"
+            "Git source differs from Cargo metadata"
         );
         if let Some(identity) = &component.purl {
             ensure!(
@@ -101,7 +101,7 @@ pub(crate) fn validate_component(component: &crate::deps::Component) -> Result<(
                 )?
                 .as_ref()
                     == Some(identity),
-                "PURL Git divergente de la source Cargo verrouillée"
+                "Git PURL differs from the locked Cargo source"
             );
         }
     }

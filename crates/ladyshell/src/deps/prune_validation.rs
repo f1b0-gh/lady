@@ -42,14 +42,14 @@ pub fn run(directory: &Path, plan: &ValidationPlan) -> Result<ValidationReceipt>
     crate::continuous::host::execution_directory(&lock.directory)?;
     let _lease = SessionLock::acquire(&lock.directory, true)?;
     let current = state::load(&lock.directory)?.ok_or_else(|| {
-        invalid("État absent : préparer une copie isolée et appliquer son environnement".into())
+        invalid("State is missing: prepare an isolated copy and apply its environment".into())
     })?;
     crate::continuous::native::admit(&current)?;
     let config = &current["desired_inputs"]["evaluated"]["config"];
     let checks: Vec<Vec<String>> = serde_json::from_value(config["checks"].clone())?;
     ensure!(
         !checks.is_empty() && checks.len() <= 32,
-        "Entre 1 et 32 checks déclarés requis"
+        "Between 1 and 32 declared checks are required"
     );
     for command in &checks {
         ensure!(
@@ -58,7 +58,7 @@ pub fn run(directory: &Path, plan: &ValidationPlan) -> Result<ValidationReceipt>
                 && command
                     .iter()
                     .all(|a| !a.is_empty() && a.len() <= 8192 && !a.contains('\0')),
-            "Check déclaré invalide"
+            "Invalid declared check"
         );
     }
     let provider = state::text(&config["sandbox"], "provider")?;
@@ -68,7 +68,7 @@ pub fn run(directory: &Path, plan: &ValidationPlan) -> Result<ValidationReceipt>
     let exclusions = sync::exclusions(&current)?;
     ensure!(
         exclusions.iter().collect::<BTreeSet<_>>() == plan.exclusions.iter().collect(),
-        "Exclusions sandbox différentes du plan de validation"
+        "Sandbox exclusions differ from the validation plan"
     );
     let verify = || -> Result<()> {
         backend.verify_execution(&current)?;
@@ -76,14 +76,14 @@ pub fn run(directory: &Path, plan: &ValidationPlan) -> Result<ValidationReceipt>
         verify_inventory(plan, &sync::observe_inventory(&current, &backend)?).map_err(Into::into)
     };
     verify()?;
-    let mut receipt=ValidationReceipt{schema_version:1,plan_sha256:files::hash(&serde_json::to_vec(plan)?),source_sha256:files::hash(&serde_json::to_vec(&plan.expected)?),sandbox_id:state::text(&current,"sandbox_id")?.into(),policy_hash:state::text(&current,"policy_hash")?.into(),desired_hash:state::text(&current,"desired_hash")?.into(),passed:false,checks:Vec::new(),limitations:vec!["Résultat limité aux commandes/configurations déclarées ; aucune garantie pour les cibles, features ou usages non testés".into(),"Reçu lié aux sources et à la sandbox observées ; pas une signature indépendante ni une preuve d'absence d'usage".into()]};
+    let mut receipt=ValidationReceipt{schema_version:1,plan_sha256:files::hash(&serde_json::to_vec(plan)?),source_sha256:files::hash(&serde_json::to_vec(&plan.expected)?),sandbox_id:state::text(&current,"sandbox_id")?.into(),policy_hash:state::text(&current,"policy_hash")?.into(),desired_hash:state::text(&current,"desired_hash")?.into(),passed:false,checks:Vec::new(),limitations:vec!["Result is limited to declared commands/configurations; no guarantee for untested targets, features or uses".into(),"Receipt is bound to the observed sources and sandbox; not an independent signature or proof of absence of use".into()]};
     drop(lock);
     let started = Instant::now();
     for args in checks {
         verify()?;
         let remaining = Duration::from_secs(600)
             .checked_sub(started.elapsed())
-            .ok_or_else(|| invalid("Budget global de validation dépassé".into()))?;
+            .ok_or_else(|| invalid("Overall validation budget exceeded".into()))?;
         let mut command = backend.command();
         command.args([
             "sandbox",

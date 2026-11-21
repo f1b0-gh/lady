@@ -20,17 +20,17 @@ from qualify_dependency_track_extended import document_identity, external_vex
 def check_current_local_targets(vex, current):
     by_ref = {c["bom-ref"]: c for c in vex.get("components", [])}
     if len(by_ref) != len(vex.get("components", [])):
-        raise ValueError("Référence locale ambiguë")
+        raise ValueError("Ambiguous local reference")
     for finding in vex.get("vulnerabilities", []):
         for target in finding.get("affects", []):
             component = by_ref.get(target["ref"])
             if component is None or not component.get("purl"):
-                raise ValueError("Référence locale absente ou sans identité qualifiée")
+                raise ValueError("Local reference missing or lacking a qualified identity")
             matches = [c for c in current.get("components", []) if c.get("purl") == component["purl"]]
             if len(matches) != 1:
-                raise ValueError("Cible locale absente ou ambiguë dans l’inventaire courant")
+                raise ValueError("Local target missing or ambiguous in the current inventory")
             if any(matches[0].get(field) != component.get(field) for field in ("name", "version", "group")):
-                raise ValueError("Identité de cible locale divergente")
+                raise ValueError("Local target identity mismatch")
 
 
 def main():
@@ -53,7 +53,7 @@ def main():
 
     version = api.call("GET", "/api/version")
     if version.get("version") != "5.2.1":
-        raise ValueError("Version différente du consommateur qualifié")
+        raise ValueError("Version differs from the qualified consumer")
     old = read(args.inputs / "scoped-sbom.cdx.json")
     fixed = read(args.inputs / "corrected-sbom.cdx.json")
     validate(old)
@@ -61,7 +61,7 @@ def main():
     leaf1, leaf2, leaf3 = (f"pkg:npm/interop-leaf@{n}.0.0" for n in (1, 2, 3))
     fixed_purls = {c.get("purl") for c in fixed["components"]}
     if leaf1 in fixed_purls or not {leaf2, leaf3}.issubset(fixed_purls):
-        raise ValueError("Fixture corrigée différente du scénario attendu")
+        raise ValueError("Corrected fixture differs from the expected scenario")
     save("input-current-sbom.cdx.json", fixed)
     project = api.call("PUT", "/api/v1/project", {
         "name": "ladybom-inventory", "version": "synthetic-stale-only-" + uuid.uuid4().hex,
@@ -72,7 +72,7 @@ def main():
     validate(current)
     save("downloaded-current-sbom.cdx.json", current)
     if {c.get("purl") for c in current["components"]} != fixed_purls:
-        raise ValueError("Inventaire courant différent avant expérience")
+        raise ValueError("Current inventory differs before the experiment")
     advisory = api.call("PUT", "/api/v1/vulnerability", {
         "vulnId": "LADYBOM-SYNTHETIC-STALE-" + uuid.uuid4().hex, "source": "INTERNAL",
         "title": "Synthetic stale-target qualification", "severity": "LOW",
@@ -81,7 +81,7 @@ def main():
     rows = api.call("GET", f"/api/v1/component/project/{project['uuid']}?pageSize=1000")
     matched = [c for c in rows if c.get("purl") == leaf2]
     if len(matched) != 1:
-        raise ValueError("Cible affectée synthétique ambiguë")
+        raise ValueError("Ambiguous synthetic affected target")
     component = matched[0]
     api.call("POST", f"/api/v1/vulnerability/{advisory['uuid']}/component/{component['uuid']}")
     baseline = document_identity(external_vex(fixed, advisory["vulnId"], {leaf2: "exploitable"}))
@@ -93,7 +93,7 @@ def main():
     save("downloaded-before.cdx.json", before)
     key = ("INTERNAL", advisory["vulnId"], leaf2)
     if finding_states(before).get(key) != "exploitable":
-        raise ValueError("Baseline exploitable non appliquée")
+        raise ValueError("Exploitable baseline not applied")
     stale = document_identity(external_vex(old, advisory["vulnId"], {leaf1: "not_affected"}))
     validate(stale)
     save("input-stale-only-vex.cdx.json", stale)
@@ -102,7 +102,7 @@ def main():
     except ValueError as error:
         rejection = str(error)
     else:
-        raise ValueError("Le contrôle préalable n’a pas refusé la cible périmée")
+        raise ValueError("Preflight check did not reject the stale target")
     # Deliberate raw negative experiment, scoped to this new synthetic project.
     api.upload("vex", project["uuid"], stale)
     after = api.call("GET", f"/api/v1/vex/cyclonedx/project/{project['uuid']}?version=1.5")

@@ -16,7 +16,7 @@ use std::{
 
 #[derive(Debug, Subcommand)]
 pub enum ArtifactCommand {
-    /// Inspecter un artefact avec des outils natifs explicitement fiables, hors ligne.
+    /// Inspect an artifact offline using explicitly trusted native tools.
     Collect {
         #[arg(long)]
         rootfs: PathBuf,
@@ -35,7 +35,7 @@ pub enum ArtifactCommand {
         #[arg(long)]
         output: PathBuf,
     },
-    /// Exporter les preuves locales en CycloneDX sans processus ni réseau.
+    /// Export local evidence as CycloneDX without processes or network access.
     Export {
         #[arg(long)]
         evidence: PathBuf,

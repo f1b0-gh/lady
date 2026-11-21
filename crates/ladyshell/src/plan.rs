@@ -16,12 +16,12 @@ pub fn plan(desired: &Value, state: Option<&Value>, observed: &Value) -> Result<
     if let Some(state) = state {
         ensure!(
             state["context"] == desired["context"],
-            "Gateway/workspace divergent : état distinct requis"
+            "Gateway/workspace mismatch: separate state is required"
         );
         if let Some(sandbox) = sandbox {
             ensure!(
                 sandbox["id"].is_string() && sandbox["id"] == state["sandbox_id"],
-                "Identité sandbox divergente : adoption refusée"
+                "Sandbox identity mismatch: adoption refused"
             );
         }
         if state["desired_hash"] != desired_hash {
@@ -47,7 +47,7 @@ pub fn plan(desired: &Value, state: Option<&Value>, observed: &Value) -> Result<
     } else {
         ensure!(
             sandbox.is_none(),
-            "Ressource présente sans propriété enregistrée"
+            "Resource exists without recorded ownership"
         );
         actions.extend(["build_image", "create_sandbox"]);
     }
@@ -78,7 +78,7 @@ pub fn plan(desired: &Value, state: Option<&Value>, observed: &Value) -> Result<
     });
     let changed: Vec<_> = desired
         .as_object()
-        .ok_or_else(|| invalid("Entrées de plan objet requises".into()))?
+        .ok_or_else(|| invalid("Plan inputs must be an object".into()))?
         .iter()
         .filter(|(key, value)| {
             state.is_none_or(|s| s.get("desired_inputs").and_then(|v| v.get(*key)) != Some(*value))
@@ -96,10 +96,10 @@ pub fn verify(
     observed: &Value,
 ) -> Result<()> {
     let current = plan(desired, state, observed)?;
-    ensure!(*saved == current, "Plan périmé : refaire plan avant apply");
+    ensure!(*saved == current, "Stale plan: run plan again before apply");
     ensure!(
         current["blocked"] == false,
-        "Plan bloqué : examiner actions et dependency_scan"
+        "Plan blocked: inspect actions and dependency_scan"
     );
     Ok(())
 }

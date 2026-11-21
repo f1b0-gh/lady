@@ -47,22 +47,22 @@ impl RemovalRequest {
         graph.validate()?;
         ensure!(
             self.schema_version == 1 && self.graph_sha256 == graph_digest(graph)?,
-            "Demande de retrait périmée ou version inconnue"
+            "Stale removal request or unknown version"
         );
         ensure!(
             (1..=256).contains(&self.max_depth),
-            "Profondeur requise entre 1 et 256"
+            "Depth must be between 1 and 256"
         );
         ensure!(
             !self.remove_roots.is_empty() && self.remove_roots.len() <= MAX_EDGES,
-            "Retraits explicites requis (maximum 500000)"
+            "Explicit removals required (maximum 500000)"
         );
         ensure!(
             self.filter
                 .graphs
                 .iter()
                 .all(|g| graph.contexts.contains_key(g)),
-            "Contexte de filtre absent"
+            "Missing filter context"
         );
         for manifest in &self.retained_manifests {
             crate::config::relative_path(manifest)?;
@@ -72,7 +72,7 @@ impl RemovalRequest {
                     .projects
                     .iter()
                     .any(|p| &p.manifest == manifest),
-                "Projet conservé absent : {manifest}"
+                "Retained project missing: {manifest}"
             );
         }
         let catalog: BTreeMap<_, _> = root_catalog(graph)?
@@ -87,17 +87,17 @@ impl RemovalRequest {
         }
         let mut seen = BTreeSet::new();
         for id in &self.remove_roots {
-            ensure!(seen.insert(id), "Retrait dupliqué");
+            ensure!(seen.insert(id), "Duplicate removal");
             let root = catalog
                 .get(id)
-                .ok_or_else(|| invalid("Déclaration de retrait inconnue".into()))?;
+                .ok_or_else(|| invalid("Unknown removal declaration".into()))?;
             ensure!(
                 self.includes_root(root),
-                "Déclaration exclue du périmètre conservé"
+                "Declaration excluded from the retained scope"
             );
             ensure!(
                 counts.get(id) == Some(&1),
-                "Déclarations identiques ambiguës : retrait individuel impossible"
+                "Ambiguous identical declarations: individual removal is not possible"
             );
         }
         Ok(())
@@ -197,19 +197,16 @@ impl Ladybug {
          -> Result<BTreeMap<NodeRef, Vec<NodeRef>>> {
             let rows = value
                 .as_array()
-                .ok_or_else(|| invalid("Liste de résultats de retrait requise".into()))?;
-            ensure!(
-                rows.len() <= keys.len(),
-                "Cardinalité de retrait incohérente"
-            );
+                .ok_or_else(|| invalid("Removal result list required".into()))?;
+            ensure!(rows.len() <= keys.len(), "Inconsistent removal cardinality");
             let lookup = |value: &Value| -> Result<NodeRef> {
                 keys.get(
                     value
                         .as_str()
-                        .ok_or_else(|| invalid("Identifiant de retrait absent".into()))?,
+                        .ok_or_else(|| invalid("Missing removal identifier".into()))?,
                 )
                 .cloned()
-                .ok_or_else(|| invalid("Composant de retrait inconnu".into()))
+                .ok_or_else(|| invalid("Unknown removal component".into()))
             };
             let mut result = BTreeMap::new();
             let mut seen = BTreeSet::new();
@@ -217,29 +214,29 @@ impl Ladybug {
                 let node = lookup(&row["id"])?;
                 let distance = row["distance"]
                     .as_u64()
-                    .ok_or_else(|| invalid("Distance de retrait absente".into()))?;
+                    .ok_or_else(|| invalid("Missing removal distance".into()))?;
                 ensure!(
                     (1..=u64::from(depth)).contains(&distance) && seen.insert(node.clone()),
-                    "Distance ou doublon de retrait invalide"
+                    "Invalid removal distance or duplicate"
                 );
                 let raw = row["path"]
                     .as_array()
-                    .ok_or_else(|| invalid("Chemin de retrait absent".into()))?;
+                    .ok_or_else(|| invalid("Missing removal path".into()))?;
                 ensure!(
                     raw.len() == distance as usize + 1
                         && raw.first().and_then(Value::as_str) == Some(seed),
-                    "Chemin de retrait incohérent"
+                    "Inconsistent removal path"
                 );
                 let path: Vec<_> = raw.iter().skip(1).map(lookup).collect::<Result<_>>()?;
                 ensure!(
                     path.last() == Some(&node)
                         && roots.iter().any(|r| Some(&r.root.to) == path.first()),
-                    "Chemin de retrait sans racine conservée"
+                    "Removal path has no retained root"
                 );
                 for pair in path.windows(2) {
                     ensure!(
                         adjacency.contains(&(&pair[0], &pair[1])),
-                        "Chemin de retrait hors graphe"
+                        "Removal path outside the graph"
                     );
                 }
                 if distance > u64::from(request.max_depth) + 1 {
@@ -294,15 +291,13 @@ impl Ladybug {
         }
         let mut limitations = graph.limitations.clone();
         if !graph.inventory.complete {
-            limitations.push("Inventaire source partiel".into());
+            limitations.push("Partial source inventory".into());
         }
         if truncated {
-            limitations.push("Parcours tronqué : aucun gain de composants affirmé".into());
+            limitations.push("Truncated traversal: no component reduction claimed".into());
         }
-        limitations.push(
-            "Simulation du graphe statique ; aucun retrait de manifest ni test projet exécuté"
-                .into(),
-        );
+        limitations
+            .push("Static graph simulation; no manifest removal or project tests performed".into());
         Ok(RemovalAnalysis {
             engine: format!("ladybugdb/{ENGINE_VERSION}"),
             request: request.clone(),

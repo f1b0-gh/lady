@@ -96,7 +96,7 @@ fn archived_candidates_cannot_disappear_when_coverage_is_reassigned() -> Result<
     close_run(root)?;
     let result = command(&["verify"], root)?;
     assert!(!result.status.success(), "orphan accepted: {:?}", result);
-    assert!(String::from_utf8(result.stderr)?.contains("Candidat sans disposition"));
+    assert!(String::from_utf8(result.stderr)?.contains("Candidate without disposition"));
     Ok(())
 }
 

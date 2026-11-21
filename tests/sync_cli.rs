@@ -9,7 +9,7 @@ fn sync_dispatches_and_accepts_preview_and_apply() -> Result<(), Box<dyn std::er
             .arg(flag)
             .output()?;
         let error = String::from_utf8(output.stderr)?;
-        assert!(error.contains("État absent"), "{error}");
+        assert!(error.contains("State is missing"), "{error}");
     }
     Ok(())
 }
@@ -46,7 +46,7 @@ fn missing_association_refuses_before_contacting_backend() -> Result<(), Box<dyn
         .env("PATH", "")
         .output()?;
     assert_eq!(output.status.code(), Some(2));
-    assert!(String::from_utf8(output.stderr)?.contains("Aucune sandbox associée"));
+    assert!(String::from_utf8(output.stderr)?.contains("No sandbox is associated"));
     Ok(())
 }
 #[test]

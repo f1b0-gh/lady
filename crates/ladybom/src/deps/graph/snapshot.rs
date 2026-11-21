@@ -42,7 +42,7 @@ const EDGE_COLUMNS: &[&str] = &[
     "evidence",
 ];
 fn parquet_error(e: impl std::fmt::Display) -> crate::error::Error {
-    invalid(format!("Parquet invalide : {e}"))
+    invalid(format!("Invalid Parquet: {e}"))
 }
 
 pub(super) fn write_table(path: &Path, columns: &[&str], rows: &[Vec<String>]) -> Result<()> {
@@ -63,7 +63,7 @@ pub(super) fn write_table(path: &Path, columns: &[&str], rows: &[Vec<String>]) -
             let mut column = group
                 .next_column()
                 .map_err(parquet_error)?
-                .ok_or_else(|| invalid("Colonne Parquet absente".into()))?;
+                .ok_or_else(|| invalid("Missing Parquet column".into()))?;
             let values: Vec<ByteArray> = chunk
                 .iter()
                 .map(|row| ByteArray::from(row[i].as_str()))
@@ -85,12 +85,12 @@ fn read_table(bytes: Vec<u8>, columns: &[&str], limit: usize) -> Result<Vec<Vec<
     ensure!(
         meta.file_metadata().num_rows() >= 0
             && meta.file_metadata().num_rows() as u64 <= limit as u64,
-        "Trop de lignes Parquet"
+        "Too many Parquet rows"
     );
     let schema = meta.file_metadata().schema_descr();
     ensure!(
         schema.num_columns() == columns.len(),
-        "Schéma Parquet divergent"
+        "Parquet schema mismatch"
     );
     for (i, name) in columns.iter().enumerate() {
         let col = schema.column(i);
@@ -104,20 +104,20 @@ fn read_table(bytes: Vec<u8>, columns: &[&str], limit: usize) -> Result<Vec<Vec<
     }
     let mut decoded_bytes = 0u64;
     for group in meta.row_groups() {
-        ensure!(group.total_byte_size() >= 0, "Taille Parquet négative");
+        ensure!(group.total_byte_size() >= 0, "Negative Parquet size");
         decoded_bytes = decoded_bytes
             .checked_add(group.total_byte_size() as u64)
             .ok_or_else(|| invalid("Taille Parquet excessive".into()))?;
         for col in group.columns() {
             ensure!(
                 col.compression() == parquet::basic::Compression::UNCOMPRESSED,
-                "Compression Parquet non prise en charge par ce schéma"
+                "Parquet compression is not supported by this schema"
             );
         }
     }
     ensure!(
         decoded_bytes <= MAX_BYTES as u64,
-        "Parquet décodé supérieur à 128 Mio"
+        "Decoded Parquet exceeds 128 MiB"
     );
     let mut rows = Vec::new();
     let mut size = 0usize;
@@ -127,11 +127,11 @@ fn read_table(bytes: Vec<u8>, columns: &[&str], limit: usize) -> Result<Vec<Vec<
         for i in 0..columns.len() {
             let value = row.get_string(i).map_err(parquet_error)?.clone();
             size = size.saturating_add(value.len());
-            ensure!(size <= MAX_BYTES, "Données Parquet trop volumineuses");
+            ensure!(size <= MAX_BYTES, "Parquet data too large");
             values.push(value);
         }
         rows.push(values);
-        ensure!(rows.len() <= limit, "Limite de lignes Parquet dépassée");
+        ensure!(rows.len() <= limit, "Parquet row limit exceeded");
     }
     Ok(rows)
 }
@@ -143,11 +143,11 @@ pub fn write_snapshot(graph: &Graph, destination: &Path) -> Result<()> {
     let absolute = files::absolute(destination)?;
     let parent = absolute
         .parent()
-        .ok_or_else(|| invalid("Parent absent".into()))?;
+        .ok_or_else(|| invalid("Missing parent".into()))?;
     let directory = files::open_directory(parent)?;
     let name = absolute
         .file_name()
-        .ok_or_else(|| invalid("Nom absent".into()))?;
+        .ok_or_else(|| invalid("Missing name".into()))?;
     let staging = tempfile::Builder::new()
         .prefix(".ladybom-graph-")
         .tempdir_in(format!("/proc/self/fd/{}", directory.as_raw_fd()))?;
@@ -207,7 +207,7 @@ pub fn write_snapshot(graph: &Graph, destination: &Path) -> Result<()> {
     for path in paths {
         let bytes = fs::read(staging.path().join(&path))?;
         total = total.saturating_add(bytes.len());
-        ensure!(total <= MAX_BYTES, "Snapshot supérieur à 128 Mio");
+        ensure!(total <= MAX_BYTES, "Snapshot exceeds 128 MiB");
         File::open(staging.path().join(&path))?.sync_all()?;
         records.insert(
             path,
@@ -234,7 +234,7 @@ pub fn write_snapshot(graph: &Graph, destination: &Path) -> Result<()> {
         staging
             .path()
             .file_name()
-            .ok_or_else(|| invalid("Nom temporaire absent".into()))?
+            .ok_or_else(|| invalid("Missing temporary name".into()))?
             .as_encoded_bytes(),
     )?;
     let target = CString::new(name.as_encoded_bytes())?;
@@ -265,7 +265,7 @@ fn read_at(root: &File, path: &str, limit: usize) -> Result<Vec<u8>> {
         }
         directory = file;
     }
-    Err(invalid("Chemin vide".into()))
+    Err(invalid("Empty path".into()))
 }
 pub fn read_snapshot(path: &Path) -> Result<Graph> {
     let directory = files::open_directory(path)?;
@@ -276,43 +276,43 @@ pub fn read_snapshot(path: &Path) -> Result<Graph> {
             && manifest.components <= MAX_COMPONENTS
             && manifest.dependencies <= MAX_EDGES
             && manifest.files.len() <= MAX_CONTEXTS * 3 + 1,
-        "Manifest de snapshot hors limites"
+        "Snapshot manifest out of bounds"
     );
     let mut all = BTreeMap::new();
     let mut total = 0usize;
     for (path, record) in &manifest.files {
         total = total.saturating_add(record.bytes);
-        ensure!(total <= MAX_BYTES, "Snapshot supérieur à 128 Mio");
+        ensure!(total <= MAX_BYTES, "Snapshot exceeds 128 MiB");
         let bytes = read_at(&directory, path, record.bytes)?;
         ensure!(
             bytes.len() == record.bytes && files::hash(&bytes) == record.sha256,
-            "Empreinte divergente : {path}"
+            "Digest mismatch : {path}"
         );
         all.insert(path.clone(), bytes);
     }
     let mut graph: Graph = serde_json::from_slice(
         &all.remove("inventory.json")
-            .ok_or_else(|| invalid("Inventaire absent".into()))?,
+            .ok_or_else(|| invalid("Missing inventory".into()))?,
     )?;
     ensure!(
         graph.components.is_empty()
             && graph.dependencies.is_empty()
             && graph.contexts.len() <= MAX_CONTEXTS,
-        "Entête de snapshot invalide"
+        "Invalid snapshot header"
     );
     for (path, context) in &graph.contexts {
-        ensure!(*path == context.path()?, "Contexte invalide");
+        ensure!(*path == context.path()?, "Invalid context");
         let bytes = all
             .remove(&format!("{path}/context.json"))
-            .ok_or_else(|| invalid("Contexte absent".into()))?;
+            .ok_or_else(|| invalid("Missing context".into()))?;
         let actual: Context = serde_json::from_slice(&bytes)?;
         ensure!(
             serde_json::to_value(&actual)? == serde_json::to_value(context)?,
-            "Métadonnées de contexte divergentes"
+            "Context metadata mismatch"
         );
         let nodes = all
             .remove(&format!("{path}/components.parquet"))
-            .ok_or_else(|| invalid("Composants absents".into()))?;
+            .ok_or_else(|| invalid("Missing components".into()))?;
         for row in read_table(
             nodes,
             NODE_COLUMNS,
@@ -328,7 +328,7 @@ pub fn read_snapshot(path: &Path) -> Result<Graph> {
         }
         let edges = all
             .remove(&format!("{path}/dependencies.parquet"))
-            .ok_or_else(|| invalid("Relations absentes".into()))?;
+            .ok_or_else(|| invalid("Missing relationships".into()))?;
         for row in read_table(
             edges,
             EDGE_COLUMNS,
@@ -355,12 +355,12 @@ pub fn read_snapshot(path: &Path) -> Result<Graph> {
         all.is_empty()
             && graph.components.len() == manifest.components
             && graph.dependencies.len() == manifest.dependencies,
-        "Cardinalités ou fichiers divergents"
+        "Cardinality or file mismatch"
     );
     graph.validate()?;
     ensure!(
         files::hash(&serde_json::to_vec(&graph)?) == manifest.logical_sha256,
-        "Identité logique divergente"
+        "Logical identity mismatch"
     );
     Ok(graph)
 }

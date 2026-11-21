@@ -15,7 +15,7 @@ use std::{
 
 #[derive(Debug, Args)]
 pub struct VxdfScopeArgs {
-    /// Document VXDF original, pas le reçu d’import.
+    /// Original VXDF document, not the import receipt.
     #[arg(long)]
     input: PathBuf,
     #[arg(long)]
@@ -35,38 +35,38 @@ pub struct VxdfScopeArgs {
 }
 #[derive(Debug, Subcommand)]
 pub enum VxdfCommand {
-    /// Archiver un VXDF local conforme au schéma épinglé ; aucune qualification.
+    /// Archive a local VXDF matching the pinned schema; does not establish qualification.
     Import {
         #[arg(long)]
         input: PathBuf,
-        /// Archive contenant le document original, potentiellement sensible.
+        /// Archive containing the potentially sensitive original document.
         #[arg(long)]
         output: PathBuf,
     },
-    /// Corréler les assertions au périmètre exact ; aucune décision VEX ou qualification.
+    /// Correlate assertions with the exact scope; no VEX decision or qualification.
     Correlate {
         #[command(flatten)]
         scope: VxdfScopeArgs,
         #[arg(long)]
         output: Option<PathBuf>,
     },
-    /// Préparer une revue distincte non approuvée ; les conclusions restent à rédiger.
+    /// Prepare a separate unapproved review; conclusions must still be written.
     ReviewTemplate {
         #[command(flatten)]
         scope: VxdfScopeArgs,
         #[arg(long)]
         output: PathBuf,
     },
-    /// Exporter un VXDF public après acceptation explicite d’une revue humaine.
+    /// Export a public VXDF after explicit acceptance of a human review.
     Export {
         #[command(flatten)]
         scope: VxdfScopeArgs,
         #[arg(long)]
         review: PathBuf,
-        /// Empreinte obtenue et approuvée indépendamment du VXDF et du reçu importés.
+        /// Digest obtained and approved independently of the imported VXDF and receipt.
         #[arg(long)]
         review_sha256: String,
-        /// Identité de revue attendue ; assertion opérateur, sans vérification cryptographique.
+        /// Expected reviewer identity; an operator assertion without cryptographic verification.
         #[arg(long)]
         reviewer: String,
         #[arg(long)]

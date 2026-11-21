@@ -11,7 +11,7 @@ fn sessions_reach_state_validation_and_remote_auth_is_callable(
             .output()?;
         assert!(!output.status.success());
         assert!(
-            String::from_utf8_lossy(&output.stderr).contains("État absent"),
+            String::from_utf8_lossy(&output.stderr).contains("State is missing"),
             "{output:?}"
         );
     }
@@ -55,7 +55,7 @@ fn apply_reaches_input_validation() -> Result<(), Box<dyn std::error::Error>> {
         .output()?;
     assert!(!output.status.success());
     assert!(
-        String::from_utf8_lossy(&output.stderr).contains("hors du projet"),
+        String::from_utf8_lossy(&output.stderr).contains("outside the project"),
         "{output:?}"
     );
     Ok(())

@@ -5,13 +5,13 @@ use std::{path::PathBuf, time::Duration};
 pub struct AlignmentArgs {
     #[arg(long)]
     snapshot: PathBuf,
-    /// Exiger alignement, pins exacts et couverture complète (sinon code 2).
+    /// Require alignment, exact pins and complete coverage (otherwise exit 2).
     #[arg(long)]
     check: bool,
-    /// Chemin absolu du CLI LadybugDB 0.17.1 pour expliquer les occurrences.
+    /// Absolute path to the LadybugDB 0.17.1 CLI for explaining occurrences.
     #[arg(long)]
     engine: Option<PathBuf>,
-    /// PURL canonique sans version à expliquer ; sinon, seuls les doublons.
+    /// Canonical unversioned PURL to explain; otherwise, explain duplicates only.
     #[arg(long, requires = "engine")]
     package: Option<String>,
     #[arg(long, default_value_t = 8)]
@@ -20,7 +20,7 @@ pub struct AlignmentArgs {
     max_results: usize,
     #[arg(long, default_value_t = 16)]
     depth: u32,
-    /// Budget total des parcours natifs (1 à 300 secondes).
+    /// Total native traversal budget (1 to 300 seconds).
     #[arg(long, default_value_t = 60)]
     timeout_secs: u64,
 }

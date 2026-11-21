@@ -26,10 +26,10 @@ def main():
     def run(*arguments, code=0):
         result = subprocess.run([str(executable), *map(str, arguments)], capture_output=True, timeout=30)
         if result.returncode != code:
-            raise ValueError(f"Ladybom : code {result.returncode}, attendu {code}: {result.stderr.decode()}")
+            raise ValueError(f"Ladybom: exit code {result.returncode}, expected {code}: {result.stderr.decode()}")
         if code != 0:
             if result.stdout:
-                raise ValueError("Refus attendu sans document partiel sur stdout")
+                raise ValueError("Expected refusal without a partial document on stdout")
             refusals.append({"arguments": list(map(str, arguments)), "exit_code": code,
                              "diagnostic": result.stderr.decode()})
         return result.stdout
@@ -75,7 +75,7 @@ def main():
     assessment = json.loads(run("vuln", "assess", *inputs, "--as-of", DATE))
     write("scoped-assessment.json", assessment)
     if len(assessment["findings"]) != 2:
-        raise ValueError("Deux findings synthétiques attendus")
+        raise ValueError("Two synthetic findings expected")
     for state in ["in_triage", "exploitable", "not_affected", "false_positive", "resolved"]:
         decisions = []
         for finding in assessment["findings"]:
@@ -110,7 +110,7 @@ def main():
     corrected_assessment = json.loads(run("vuln", "assess", *corrected_inputs, "--as-of", DATE))
     write("corrected-assessment.json", corrected_assessment)
     if [finding["version"] for finding in corrected_assessment["findings"]] != ["2.0.0"]:
-        raise ValueError("Le composant corrigé 3.0.0 ne doit plus matcher l’avis synthétique")
+        raise ValueError("Corrected component 3.0.0 must no longer match the synthetic advisory")
     run("vuln", "vex", *corrected_inputs, "--as-of", DATE, "--profile", "local-components",
         "--decisions", output / "decisions-not_affected.json", code=2)
     run("vuln", "vex", "--report", output / "duplicate-report.json", "--snapshot", output / "internal-snapshot.json",
@@ -125,7 +125,7 @@ def main():
         value = read(path)
         check.validate(value)
         references(value)
-    print(f"Fixtures synthétiques préparées et validées : {output}")
+    print(f"Synthetic fixtures prepared and validated: {output}")
 
 
 if __name__ == "__main__":

@@ -100,7 +100,7 @@ fn input_hashes(snapshot: &sources::Snapshot) -> Result<BTreeMap<String, String>
     ] {
         ensure!(
             snapshot.contains_key(name),
-            "Ressource bootc requise : {name}"
+            "Required bootc resource: {name}"
         );
     }
     snapshot
@@ -130,7 +130,7 @@ pub fn check(request: &ArtifactRequest) -> Result<ArtifactLock> {
         &source_spec(),
         None,
     )?)?;
-    ensure!(before == after, "Ressources modifiées pendant l’évaluation");
+    ensure!(before == after, "Resources changed during evaluation");
     crate::profile::validate(&evaluated.value)?;
     Ok(ArtifactLock {
         schema_version: 1,
@@ -157,11 +157,11 @@ pub fn lock(request: &ArtifactRequest, destination: &Path, replace: bool) -> Res
 pub fn verify_lock(expected: &ArtifactLock, actual: &ArtifactLock) -> Result<()> {
     ensure!(
         expected.schema_version == 1 && expected.profile == "bootc",
-        "Version/profil du verrou non supporté"
+        "Unsupported lock version or profile"
     );
     ensure!(
         expected == actual,
-        "Verrou artefact divergent : examiner puis exécuter artifact lock explicitement"
+        "Artifact lock differs: review it, then explicitly run ladyboot lock"
     );
     Ok(())
 }
@@ -184,19 +184,19 @@ pub fn plan(request: &ArtifactRequest, lock: &Path, target: Target) -> Result<Va
 fn store_path(path: &Path) -> Result<()> {
     ensure!(
         path.starts_with("/nix/store") && path.components().count() == 4 && path.is_absolute(),
-        "Chemin store Nix attendu"
+        "Expected Nix store path"
     );
     let name = path
         .file_name()
         .and_then(|v| v.to_str())
-        .ok_or_else(|| invalid("Nom store invalide".into()))?;
+        .ok_or_else(|| invalid("Invalid store name".into()))?;
     ensure!(
         name.len() > 33
             && name.as_bytes()[32] == b'-'
             && name
                 .bytes()
                 .all(|c| c.is_ascii_alphanumeric() || b"+-._?=".contains(&c)),
-        "Nom store invalide"
+        "Invalid store name"
     );
     Ok(())
 }
@@ -216,11 +216,11 @@ fn identity(path: &Path) -> Result<String> {
     let value = json::parse(&capture(command, Duration::from_secs(60), 1024 * 1024)?)?;
     let key = path
         .to_str()
-        .ok_or_else(|| invalid("Chemin non UTF-8".into()))?;
+        .ok_or_else(|| invalid("Non-UTF-8 path".into()))?;
     value[key]["narHash"]
         .as_str()
         .map(String::from)
-        .ok_or_else(|| invalid("Identité NAR absente".into()))
+        .ok_or_else(|| invalid("Missing NAR identity".into()))
 }
 pub fn build(request: &ArtifactRequest, lock: &Path, target: Target) -> Result<BuildReceipt> {
     let inputs = selected(request, lock)?;
@@ -230,7 +230,7 @@ pub fn build(request: &ArtifactRequest, lock: &Path, target: Target) -> Result<B
     let snapshot = sources::snapshot(&request.resources, &source_spec(), Some(&recipes))?;
     ensure!(
         input_hashes(&snapshot)? == inputs.inputs_sha256,
-        "Recettes modifiées depuis vérification"
+        "Recipes changed since verification"
     );
     let config = temporary.path().join("profile.json");
     publish(&config, &inputs.configuration, false)?;
@@ -294,12 +294,12 @@ fn realize(recipes: &Path, config: &Path, target: Target) -> Result<PathBuf> {
     )?)?;
     let rows = value
         .as_array()
-        .ok_or_else(|| invalid("Résultat build Nix invalide".into()))?;
-    ensure!(rows.len() == 1, "Une sortie Nix requise");
+        .ok_or_else(|| invalid("Invalid Nix build result".into()))?;
+    ensure!(rows.len() == 1, "Exactly one Nix output required");
     let path = rows
         .first()
         .and_then(|row| row["outputs"]["out"].as_str())
-        .ok_or_else(|| invalid("Sortie Nix absente".into()))?;
+        .ok_or_else(|| invalid("Missing Nix output".into()))?;
     let store_path = PathBuf::from(path);
     Ok(store_path)
 }
@@ -310,11 +310,11 @@ pub fn test(request: &ArtifactRequest, lock: &Path) -> Result<BuildReceipt> {
 pub fn inspect(path: &Path) -> Result<Value> {
     let receipt: BuildReceipt =
         serde_json::from_value(json::parse(&files::read_limited(path, 8 * 1024 * 1024)?)?)?;
-    ensure!(receipt.schema_version == 1, "Version de reçu non supportée");
+    ensure!(receipt.schema_version == 1, "Unsupported receipt version");
     verify_lock(&receipt.inputs, &receipt.inputs)?;
     ensure!(
         identity(&receipt.store_path)? == receipt.nar_hash,
-        "Identité du store divergente du reçu"
+        "Store identity differs from receipt"
     );
     let observed = if matches!(receipt.target, Target::Rootfs | Target::BootcImage) {
         let rootfs = receipt

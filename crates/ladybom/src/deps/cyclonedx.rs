@@ -62,12 +62,12 @@ pub fn component_reference(project: &Project, component: &InventoryComponent) ->
 pub fn serial_from_digest(digest: &str) -> Result<String> {
     ensure!(
         digest.len() == 64 && digest.bytes().all(|b| b.is_ascii_hexdigit()),
-        "Empreinte de document invalide"
+        "Invalid document digest"
     );
     let mut hex = digest[..32].to_ascii_lowercase().into_bytes();
     hex[12] = b'8';
     let variant = u8::from_str_radix(&digest[16..17], 16)
-        .map_err(|_| invalid("Empreinte de document invalide".into()))?;
+        .map_err(|_| invalid("Invalid document digest".into()))?;
     hex[16] = b"0123456789abcdef"[usize::from((variant & 3) | 8)];
     let hex = String::from_utf8(hex)?;
     Ok(format!(
@@ -101,7 +101,7 @@ fn unsigned_serial(bom: &Bom) -> Result<String> {
 fn json_error(error: JsonWriteError) -> Error {
     match error {
         JsonWriteError::JsonElementWriteError { error } => Error::Json(error),
-        other => invalid(format!("Sérialisation CycloneDX impossible : {other}")),
+        other => invalid(format!("Cannot serialize CycloneDX: {other}")),
     }
 }
 
@@ -120,7 +120,7 @@ pub fn from_report_with_profile(report: &Report, profile: ExportProfile) -> Resu
     let mut bom = unsigned_report(report, profile)?;
     bom.serial_number = Some(
         UrnUuid::new(unsigned_serial(&bom)?)
-            .map_err(|error| invalid(format!("Identité CycloneDX invalide : {error:?}")))?,
+            .map_err(|error| invalid(format!("Invalid CycloneDX identity: {error:?}")))?,
     );
     Ok(bom)
 }
@@ -171,7 +171,7 @@ fn unsigned_report(report: &Report, profile: ExportProfile) -> Result<Bom> {
                 dependencies: Vec::new(),
                 roots: Vec::new(),
                 limitations: vec![format!(
-                    "Projection du graphe indisponible ; relations inconnues : {error}"
+                    "Graph projection unavailable; relationships unknown: {error}"
                 )],
             },
             BTreeMap::new(),
@@ -188,11 +188,11 @@ fn unsigned_report(report: &Report, profile: ExportProfile) -> Result<Bom> {
         .map(|(key, (manifest, index))| {
             let project = owners
                 .get(manifest.as_str())
-                .ok_or_else(|| invalid("Provenance du graphe absente".into()))?;
+                .ok_or_else(|| invalid("Missing graph provenance".into()))?;
             let component = project
                 .components
                 .get(*index)
-                .ok_or_else(|| invalid("Composant du graphe absent".into()))?;
+                .ok_or_else(|| invalid("Missing graph component".into()))?;
             Ok((key.clone(), component_reference(project, component)?))
         })
         .collect::<Result<_>>()?;
@@ -214,7 +214,7 @@ fn unsigned_report(report: &Report, profile: ExportProfile) -> Result<Bom> {
     for declared in &graph.roots {
         let target = references
             .get(&declared.to)
-            .ok_or_else(|| invalid("Référence racine CycloneDX absente".into()))?;
+            .ok_or_else(|| invalid("Missing CycloneDX root reference".into()))?;
         dependencies
             .entry(root_reference.into())
             .or_default()
@@ -228,10 +228,10 @@ fn unsigned_report(report: &Report, profile: ExportProfile) -> Result<Bom> {
     for edge in &graph.dependencies {
         let from = references
             .get(&edge.from)
-            .ok_or_else(|| invalid("Origine CycloneDX absente".into()))?;
+            .ok_or_else(|| invalid("Missing CycloneDX origin".into()))?;
         let to = references
             .get(&edge.to)
-            .ok_or_else(|| invalid("Cible CycloneDX absente".into()))?;
+            .ok_or_else(|| invalid("Missing CycloneDX target".into()))?;
         dependencies
             .entry(from.clone())
             .or_default()
@@ -343,7 +343,7 @@ fn unsigned_report(report: &Report, profile: ExportProfile) -> Result<Bom> {
     let validation = bom.validate_version(SpecVersion::V1_5);
     ensure!(
         validation.passed(),
-        "Export CycloneDX invalide : {validation:?}"
+        "Invalid CycloneDX export: {validation:?}"
     );
     Ok(bom)
 }
@@ -366,14 +366,14 @@ fn convert_component(
     ] {
         ensure!(
             !value.contains(['\r', '\n', '\t']),
-            "Champ CycloneDX {field} non normalisé : retour à la ligne ou tabulation"
+            "Unnormalized CycloneDX field {field}: newline or tab"
         );
     }
     if profile == ExportProfile::Public {
         ensure!(
             !source.name.is_empty() && source.name.bytes().all(|c| c.is_ascii_alphanumeric() || b"._-/@".contains(&c))
                 && source.version.bytes().all(|c| c.is_ascii_alphanumeric() || b"._-+!".contains(&c)),
-            "Identité de composant non publiable ; utiliser le profil privé sans réécrire son identité"
+            "Component identity cannot be published; use the private profile without rewriting its identity"
         );
     }
     let mut component = Component::new(
@@ -387,7 +387,7 @@ fn convert_component(
     }
     if let Some(purl) = &source.purl {
         purl.parse::<packageurl::PackageUrl>().map_err(|_| {
-            invalid("PURL native invalide même si omise de la projection publique".into())
+            invalid("Invalid native PURL, even when omitted from the public projection".into())
         })?;
     }
     component.purl = source
@@ -400,7 +400,7 @@ fn convert_component(
         })
         .map(|purl| {
             purl.parse()
-                .map_err(|_| invalid("PURL CycloneDX invalide".into()))
+                .map_err(|_| invalid("Invalid CycloneDX PURL".into()))
         })
         .transpose()?;
     let mut distributions = Vec::new();

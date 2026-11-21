@@ -124,6 +124,6 @@ fn old_report_versions_require_explicit_regeneration() -> TestResult {
         .admit(Some(&f.report))
         .err()
         .ok_or("old report accepted")?;
-    assert!(error.to_string().contains("régénérer"), "{error}");
+    assert!(error.to_string().contains("regenerate"), "{error}");
     Ok(())
 }

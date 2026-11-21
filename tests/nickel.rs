@@ -72,15 +72,15 @@ fn refuses_external_import_and_symlink_ancestors() -> Result<(), Box<dyn std::er
         &entry,
         format!(
             "import {}",
-            serde_json::to_string(outside.to_str().ok_or("Chemin non UTF-8")?)?
+            serde_json::to_string(outside.to_str().ok_or("Non-UTF-8 path")?)?
         ),
     )?;
     let error = evaluate(&entry, "dev", resources())
         .err()
-        .ok_or("Import externe accepté")?;
+        .ok_or("External import was accepted")?;
     assert!(
         matches!(&error, ladyshell::error::Error::Nickel { .. }),
-        "L’import doit être refusé par Nickel isolé, pas par un prérequis absent : {error}"
+        "The import must be rejected by isolated Nickel, not by a missing prerequisite: {error}"
     );
     fs::write(&entry, fixture)?;
     assert_eq!(
@@ -106,11 +106,7 @@ fn permits_local_modules_but_not_readable_external_configuration(
         &entry,
         format!(
             "import {}",
-            serde_json::to_string(
-                outside
-                    .to_str()
-                    .ok_or("Fixture invalide : valeur absente")?
-            )?
+            serde_json::to_string(outside.to_str().ok_or("Invalid fixture: missing value")?)?
         ),
     )?;
     assert!(evaluate(&entry, "dev", resources()).is_err());

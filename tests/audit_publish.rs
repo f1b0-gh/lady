@@ -125,8 +125,8 @@ fn publication_recomputes_hashes_verifies_evidence_and_derives_partial_report(
     assert_eq!(summary["authenticity_verified"], false);
     assert_eq!(summary, verify::summary(&verify::load(dir.path())?));
     let report = fs::read_to_string(dir.path().join("REPORT.md"))?;
-    assert!(report.contains("couverture partielle"));
-    assert!(report.contains("| Confirmé | 1 |"));
+    assert!(report.contains("partial coverage"));
+    assert!(report.contains("| Confirmed | 1 |"));
     Ok(())
 }
 

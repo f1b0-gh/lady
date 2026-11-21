@@ -108,7 +108,7 @@ impl AlignmentPolicy {
     pub fn from_json(bytes: &[u8]) -> Result<Self> {
         ensure!(
             bytes.len() <= MAX_ALIGNMENT_POLICY_BYTES,
-            "Politique d'alignement supérieure à 4 Mio"
+            "Alignment policy exceeds 4 MiB"
         );
         // Typed structures reject duplicate fields and unknown keys at every level.
         Ok(serde_json::from_slice(bytes)?)
@@ -117,13 +117,13 @@ impl AlignmentPolicy {
 
 fn instant(value: &str) -> Result<OffsetDateTime> {
     OffsetDateTime::parse(value, &Rfc3339)
-        .map_err(|_| invalid("Date RFC3339 invalide dans la politique d'alignement".into()))
+        .map_err(|_| invalid("Invalid RFC3339 date in alignment policy".into()))
 }
 
 fn text(value: &str) -> Result<()> {
     ensure!(
         !value.trim().is_empty() && value.len() <= 8192 && !value.chars().any(char::is_control),
-        "Champ d'exception vide, trop long ou contenant des caractères de contrôle"
+        "Exception field is empty, too long or contains control characters"
     );
     Ok(())
 }
@@ -171,7 +171,7 @@ fn providers(report: &Alignment) -> Result<BTreeMap<String, BTreeSet<String>>> {
         let purl = group
             .identity
             .parse::<packageurl::PackageUrl>()
-            .map_err(|e| invalid(format!("PURL invalide : {e}")))?;
+            .map_err(|e| invalid(format!("Invalid PURL: {e}")))?;
         let key =
             serde_json::to_string(&(&group.domain, purl.ty(), purl.namespace(), purl.name()))?;
         result
@@ -189,7 +189,7 @@ fn exceptions<'a>(
 ) -> Result<BTreeMap<&'a str, (&'a AlignmentException, bool)>> {
     ensure!(
         policy.exceptions.len() <= MAX_EXCEPTIONS,
-        "Trop d'exceptions d'alignement"
+        "Too many alignment exceptions"
     );
     let mut result = BTreeMap::new();
     for exception in &policy.exceptions {
@@ -200,23 +200,23 @@ fn exceptions<'a>(
         let expires = instant(&exception.expires_at)?;
         ensure!(
             issued <= as_of && expires > issued && expires - issued <= time::Duration::days(365),
-            "Exception future ou période invalide (maximum 365 jours)"
+            "Exception is dated in the future or has an invalid period (maximum 365 days)"
         );
         let group = current
             .get(&exception.finding_id)
-            .ok_or_else(|| invalid("Exception hors périmètre : famille absente".into()))?;
+            .ok_or_else(|| invalid("Exception outside scope: missing family".into()))?;
         let selected: BTreeSet<_> = exception.versions.iter().cloned().collect();
         ensure!(
             group.duplicate
                 && selected.len() == exception.versions.len()
                 && selected == versions(Some(group)),
-            "Exception périmée : ensemble exact de versions divergent ou famille résolue"
+            "Stale exception: exact version set differs or family is resolved"
         );
         ensure!(
             result
                 .insert(exception.finding_id.as_str(), (exception, as_of < expires))
                 .is_none(),
-            "Exception d'alignement dupliquée"
+            "Duplicate alignment exception"
         );
     }
     Ok(result)
@@ -232,33 +232,31 @@ pub fn check_alignment_policy(
 ) -> Result<AlignmentPolicyResult> {
     ensure!(
         policy.schema_version == 1,
-        "Version de politique d'alignement inconnue"
+        "Unknown alignment policy version"
     );
     let policy_bytes = serde_json::to_vec(policy)?;
     ensure!(
         policy_bytes.len() <= MAX_ALIGNMENT_POLICY_BYTES,
-        "Politique d'alignement supérieure à 4 Mio"
+        "Alignment policy exceeds 4 MiB"
     );
     let date = instant(as_of)?;
     let baseline_digest = graph_digest(baseline)?;
     ensure!(
         baseline_digest == policy.baseline_graph_digest,
-        "Digest de référence divergent"
+        "Baseline digest mismatch"
     );
     let before = alignment(baseline)?;
     let after = alignment(current)?;
     let mut problems = Vec::new();
     if !before.coverage.versions_complete {
-        problems
-            .push("baseline_incomplete: couverture des versions de référence incomplète".into());
+        problems.push("baseline_incomplete: incomplete baseline version coverage".into());
     }
     if !after.coverage.versions_complete {
-        problems.push("current_incomplete: couverture des versions courantes incomplète".into());
+        problems.push("current_incomplete: incomplete current version coverage".into());
     }
     if scope(&before) != scope(&after) {
         problems.push(
-            "scope_changed: périmètre des manifests/verrous différent ; revue de référence requise"
-                .into(),
+            "scope_changed: manifest/lockfile scope differs; baseline review required".into(),
         );
     }
     let complete = problems.is_empty();
@@ -269,7 +267,7 @@ pub fn check_alignment_policy(
             .is_some_and(|old| !selected.is_subset(old))
         {
             problems.push(format!(
-                "source_changed: nouveau fournisseur pour {key} ; revue de référence requise"
+                "source_changed: new provider for {key}; baseline review required"
             ));
         }
     }
@@ -293,7 +291,7 @@ pub fn check_alignment_policy(
         let next = new.get(id);
         let group = next
             .or(previous)
-            .ok_or_else(|| invalid("Famille d'alignement absente".into()))?;
+            .ok_or_else(|| invalid("Missing alignment family".into()))?;
         let previous_versions = versions(previous);
         let next_versions = versions(next);
         let change = if next_versions.len() < 2 {
@@ -357,15 +355,15 @@ pub fn check_alignment_policy(
         baseline_coverage: before.coverage, coverage: after.coverage,
         summary, findings, problems,
         limitations: vec![
-            "Une référence constate une dette ; elle ne l'approuve pas. Renouveler la référence nécessite une revue explicite.".into(),
-            "Toutes les plateformes du verrou sont inventoriées ; l'activation des features, cibles et profils n'est pas évaluée.".into(),
-            "Cette politique contrôle les divergences de versions. Les pins/concordances restent contrôlés par graph alignment --check ; les CVE demandent un audit distinct.".into(),
-            "Une exception consigne une décision humaine, sans établir sa justesse, la compatibilité ni la sécurité.".into(),
+            "A baseline records debt; it does not approve it. Refreshing the baseline requires explicit review.".into(),
+            "All lockfile platforms are inventoried; feature, target and profile activation is not evaluated.".into(),
+            "This policy checks version differences. Pins and agreement remain checked by graph alignment --check; CVEs require a separate audit.".into(),
+            "An exception records a human decision without establishing its correctness, compatibility or security.".into(),
         ],
     };
     ensure!(
         serde_json::to_vec(&report)?.len() <= MAX_BYTES,
-        "Rapport de politique supérieur à 128 Mio"
+        "Policy report exceeds 128 MiB"
     );
     Ok(report)
 }

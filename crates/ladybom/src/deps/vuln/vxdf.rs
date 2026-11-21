@@ -15,7 +15,7 @@ pub const MAX_DOCUMENT_BYTES: usize = 4 * 1024 * 1024;
 const MAX_NODES: usize = 20_000;
 const MAX_FLOWS: usize = 256;
 const MAX_EVIDENCE: usize = 256;
-const GAP: &str = "La conformité au schéma ne prouve ni authenticité ni exploitabilité ; une revue humaine distincte est requise pour l’export";
+const GAP: &str = "Schema compliance establishes neither authenticity nor exploitability; a separate human review is required for export";
 pub const SCHEMA_SHA256: &str = "757177284eb87d75ecb6133c6aafdf8877cc1eef6cd6a69d401495f905129da9";
 const SCHEMA_BYTES: &[u8] = include_bytes!("../../../schemas/vxdf-0.0.1.schema.json");
 
@@ -36,7 +36,7 @@ fn schema_validator() -> Result<&'static jsonschema::Validator> {
     VALIDATOR
         .get_or_init(|| {
             if files::hash(SCHEMA_BYTES) != SCHEMA_SHA256 {
-                return Err("VXDF : empreinte du schéma embarqué différente".into());
+                return Err("VXDF: embedded schema digest mismatch".into());
             }
             let schema: Value =
                 serde_json::from_slice(SCHEMA_BYTES).map_err(|error| error.to_string())?;
@@ -55,7 +55,7 @@ fn validate_schema(document: &Value) -> Result<()> {
     // Do not echo payloads, paths or secrets contained in validation errors.
     ensure!(
         schema_validator()?.is_valid(document),
-        "VXDF : document non conforme au schéma 0.0.1 épinglé"
+        "VXDF: document does not conform to the pinned 0.0.1 schema"
     );
     Ok(())
 }
@@ -136,13 +136,13 @@ fn string<'a>(value: &'a Value, field: &str) -> Result<&'a str> {
         .get(field)
         .and_then(Value::as_str)
         .filter(|s| !s.trim().is_empty())
-        .ok_or_else(|| invalid(format!("VXDF : chaîne non vide requise pour {field}")))
+        .ok_or_else(|| invalid(format!("VXDF: nonempty string required for {field}")))
 }
 fn array<'a>(value: &'a Value, field: &str) -> Result<&'a Vec<Value>> {
     value
         .get(field)
         .and_then(Value::as_array)
-        .ok_or_else(|| invalid(format!("VXDF : tableau requis pour {field}")))
+        .ok_or_else(|| invalid(format!("VXDF: array required for {field}")))
 }
 fn uuid(value: &str) -> Result<()> {
     ensure!(
@@ -154,7 +154,7 @@ fn uuid(value: &str) -> Result<()> {
                     byte.is_ascii_hexdigit()
                 }
             }),
-        "VXDF : UUID invalide"
+        "VXDF: invalid UUID"
     );
     Ok(())
 }
@@ -162,7 +162,7 @@ fn bounds(value: &Value, depth: usize, nodes: &mut usize) -> Result<()> {
     *nodes += 1;
     ensure!(
         depth <= 32 && *nodes <= MAX_NODES,
-        "VXDF : profondeur ou nombre d’éléments excessif"
+        "VXDF: excessive depth or element count"
     );
     match value {
         Value::Array(values) => {
@@ -176,7 +176,7 @@ fn bounds(value: &Value, depth: usize, nodes: &mut usize) -> Result<()> {
             }
         }
         Value::String(value) => {
-            ensure!(value.len() <= 1024 * 1024, "VXDF : chaîne trop volumineuse")
+            ensure!(value.len() <= 1024 * 1024, "VXDF: string too large")
         }
         _ => {}
     }
@@ -188,16 +188,16 @@ fn references(value: &Value, ids: &BTreeSet<String>) -> Result<()> {
             if let Some(refs) = object.get("evidenceRefs") {
                 let refs = refs
                     .as_array()
-                    .ok_or_else(|| invalid("VXDF : références invalides"))?;
+                    .ok_or_else(|| invalid("VXDF: invalid references"))?;
                 let mut seen = BTreeSet::new();
                 for reference in refs {
                     let id = reference
                         .as_str()
-                        .ok_or_else(|| invalid("VXDF : référence invalide"))?;
+                        .ok_or_else(|| invalid("VXDF: invalid reference"))?;
                     ensure!(
                         ids.contains(&id.to_ascii_lowercase())
                             && seen.insert(id.to_ascii_lowercase()),
-                        "VXDF : référence de preuve absente ou dupliquée"
+                        "VXDF: missing or duplicate evidence reference"
                     );
                 }
             }
@@ -221,21 +221,21 @@ fn references(value: &Value, ids: &BTreeSet<String>) -> Result<()> {
 pub fn import(bytes: &[u8]) -> Result<ImportedDocument> {
     ensure!(
         bytes.len() <= MAX_DOCUMENT_BYTES,
-        "VXDF : document supérieur à 4 Mio"
+        "VXDF: document exceeds 4 MiB"
     );
     let document = parse_json(bytes)?;
     bounds(&document, 0, &mut 0)?;
     validate_schema(&document)?;
     ensure!(
         string(&document, "vxdfVersion")? == "0.0.1",
-        "VXDF : version non prise en charge"
+        "VXDF: unsupported version"
     );
     uuid(string(&document, "id")?)?;
     instant(string(&document, "generatedAt")?)?;
     let flows = array(&document, "exploitFlows")?;
     ensure!(
         !flows.is_empty() && flows.len() <= MAX_FLOWS,
-        "VXDF : nombre de findings invalide"
+        "VXDF: invalid finding count"
     );
     let mut flow_ids = BTreeSet::new();
     for flow in flows {
@@ -243,26 +243,26 @@ pub fn import(bytes: &[u8]) -> Result<ImportedDocument> {
         uuid(id)?;
         ensure!(
             flow_ids.insert(id.to_ascii_lowercase()),
-            "VXDF : finding dupliqué"
+            "VXDF: duplicate finding"
         );
         string(flow, "title")?;
         string(flow, "category")?;
         instant(string(flow, "validatedAt")?)?;
         ensure!(
             flow.get("severity").is_some_and(Value::is_object),
-            "VXDF : sévérité structurée requise"
+            "VXDF: structured severity required"
         );
         ensure!(
             flow.get("affectedComponents")
                 .is_some_and(|v| v.as_array().is_some_and(|a| !a.is_empty()))
                 || (flow.get("source").is_some_and(Value::is_object)
                     && flow.get("sink").is_some_and(Value::is_object)),
-            "VXDF : composants affectés ou source/puits requis"
+            "VXDF: affected components or source/sink required"
         );
         let evidence = array(flow, "evidence")?;
         ensure!(
             !evidence.is_empty() && evidence.len() <= MAX_EVIDENCE,
-            "VXDF : nombre de preuves invalide"
+            "VXDF: invalid evidence count"
         );
         let mut ids = BTreeSet::new();
         for item in evidence {
@@ -270,14 +270,14 @@ pub fn import(bytes: &[u8]) -> Result<ImportedDocument> {
             string(item, "description")?;
             ensure!(
                 item.get("data").is_some_and(Value::is_object),
-                "VXDF : données de preuve structurées requises"
+                "VXDF: structured evidence data required"
             );
             if item.get("id").is_some() {
                 let id = string(item, "id")?;
                 uuid(id)?;
                 ensure!(
                     ids.insert(id.to_ascii_lowercase()),
-                    "VXDF : preuve dupliquée"
+                    "VXDF: duplicate evidence"
                 );
             }
             if item.get("timestamp").is_some() {
@@ -287,7 +287,7 @@ pub fn import(bytes: &[u8]) -> Result<ImportedDocument> {
         references(flow, &ids)?;
     }
     let original = std::str::from_utf8(bytes)
-        .map_err(|_| invalid("VXDF : UTF-8 invalide"))?
+        .map_err(|_| invalid("VXDF: invalid UTF-8"))?
         .to_owned();
     Ok(ImportedDocument {
         schema_version: 1,
@@ -312,11 +312,11 @@ pub fn correlate(
 ) -> Result<Correlation> {
     ensure!(
         !scope.revision.trim().is_empty() && !scope.target_profile.trim().is_empty(),
-        "VXDF : révision et profil explicites requis"
+        "VXDF: explicit revision and profile required"
     );
     ensure!(
         scope.evidence_max_age_seconds > 0,
-        "VXDF : durée de validité nulle"
+        "VXDF: zero validity duration"
     );
     let assessment = assess(
         report,
@@ -326,31 +326,31 @@ pub fn correlate(
     )?;
     ensure!(
         assessment.complete,
-        "VXDF : couverture courante incomplète ou périmée"
+        "VXDF: current coverage incomplete or stale"
     );
     ensure!(
         assessment.report_digest == digest(report)?,
-        "VXDF : rapport incohérent"
+        "VXDF: inconsistent report"
     );
     let now = instant(&scope.as_of)?;
     let generated = instant(string(&document.document, "generatedAt")?)?;
-    ensure!(generated <= now, "VXDF : document daté dans le futur");
+    ensure!(generated <= now, "VXDF: document dated in the future");
     let mut matches = Vec::new();
     let mut seen_findings = BTreeSet::new();
     for flow in array(&document.document, "exploitFlows")? {
         let binding: Binding = serde_json::from_value(
             flow.get("x-ladybom")
                 .cloned()
-                .ok_or_else(|| invalid("VXDF : liaison x-ladybom explicite requise"))?,
+                .ok_or_else(|| invalid("VXDF: explicit x-ladybom binding required"))?,
         )?;
         let finding = assessment
             .findings
             .iter()
             .find(|finding| finding.id == binding.finding_id)
-            .ok_or_else(|| invalid("VXDF : finding inconnu"))?;
+            .ok_or_else(|| invalid("VXDF: unknown finding"))?;
         ensure!(
             finding.status == MatchStatus::Matched && seen_findings.insert(&finding.id),
-            "VXDF : finding inconnu ou dupliqué"
+            "VXDF: unknown or duplicate finding"
         );
         let project = report
             .projects
@@ -368,7 +368,7 @@ pub fn correlate(
         let purl = finding
             .purl
             .as_ref()
-            .ok_or_else(|| invalid("VXDF : PURL inconnu"))?;
+            .ok_or_else(|| invalid("VXDF: unknown PURL"))?;
         let expected = Binding {
             report_digest: assessment.report_digest.clone(),
             snapshot_digest: assessment.snapshot_digest.clone(),
@@ -384,7 +384,7 @@ pub fn correlate(
         };
         ensure!(
             binding == expected,
-            "VXDF : périmètre différent du rapport, des sources ou du profil courant"
+            "VXDF: scope differs from the report, sources or current profile"
         );
         let affected = array(flow, "affectedComponents")?;
         ensure!(
@@ -392,12 +392,12 @@ pub fn correlate(
                 && string(&affected[0], "purl")? == purl
                 && string(&affected[0], "name")? == finding.name
                 && string(&affected[0], "version")? == finding.version,
-            "VXDF : composant affecté absent, ambigu ou différent"
+            "VXDF: affected component missing, ambiguous or different"
         );
         if flow.get("status").is_some() {
             ensure!(
                 string(flow, "status")? == "OPEN",
-                "VXDF : seul un constat ouvert peut être corrélé dans ce pilote"
+                "VXDF: only an open finding can be correlated in this pilot"
             );
         }
         let validated = instant(string(flow, "validatedAt")?)?;
@@ -406,7 +406,7 @@ pub fn correlate(
                 && validated <= now
                 && (now - validated).whole_nanoseconds()
                     <= i128::from(scope.evidence_max_age_seconds) * 1_000_000_000,
-            "VXDF : validation périmée ou future"
+            "VXDF: validation is stale or dated in the future"
         );
         let mut evidence_ids = Vec::new();
         for evidence in array(flow, "evidence")? {
@@ -415,7 +415,7 @@ pub fn correlate(
                 captured <= validated
                     && (now - captured).whole_nanoseconds()
                         <= i128::from(scope.evidence_max_age_seconds) * 1_000_000_000,
-                "VXDF : preuve périmée ou postérieure à la validation"
+                "VXDF: evidence is stale or newer than the validation"
             );
             evidence_ids.push(string(evidence, "id")?.into());
         }
@@ -545,7 +545,7 @@ fn public_text(value: &str) -> Result<()> {
             && !value
                 .chars()
                 .any(|ch| ch.is_control() && !matches!(ch, '\n' | '\t' | '\r')),
-        "VXDF : texte public de revue absent, trop long ou invalide"
+        "VXDF: public review text missing, too long or invalid"
     );
     Ok(())
 }
@@ -553,7 +553,7 @@ fn document_uuid(value: &impl Serialize) -> Result<String> {
     let urn = cyclonedx::serial_from_digest(&digest(value)?)?;
     urn.strip_prefix("urn:uuid:")
         .map(str::to_owned)
-        .ok_or_else(|| invalid("VXDF : UUID documentaire invalide"))
+        .ok_or_else(|| invalid("VXDF: invalid document UUID"))
 }
 
 /// Export a public VXDF projection only after the operator explicitly accepts a
@@ -571,12 +571,12 @@ pub fn export_reviewed(
 ) -> Result<Value> {
     ensure!(
         review_bytes.len() <= MAX_DOCUMENT_BYTES,
-        "VXDF : revue supérieure à 4 Mio"
+        "VXDF: review exceeds 4 MiB"
     );
     ensure!(
         files::hash(review_bytes) == acceptance.review_digest
             && !acceptance.reviewer.trim().is_empty(),
-        "VXDF : revue non acceptée explicitement par son empreinte et son auteur"
+        "VXDF: review not explicitly accepted by its digest and author"
     );
     let value = parse_json(review_bytes)?;
     bounds(&value, 0, &mut 0)?;
@@ -585,12 +585,12 @@ pub fn export_reviewed(
         review.schema_version == 1
             && review.review_kind == "human_technical_review"
             && review.public_content_approved,
-        "VXDF : revue technique et approbation de publication requises"
+        "VXDF: technical review and publication approval required"
     );
     ensure!(
         review.document_digest == document.document_digest
             && review.reviewer == acceptance.reviewer,
-        "VXDF : revue d’un autre document ou d’un autre auteur"
+        "VXDF: review belongs to another document or author"
     );
     let correlation = correlate(document, report, snapshot, scope)?;
     let now = instant(&scope.as_of)?;
@@ -601,28 +601,28 @@ pub fn export_reviewed(
             && expires_at > now
             && reviewed_at < expires_at
             && reviewed_at >= instant(string(&document.document, "generatedAt")?)?,
-        "VXDF : revue périmée, future ou antérieure au document"
+        "VXDF: review is stale, dated in the future or older than the document"
     );
     let original_flows = array(&document.document, "exploitFlows")?;
     ensure!(
         review.flows.len() == original_flows.len(),
-        "VXDF : revue incomplète des findings"
+        "VXDF: incomplete review of findings"
     );
     let mut seen = BTreeSet::new();
     let mut flows = Vec::new();
     for reviewed in &review.flows {
         ensure!(
             seen.insert(&reviewed.flow_id) && reviewed.decision == "validated_exploitable",
-            "VXDF : finding dupliqué, suspecté ou non validé par la revue"
+            "VXDF: finding is duplicated, suspected or not validated by the review"
         );
         let flow = original_flows
             .iter()
             .find(|flow| flow["id"].as_str() == Some(&reviewed.flow_id))
-            .ok_or_else(|| invalid("VXDF : finding de revue inconnu"))?;
+            .ok_or_else(|| invalid("VXDF: unknown review finding"))?;
         ensure!(
             reviewed.binding_digest == digest(&flow["x-ladybom"])?
                 && reviewed.evidence == evidence_digests(flow)?,
-            "VXDF : périmètre ou preuves différents de ceux examinés"
+            "VXDF: scope or evidence differs from what was reviewed"
         );
         let public = &reviewed.public;
         for text in [
@@ -678,7 +678,7 @@ pub fn export_reviewed(
     exported["id"] = Value::String(document_uuid(&exported)?);
     ensure!(
         serde_json::to_vec(&exported)?.len() <= MAX_DOCUMENT_BYTES,
-        "VXDF : export supérieur à 4 Mio"
+        "VXDF: export exceeds 4 MiB"
     );
     validate_schema(&exported)?;
     Ok(exported)

@@ -13,7 +13,7 @@ const MAX_LABEL: usize = 4096;
 fn object(value: &Value) -> Result<&Map<String, Value>> {
     value
         .as_object()
-        .ok_or_else(|| invalid("Objet OSV attendu".into()))
+        .ok_or_else(|| invalid("OSV object expected".into()))
 }
 
 fn text<'a>(object: &'a Map<String, Value>, key: &str) -> Result<&'a str> {
@@ -21,7 +21,7 @@ fn text<'a>(object: &'a Map<String, Value>, key: &str) -> Result<&'a str> {
         .get(key)
         .and_then(Value::as_str)
         .filter(|value| !value.trim().is_empty())
-        .ok_or_else(|| invalid(format!("Chaîne OSV obligatoire invalide : {key}")))
+        .ok_or_else(|| invalid(format!("Invalid required OSV string: {key}")))
 }
 
 fn optional_text<'a>(object: &'a Map<String, Value>, key: &str) -> Result<Option<&'a str>> {
@@ -30,7 +30,7 @@ fn optional_text<'a>(object: &'a Map<String, Value>, key: &str) -> Result<Option
         .map(|value| {
             value
                 .as_str()
-                .ok_or_else(|| invalid(format!("Chaîne OSV attendue : {key}")))
+                .ok_or_else(|| invalid(format!("Expected OSV string: {key}")))
         })
         .transpose()
 }
@@ -41,14 +41,14 @@ fn array<'a>(object: &'a Map<String, Value>, key: &str) -> Result<&'a [Value]> {
         Some(value) => value
             .as_array()
             .map(Vec::as_slice)
-            .ok_or_else(|| invalid(format!("Tableau OSV attendu : {key}"))),
+            .ok_or_else(|| invalid(format!("OSV array expected: {key}"))),
     }
 }
 
 fn label(value: &str) -> Result<()> {
     if value.trim().is_empty() || value.len() > MAX_LABEL || value.chars().any(char::is_control) {
         return Err(invalid(
-            "Identité ou version OSV invalide ou trop longue".into(),
+            "Invalid or excessively long OSV identity or version".into(),
         ));
     }
     Ok(())
@@ -61,7 +61,7 @@ fn identifier(value: &str) -> Result<()> {
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || b":_.-".contains(&byte))
     {
-        return Err(invalid("Identifiant OSV invalide".into()));
+        return Err(invalid("Invalid OSV identifier".into()));
     }
     Ok(())
 }
@@ -76,7 +76,7 @@ fn bounded_shape(value: &Value) -> Result<()> {
         match value {
             Value::Array(values) => {
                 if values.len() > MAX_ARRAY {
-                    return Err(invalid("Tableau OSV supérieur à 10000 éléments".into()));
+                    return Err(invalid("OSV array exceeds 10000 elements".into()));
                 }
                 pending.extend(values.iter().map(|value| (value, depth + 1)));
             }
@@ -96,7 +96,7 @@ struct SizeLimit(usize);
 impl Write for SizeLimit {
     fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
         if bytes.len() > MAX_INPUT_BYTES.saturating_sub(self.0) {
-            return Err(std::io::Error::other("Limite JSON de 64 Mio dépassée"));
+            return Err(std::io::Error::other("JSON limit of 64 MiB exceeded"));
         }
         self.0 += bytes.len();
         Ok(bytes.len())
@@ -139,9 +139,9 @@ pub fn validate_record(record: &Value) -> Result<()> {
     if let Some(version) = optional_text(record, "schema_version")? {
         let version = version
             .parse::<semver::Version>()
-            .map_err(|_| invalid("Version de schéma OSV invalide".into()))?;
+            .map_err(|_| invalid("Invalid OSV schema version".into()))?;
         if version.major != 1 {
-            return Err(invalid("Version majeure OSV non prise en charge".into()));
+            return Err(invalid("Unsupported OSV major version".into()));
         }
     }
     instant(text(record, "modified")?)?;
@@ -161,7 +161,7 @@ pub fn validate_record(record: &Value) -> Result<()> {
             identifier(
                 value
                     .as_str()
-                    .ok_or_else(|| invalid("Identifiant OSV attendu".into()))?,
+                    .ok_or_else(|| invalid("OSV identifier expected".into()))?,
             )?;
         }
     }
@@ -178,7 +178,7 @@ pub fn validate_record(record: &Value) -> Result<()> {
         optional_text(credit, "type")?;
         for contact in array(credit, "contact")? {
             if !contact.is_string() {
-                return Err(invalid("Contact OSV invalide".into()));
+                return Err(invalid("Invalid OSV contact".into()));
             }
         }
     }
@@ -187,14 +187,14 @@ pub fn validate_record(record: &Value) -> Result<()> {
         let package = object(
             affected
                 .get("package")
-                .ok_or_else(|| invalid("Paquet OSV absent".into()))?,
+                .ok_or_else(|| invalid("Missing OSV package".into()))?,
         )?;
         label(text(package, "ecosystem")?)?;
         label(text(package, "name")?)?;
         if let Some(purl) = optional_text(package, "purl")? {
             label(purl)?;
             purl.parse::<PackageUrl>()
-                .map_err(|_| invalid("PURL OSV invalide".into()))?;
+                .map_err(|_| invalid("Invalid OSV PURL".into()))?;
         }
         extension_objects(affected)?;
         severity(affected)?;
@@ -202,7 +202,7 @@ pub fn validate_record(record: &Value) -> Result<()> {
             label(
                 version
                     .as_str()
-                    .ok_or_else(|| invalid("Version OSV invalide".into()))?,
+                    .ok_or_else(|| invalid("Invalid OSV version".into()))?,
             )?;
         }
         for range in array(affected, "ranges")? {
@@ -231,7 +231,7 @@ fn validate_range(range: &Value) -> Result<()> {
             .collect();
         if keys.len() != 1 {
             return Err(invalid(
-                "Un événement OSV doit porter une seule borne".into(),
+                "An OSV event must contain exactly one boundary".into(),
             ));
         }
         let key = keys[0];
@@ -244,12 +244,12 @@ fn validate_range(range: &Value) -> Result<()> {
             && !(key == "introduced" && value == "0" || key == "limit" && value.contains('*'))
             && parse_version("SEMVER", value).is_none()
         {
-            return Err(invalid("Borne SEMVER OSV invalide".into()));
+            return Err(invalid("Invalid OSV SEMVER boundary".into()));
         }
     }
     if !introduced || fixed && last_affected {
         return Err(invalid(
-            "Plage OSV sans introduction ou mélangeant fixed et last_affected".into(),
+            "OSV range lacks an introduction or mixes fixed and last_affected".into(),
         ));
     }
     Ok(())
@@ -258,9 +258,7 @@ fn validate_range(range: &Value) -> Result<()> {
 /// Validate snapshot provenance and limits; completeness is an explicit separate assertion.
 pub fn validate_snapshot(snapshot: &Snapshot) -> Result<()> {
     if snapshot.schema_version != 1 {
-        return Err(invalid(
-            "Version d'instantané OSV non prise en charge".into(),
-        ));
+        return Err(invalid("Unsupported OSV snapshot version".into()));
     }
     label(&snapshot.source)?;
     let fetched_at = instant(&snapshot.fetched_at)?;
@@ -273,11 +271,11 @@ pub fn validate_snapshot(snapshot: &Snapshot) -> Result<()> {
             .any(|ecosystem| !matches!(ecosystem.as_str(), "crates.io" | "npm" | "PyPI"))
     {
         return Err(invalid(
-            "Écosystèmes d'instantané OSV invalides, absents ou dupliqués".into(),
+            "Invalid, missing or duplicate OSV snapshot ecosystems".into(),
         ));
     }
     if snapshot.advisories.len() > MAX_RECORDS {
-        return Err(invalid("Trop d'avis OSV dans l'instantané".into()));
+        return Err(invalid("Too many OSV advisories in the snapshot".into()));
     }
     let mut ids = BTreeSet::new();
     for record in &snapshot.advisories {
@@ -289,12 +287,12 @@ pub fn validate_snapshot(snapshot: &Snapshot) -> Result<()> {
                 .is_some_and(|date| date > fetched_at)
             {
                 return Err(invalid(
-                    "Avis OSV postérieur à la date de collecte de l'instantané".into(),
+                    "OSV advisory is newer than the snapshot collection date".into(),
                 ));
             }
         }
         if !ids.insert(text(object(record)?, "id")?) {
-            return Err(invalid("Identifiant OSV dupliqué dans l'instantané".into()));
+            return Err(invalid("Duplicate OSV identifier in the snapshot".into()));
         }
     }
     bounded_size(snapshot)?;
@@ -486,7 +484,7 @@ pub fn match_record(
         let purl = optional_text(package, "purl")?
             .map(|raw| {
                 raw.parse::<PackageUrl>()
-                    .map_err(|_| invalid("PURL OSV invalide".into()))
+                    .map_err(|_| invalid("Invalid OSV PURL".into()))
             })
             .transpose()?;
         let purl_identity = purl.as_ref().and_then(purl_key);
@@ -501,25 +499,28 @@ pub fn match_record(
         }) {
             limitation(
                 &mut result,
-                "Identité PURL OSV contradictoire ou qualifiée non prise en charge",
+                "Contradictory OSV PURL identity or unsupported qualifiers",
             );
             continue;
         }
         let versions = array(affected, "versions")?;
         let ranges = array(affected, "ranges")?;
         if versions.is_empty() && ranges.is_empty() {
-            limitation(&mut result, "Avis OSV sans versions ni plages évaluables");
+            limitation(
+                &mut result,
+                "OSV advisory has no assessable versions or ranges",
+            );
         }
         if parse_version(ecosystem, version).is_none() {
             limitation(
                 &mut result,
-                "Version de composant non prise en charge pour cet écosystème",
+                "Unsupported component version for this ecosystem",
             );
         }
         for candidate in versions {
             let candidate = candidate
                 .as_str()
-                .ok_or_else(|| invalid("Version OSV invalide".into()))?;
+                .ok_or_else(|| invalid("Invalid OSV version".into()))?;
             if candidate == version {
                 result.status = Some(MatchStatus::Matched);
             } else {
@@ -530,9 +531,7 @@ pub fn match_record(
                     (Some(version), Some(candidate)) if version == candidate => {
                         result.status = Some(MatchStatus::Matched)
                     }
-                    (_, None) => {
-                        limitation(&mut result, "Version énumérée OSV non prise en charge")
-                    }
+                    (_, None) => limitation(&mut result, "Unsupported enumerated OSV version"),
                     _ => {}
                 }
             }
@@ -549,10 +548,7 @@ pub fn match_record(
             match included_in_range(range, ecosystem, version)? {
                 Some(true) => result.status = Some(MatchStatus::Matched),
                 Some(false) => {}
-                None => limitation(
-                    &mut result,
-                    "Plage ou borne OSV non prise en charge localement",
-                ),
+                None => limitation(&mut result, "OSV range or boundary not supported locally"),
             }
         }
     }

@@ -34,7 +34,7 @@ pub(super) fn validate(
     let lock = selected
         .lockfile
         .as_deref()
-        .ok_or_else(|| invalid("Verrou Cargo absent".into()))?;
+        .ok_or_else(|| invalid("Missing Cargo lock".into()))?;
     let workspace_root = Path::new(lock)
         .with_file_name("Cargo.toml")
         .to_string_lossy()
@@ -45,7 +45,7 @@ pub(super) fn validate(
     while let Some(name) = pending.pop_first() {
         let value = manifests
             .get(&name)
-            .ok_or_else(|| invalid(format!("Manifest Cargo absent : {name}")))?;
+            .ok_or_else(|| invalid(format!("Missing Cargo manifest: {name}")))?;
         for dependency in dependencies(
             &name,
             value,
@@ -55,12 +55,12 @@ pub(super) fn validate(
         )? {
             ensure!(
                 snapshot.contains_key(&dependency.manifest),
-                "Manifest de dépendance Cargo absent des sources : {}",
+                "Cargo dependency manifest is missing from sources: {}",
                 dependency.manifest
             );
             let value = manifests.get(&dependency.manifest).ok_or_else(|| {
                 invalid(format!(
-                    "Manifest de dépendance Cargo absent du rapport : {}",
+                    "Cargo dependency manifest is missing from the report: {}",
                     dependency.manifest
                 ))
             })?;
@@ -72,7 +72,7 @@ pub(super) fn validate(
             )?;
             ensure!(
                 locked.is_some() || dependency.conditional,
-                "Dépendance locale Cargo absente du verrou : {}",
+                "Local Cargo dependency is missing from the lock: {}",
                 dependency.manifest
             );
             if locked.is_some() {
@@ -92,7 +92,7 @@ pub(super) fn validate(
             && (selected.manifest == workspace_root || name == &selected.manifest);
         for (field, value) in manifest
             .as_table()
-            .ok_or_else(|| invalid("Table Cargo requise".into()))?
+            .ok_or_else(|| invalid("A Cargo table is required".into()))?
         {
             let target = matches!(field.as_str(), "bin" | "test" | "example" | "bench");
             check_paths(
@@ -109,7 +109,7 @@ pub(super) fn validate(
                         resolve(
                             name,
                             path.as_str().ok_or_else(|| {
-                                invalid("Chemin workspace Cargo textuel requis".into())
+                                invalid("Cargo workspace path must be a string".into())
                             })?,
                         )?;
                     }
@@ -131,10 +131,12 @@ pub(super) fn validate(
         if !members.contains(&project.manifest) {
             let value = manifests
                 .get(&project.manifest)
-                .ok_or_else(|| invalid("Manifest de dépendance Cargo absent".into()))?;
+                .ok_or_else(|| invalid("Missing Cargo dependency manifest".into()))?;
             let package =
                 locked_package(&project.manifest, value, &manifests, &selected.components)?
-                    .ok_or_else(|| invalid("Dépendance locale Cargo absente du verrou".into()))?;
+                    .ok_or_else(|| {
+                        invalid("Local Cargo dependency is missing from the lock".into())
+                    })?;
             let locked_names: BTreeSet<&str> = package.metadata["dependencies"]
                 .as_array()
                 .into_iter()
@@ -213,16 +215,16 @@ fn dependency_table(
 ) -> Result<()> {
     let table = value
         .as_table()
-        .ok_or_else(|| invalid("Table de dépendances Cargo requise".into()))?;
+        .ok_or_else(|| invalid("A Cargo dependency table is required".into()))?;
     for (alias, declaration) in table {
         let (origin, spec) = if declaration.get("workspace").and_then(Value::as_bool) == Some(true)
         {
             let (origin, workspace) = workspace(name, manifests)
-                .ok_or_else(|| invalid(format!("Workspace Cargo introuvable : {name}")))?;
+                .ok_or_else(|| invalid(format!("Cargo workspace not found: {name}")))?;
             let spec = workspace
                 .get("dependencies")
                 .and_then(|deps| deps.get(alias))
-                .ok_or_else(|| invalid(format!("Dépendance workspace Cargo absente : {alias}")))?;
+                .ok_or_else(|| invalid(format!("Missing Cargo workspace dependency: {alias}")))?;
             (origin, spec)
         } else {
             (name, declaration)
@@ -232,7 +234,7 @@ fn dependency_table(
         };
         let path = path
             .as_str()
-            .ok_or_else(|| invalid("Chemin de dépendance Cargo textuel requis".into()))?;
+            .ok_or_else(|| invalid("Cargo dependency path must be a string".into()))?;
         let path = resolve(origin, path)?;
         let manifest = if path.is_empty() {
             "Cargo.toml".into()
@@ -293,18 +295,18 @@ fn locked_package<'a>(
     let package_name = package
         .get("name")
         .and_then(Value::as_str)
-        .ok_or_else(|| invalid(format!("Nom Cargo absent : {name}")))?;
+        .ok_or_else(|| invalid(format!("Missing Cargo name: {name}")))?;
     let version = match package.get("version") {
         Some(value) if value.get("workspace").and_then(Value::as_bool) == Some(true) => {
             workspace(name, manifests)
                 .and_then(|(_, workspace)| workspace.get("package"))
                 .and_then(|package| package.get("version"))
                 .and_then(Value::as_str)
-                .ok_or_else(|| invalid(format!("Version workspace Cargo absente : {name}")))?
+                .ok_or_else(|| invalid(format!("Missing Cargo workspace version: {name}")))?
         }
         Some(value) => value
             .as_str()
-            .ok_or_else(|| invalid(format!("Version Cargo invalide : {name}")))?,
+            .ok_or_else(|| invalid(format!("Invalid Cargo version: {name}")))?,
         None => "0.0.0",
     };
     Ok(components.iter().find(|component| {
@@ -315,24 +317,24 @@ fn locked_package<'a>(
 fn resolve(manifest: &str, path: &str) -> Result<String> {
     ensure!(
         !path.is_empty() && !path.contains('\\') && !path.chars().any(char::is_control),
-        "Chemin Cargo invalide"
+        "Invalid Cargo path"
     );
     let parent = Path::new(manifest)
         .parent()
-        .ok_or_else(|| invalid("Parent manifest absent".into()))?;
+        .ok_or_else(|| invalid("Missing manifest parent".into()))?;
     let mut resolved = PathBuf::new();
     for part in parent.join(path).components() {
         match part {
             PathComponent::Normal(value) => resolved.push(value),
             PathComponent::CurDir => {}
-            PathComponent::ParentDir => ensure!(resolved.pop(), "Chemin Cargo hors périmètre"),
-            _ => return Err(invalid("Chemin Cargo absolu interdit".into())),
+            PathComponent::ParentDir => ensure!(resolved.pop(), "Cargo path is outside the scope"),
+            _ => return Err(invalid("Absolute Cargo paths are not allowed".into())),
         }
     }
     resolved
         .into_os_string()
         .into_string()
-        .map_err(|_| invalid("Chemin Cargo non UTF-8".into()))
+        .map_err(|_| invalid("Non-UTF-8 Cargo path".into()))
 }
 
 fn check_paths(value: &Value, manifest: &str, snapshot: &Snapshot, complete: bool) -> Result<()> {
@@ -346,7 +348,7 @@ fn check_paths(value: &Value, manifest: &str, snapshot: &Snapshot, complete: boo
                             || snapshot.keys().any(
                                 |name| path.is_empty() || name.starts_with(&format!("{path}/"))
                             ),
-                        "Chemin Cargo absent des sources : {path}"
+                        "Cargo path is missing from sources: {path}"
                     );
                 }
             }
@@ -383,7 +385,7 @@ fn check_build_inputs(
             Some(resolve(name, "build.rs")?)
         }
         None => None,
-        _ => return Err(invalid(format!("Entrée build Cargo invalide : {name}"))),
+        _ => return Err(invalid(format!("Invalid Cargo build entry: {name}"))),
     };
     if active {
         if let Some(build) = build {
@@ -394,7 +396,7 @@ fn check_build_inputs(
                 .get("path")
                 .map(|path| {
                     path.as_str()
-                        .ok_or_else(|| invalid("Chemin lib Cargo invalide".into()))
+                        .ok_or_else(|| invalid("Invalid Cargo lib path".into()))
                 })
                 .transpose()?
                 .unwrap_or("src/lib.rs");
@@ -404,7 +406,7 @@ fn check_build_inputs(
             let enabled = package.get("autolib").and_then(Value::as_bool) != Some(false);
             ensure!(
                 !library || enabled,
-                "Bibliothèque Cargo requise pour une dépendance locale : {name}"
+                "A Cargo library is required for a local dependency: {name}"
             );
             if library || (enabled && exists(root, &path)?) {
                 require_file(snapshot, &path)?;
@@ -417,7 +419,7 @@ fn check_build_inputs(
 fn require_file(snapshot: &Snapshot, path: &str) -> Result<()> {
     ensure!(
         snapshot.contains_key(path),
-        "Entrée de compilation Cargo absente des sources : {path}"
+        "Cargo build entry is missing from sources: {path}"
     );
     Ok(())
 }

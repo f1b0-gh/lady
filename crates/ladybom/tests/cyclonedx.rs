@@ -474,7 +474,9 @@ fn graph_projection_failure_keeps_distinct_inventory_with_explicit_unknown_relat
     assert_eq!(bom["compositions"][0]["aggregate"], "unknown");
     let limitations: Vec<String> =
         serde_json::from_str(property(&bom, "ladybom:graph:limitations").ok_or("limitations")?)?;
-    assert!(limitations.iter().any(|limit| limit.contains("Projection")));
+    assert!(limitations
+        .iter()
+        .any(|limit| limit.starts_with("Graph projection unavailable; relationships unknown:")));
     Ok(())
 }
 

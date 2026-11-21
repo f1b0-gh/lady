@@ -103,7 +103,7 @@ impl Backend {
             labels
                 .as_object()
                 .is_some_and(|labels| labels.values().all(Value::is_string)),
-            "Labels d’identité sandbox invalides"
+            "Invalid sandbox identity labels"
         );
         let mut observed = json!({"id":id,"phase":phase,"labels":labels});
         if let Some(conditions) = value.get("conditions") {
@@ -126,19 +126,19 @@ impl Backend {
     pub fn verify_execution(&self, state: &Value) -> Result<Value> {
         let observed = self
             .sandbox(text(state, "sandbox_name")?)?
-            .ok_or_else(|| invalid("Sandbox absente".into()))?;
+            .ok_or_else(|| invalid("Sandbox is missing".into()))?;
         ensure!(
             observed["id"] == state["sandbox_id"] && observed["phase"] == "Ready",
-            "Sandbox divergente ou non prête"
+            "Sandbox mismatch or not ready"
         );
         ensure!(
             observed["policy_hash"] == state["policy_hash"],
-            "Politique modifiée : réconciliation requise"
+            "Policy changed: reconciliation required"
         );
         let label = state["owner_label"].as_str().unwrap_or("ladyshell.owner");
         ensure!(
             observed["labels"].get(label) == state.get("owner"),
-            "Propriété sandbox divergente"
+            "Sandbox ownership mismatch"
         );
         self.validate_policy(text(state, "sandbox_name")?, text(state, "codex_binary")?)?;
         Ok(observed)
@@ -155,13 +155,13 @@ impl Backend {
         // Never log the provider response: only test availability, with no credential fallback.
         let output = self.call(&["provider", "get", name]).map_err(|_| {
             invalid(format!(
-                "Provider {name} indisponible : vérifier/rafraîchir ce provider côté hôte"
+                "Provider {name} is unavailable: verify/refresh this provider on the host"
             ))
         })?;
         let text = String::from_utf8_lossy(&output).to_ascii_lowercase();
         ensure!(
             !text.contains("expired") && !text.contains("revoked"),
-            "Provider expiré ou révoqué : rafraîchir côté hôte"
+            "Provider expired or revoked: refresh on the host"
         );
         Ok(())
     }

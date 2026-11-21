@@ -12,15 +12,15 @@ pub fn run(directory: &Path) -> Result<i32> {
     crate::continuous::host::execution_directory(&lock.directory)?;
     let _lease = SessionLock::acquire(&lock.directory, false)?;
     let current = state::load(&lock.directory)?.ok_or_else(|| {
-        invalid("État absent : appliquer un environnement avant de lancer check".into())
+        invalid("State is missing; apply an environment before running check".into())
     })?;
     crate::continuous::native::admit(&current)?;
     let config = &current["desired_inputs"]["evaluated"]["config"];
     let checks: Vec<Vec<String>> =
         serde_json::from_value(config["checks"].clone()).map_err(|_| {
-            invalid("Checks résolus absents ou invalides : réconcilier avec plan/apply".into())
+            invalid("Resolved checks are missing or invalid; reconcile with plan/apply".into())
         })?;
-    ensure!(!checks.is_empty(), "Aucun check déclaré pour cette mission");
+    ensure!(!checks.is_empty(), "No checks declared for this mission");
     // Validate the entire sequence before executing even its first command.
     for command in &checks {
         ensure!(
@@ -28,7 +28,7 @@ pub fn run(directory: &Path) -> Result<i32> {
                 && command
                     .iter()
                     .all(|arg| !arg.is_empty() && !arg.contains('\0')),
-            "Liste d’arguments non vides requise pour chaque check"
+            "Each check requires a list of nonempty arguments"
         );
     }
     let provider = state::text(&config["sandbox"], "provider")?;

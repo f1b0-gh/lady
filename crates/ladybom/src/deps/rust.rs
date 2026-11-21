@@ -22,10 +22,10 @@ fn requirements(
         if let Some(values) = table.get(key) {
             let values = values
                 .as_table()
-                .ok_or_else(|| invalid(format!("Table Cargo requise : {key}")))?;
+                .ok_or_else(|| invalid(format!("Cargo table required: {key}")))?;
             for (alias, spec) in values {
                 if !spec.is_str() && !spec.is_table() {
-                    return Err(invalid(format!("Dépendance Cargo invalide : {alias}")));
+                    return Err(invalid(format!("Invalid Cargo dependency: {alias}")));
                 }
                 let inherited;
                 let is_inherited =
@@ -35,7 +35,7 @@ fn requirements(
                         .and_then(|w| w.get("dependencies"))
                         .and_then(|d| d.get(alias))
                         .ok_or_else(|| {
-                            invalid(format!("Dépendance workspace introuvable : {alias}"))
+                            invalid(format!("Workspace dependency not found: {alias}"))
                         })?;
                     let mut table = if let Some(version) = value.as_str() {
                         toml::map::Map::from_iter([(
@@ -45,7 +45,7 @@ fn requirements(
                     } else {
                         value
                             .as_table()
-                            .ok_or_else(|| invalid("Dépendance workspace invalide".into()))?
+                            .ok_or_else(|| invalid("Invalid workspace dependency".into()))?
                             .clone()
                     };
                     if let Some(extra) = spec.get("features") {
@@ -57,7 +57,7 @@ fn requirements(
                         features.extend(
                             extra
                                 .as_array()
-                                .ok_or_else(|| invalid("Liste features requise".into()))?
+                                .ok_or_else(|| invalid("features list required".into()))?
                                 .clone(),
                         );
                         table.insert("features".into(), toml::Value::Array(features));
@@ -81,12 +81,12 @@ fn requirements(
                 let extras = if let Some(features) = spec.get("features") {
                     features
                         .as_array()
-                        .ok_or_else(|| invalid("Liste features requise".into()))?
+                        .ok_or_else(|| invalid("features list required".into()))?
                         .iter()
                         .map(|v| {
                             v.as_str()
                                 .map(String::from)
-                                .ok_or_else(|| invalid("Feature textuelle requise".into()))
+                                .ok_or_else(|| invalid("Feature must be a string".into()))
                         })
                         .collect::<Result<Vec<_>>>()?
                 } else {
@@ -135,7 +135,7 @@ fn workspace(
         .is_some()
     {
         return Err(invalid(
-            "package.workspace explicite non pris en charge ; aucun chemin externe suivi".into(),
+            "Explicit package.workspace is unsupported; no external path followed".into(),
         ));
     }
     let member_root = name.rsplit_once('/').map_or("", |(root, _)| root);
@@ -153,7 +153,7 @@ fn workspace(
         } else {
             member_root
                 .strip_prefix(&format!("{root}/"))
-                .ok_or_else(|| invalid("Racine workspace invalide".into()))?
+                .ok_or_else(|| invalid("Invalid workspace root".into()))?
         };
         let matches = |key: &str| -> Result<bool> {
             let Some(patterns) = workspace.get(key) else {
@@ -161,11 +161,11 @@ fn workspace(
             };
             for pattern in patterns
                 .as_array()
-                .ok_or_else(|| invalid("Liste workspace requise".into()))?
+                .ok_or_else(|| invalid("Workspace list required".into()))?
             {
                 let pattern = pattern
                     .as_str()
-                    .ok_or_else(|| invalid("Motif workspace textuel requis".into()))?;
+                    .ok_or_else(|| invalid("Workspace pattern must be a string".into()))?;
                 crate::config::relative_path(pattern)?;
                 let glob = globset::GlobBuilder::new(pattern)
                     .literal_separator(true)
@@ -194,7 +194,9 @@ pub(super) fn parse(
 ) -> Result<Project> {
     let manifest = parse_toml(content)?;
     if manifest.get("package").is_none() && manifest.get("workspace").is_none() {
-        return Err(invalid("Cargo.toml sans package ni workspace".into()));
+        return Err(invalid(
+            "Cargo.toml has neither package nor workspace".into(),
+        ));
     }
     let mut project = Project::new("rust", "cargo", name);
     let workspace = workspace(name, &manifest, inputs)?;
@@ -297,7 +299,7 @@ pub(super) fn parse(
         } else {
             let lock: cargo_lock::Lockfile = content
                 .parse()
-                .map_err(|e| invalid(format!("Cargo.lock invalide : {e}")))?;
+                .map_err(|e| invalid(format!("Invalid Cargo.lock: {e}")))?;
             let metadata = lock::metadata(content, &lock)?;
             for (package, metadata) in lock.packages.into_iter().zip(metadata) {
                 let package_name = package.name.to_string();
@@ -315,7 +317,7 @@ pub(super) fn parse(
                     Vec::new()
                 };
                 if source.is_some() && !registry {
-                    diagnostic(diagnostics, "non_default_source", &lock_name, format!("Source Cargo spécifique pour {package_name} : validation requise avant préparation"), false);
+                    diagnostic(diagnostics, "non_default_source", &lock_name, format!("Custom Cargo source for {package_name}: validation required before preparation"), false);
                 }
                 project.components.push(Component {
                     name: package_name.clone(),

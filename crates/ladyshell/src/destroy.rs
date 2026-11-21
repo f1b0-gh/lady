@@ -34,7 +34,7 @@ fn run_selected(
     crate::continuous::host::execution_directory(&lock.directory)?;
     lock.verify_directory()?;
     let mut current = state::load(&lock.directory)?.ok_or_else(|| Error::InvalidInput {
-        message: "État absent".into(),
+        message: "State is missing".into(),
     })?;
     if let Some(expected) = expected {
         expected.verify(&current)?;
@@ -42,12 +42,12 @@ fn run_selected(
     if let Some(operation) = state::read(&lock.directory.join("operation.json"))? {
         ensure!(
             operation["phase"] == "complete",
-            "Apply interrompu : reprendre avant destroy"
+            "Apply was interrupted: resume before destroy"
         );
     }
     ensure!(
         !lock.directory.join("checkout-pending.json").try_exists()?,
-        "Application checkout interrompue : reprendre avant destroy"
+        "Checkout application was interrupted: resume before destroy"
     );
     lock.verify_directory()?;
     let backend = Backend::new(&current["context"])?;
@@ -58,19 +58,19 @@ fn run_selected(
     lock.verify_directory()?;
     if observed.is_none() {
         let receipt = previous.ok_or_else(|| Error::InvalidInput {
-            message: "Sandbox absente sans reçu de suppression ; état conservé".into(),
+            message: "Sandbox is missing without a deletion receipt; state retained".into(),
         })?;
         ensure!(
             receipt["sandbox_id"] == current["sandbox_id"]
                 && receipt["context"] == current["context"]
                 && receipt["owner"] == current["owner"],
-            "Reçu de suppression divergent"
+            "Deletion receipt mismatch"
         );
         return complete(receipt, &path);
     }
     // Never delete a replacement which merely has the same name.
     let observed = observed.ok_or_else(|| Error::InvalidInput {
-        message: "Sandbox absente".into(),
+        message: "Sandbox is missing".into(),
     })?;
     let label = current["owner_label"]
         .as_str()
@@ -79,7 +79,7 @@ fn run_selected(
     ensure!(
         observed["id"] == current["sandbox_id"]
             && observed["labels"].get(&label) == current.get("owner"),
-        "Identité/propriété sandbox divergente : suppression refusée"
+        "Sandbox identity/ownership mismatch: deletion refused"
     );
     if !args.discard_work {
         // Fresh export even on retry: work may have changed after a failed delete.
@@ -100,12 +100,12 @@ fn run_selected(
             .as_ref()
             .is_some_and(|s| s["id"] == current["sandbox_id"]
                 && s["labels"].get(&label) == current.get("owner")),
-        "Sandbox modifiée avant suppression"
+        "Sandbox changed before deletion"
     );
     backend.call(&["sandbox", "delete", &name])?;
     ensure!(
         backend.sandbox(&name)?.is_none(),
-        "Suppression non encore confirmée ; relancer destroy, état conservé"
+        "Deletion is not yet confirmed; run destroy again, state retained"
     );
     lock.verify_directory()?;
     complete(receipt, &path)

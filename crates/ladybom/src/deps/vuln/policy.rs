@@ -29,14 +29,14 @@ pub(super) struct Qualification<'a> {
 fn text(value: &str, field: &str) -> Result<()> {
     ensure!(
         !value.trim().is_empty() && value.len() <= MAX_TEXT && !value.contains(['\r', '\n', '\t']),
-        "Champ {field} vide, trop long ou non normalisé"
+        "Field {field} is empty, too long or not normalized"
     );
     Ok(())
 }
 fn evidence(values: &[String]) -> Result<()> {
     ensure!(
         !values.is_empty() && values.len() <= MAX_EVIDENCE,
-        "Preuves requises et bornées"
+        "Evidence is required and must be bounded"
     );
     for value in values {
         text(value, "evidence")?;
@@ -52,14 +52,14 @@ fn active(issued: &str, expires: &str, as_of: i128) -> Result<bool> {
     let expires = instant(expires)?;
     ensure!(
         issued <= as_of && expires > issued,
-        "Décision future ou période de validité incohérente"
+        "Decision is dated in the future or has an inconsistent validity period"
     );
     Ok(as_of < expires)
 }
 fn age_bound(age: u64) -> Result<()> {
     ensure!(
         (1..=MAX_AGE).contains(&age),
-        "Durée de fraîcheur hors limites (1..31536000 secondes)"
+        "Freshness duration out of bounds (1..31536000 seconds)"
     );
     Ok(())
 }
@@ -70,11 +70,11 @@ pub(super) fn qualify<'a>(
 ) -> Result<BTreeMap<String, Qualification<'a>>> {
     ensure!(
         assessment.schema_version == 1,
-        "Version d'analyse non prise en charge"
+        "Unsupported assessment version"
     );
     ensure!(
         assessment.findings.len() <= MAX_FINDINGS,
-        "Trop de résultats"
+        "Too many results"
     );
     age_bound(assessment.max_age_seconds)?;
     text(&assessment.report_digest, "report_digest")?;
@@ -83,7 +83,7 @@ pub(super) fn qualify<'a>(
     let as_of = instant(&assessment.as_of)?;
     ensure!(
         instant(&assessment.snapshot_fetched_at)? <= as_of,
-        "Instantané futur"
+        "Snapshot is dated in the future"
     );
     let mut result = BTreeMap::new();
     let mut statuses = BTreeMap::new();
@@ -95,32 +95,42 @@ pub(super) fn qualify<'a>(
         }
         ensure!(
             !result.contains_key(&finding.id),
-            "Identifiant de résultat dupliqué"
+            "Duplicate result identifier"
         );
         statuses.insert(finding.id.as_str(), finding.status);
-        result.insert(finding.id.clone(), Qualification { state: DecisionState::InTriage, decision: None, active: false,
-            reasons: vec!["Analyse initiale in_triage ; une correspondance ne prouve pas l'exploitabilité".into()] });
+        result.insert(
+            finding.id.clone(),
+            Qualification {
+                state: DecisionState::InTriage,
+                decision: None,
+                active: false,
+                reasons: vec![
+                    "Initial assessment is in_triage; a match does not establish exploitability"
+                        .into(),
+                ],
+            },
+        );
     }
     if let Some(document) = decisions {
         ensure!(
             document.schema_version == 1,
-            "Version des décisions non prise en charge"
+            "Unsupported decisions version"
         );
         ensure!(
             document.report_digest == assessment.report_digest
                 && document.snapshot_digest == assessment.snapshot_digest,
-            "Décisions hors du périmètre rapport/instantané"
+            "Decisions outside the report/snapshot scope"
         );
         ensure!(
             document.decisions.len() <= MAX_FINDINGS,
-            "Trop de décisions"
+            "Too many decisions"
         );
         let mut seen = BTreeSet::new();
         for decision in &document.decisions {
             text(&decision.finding_id, "finding_id")?;
-            ensure!(seen.insert(&decision.finding_id), "Décision dupliquée");
+            ensure!(seen.insert(&decision.finding_id), "Duplicate decision");
             let Some(qualification) = result.get_mut(&decision.finding_id) else {
-                return Err(invalid("Décision pour un résultat inconnu".into()));
+                return Err(invalid("Decision for an unknown result".into()));
             };
             text(&decision.author, "author")?;
             text(&decision.detail, "detail")?;
@@ -132,33 +142,33 @@ pub(super) fn qualify<'a>(
                         &ImpactAnalysisJustification::new_unchecked(justification)
                     )
                     .is_ok(),
-                    "Justification VEX non reconnue"
+                    "Unrecognized VEX justification"
                 );
             }
             ensure!(
                 decision.state != DecisionState::NotAffected || decision.justification.is_some(),
-                "Justification VEX requise pour not_affected"
+                "VEX justification required for not_affected"
             );
             let is_active = active(&decision.issued_at, &decision.expires_at, as_of)?;
             qualification.decision = Some(decision);
             qualification.active = is_active;
-            qualification.reasons.push(format!("Assertion documentée par {} ; détail={} ; preuves={} ; émission={} ; expiration={} ; vérification des preuves humaine", decision.author, decision.detail, serde_json::to_string(&decision.evidence)?, decision.issued_at, decision.expires_at));
+            qualification.reasons.push(format!("Assertion documented by {}; detail={}; evidence={}; issued={}; expires={}; evidence verification is human", decision.author, decision.detail, serde_json::to_string(&decision.evidence)?, decision.issued_at, decision.expires_at));
             if !is_active {
                 qualification
                     .reasons
-                    .push("Décision expirée ; retour à in_triage".into());
+                    .push("Expired decision; reverting to in_triage".into());
                 continue;
             }
             let status = statuses
                 .get(decision.finding_id.as_str())
-                .ok_or_else(|| invalid("Résultat absent".into()))?;
+                .ok_or_else(|| invalid("Missing result".into()))?;
             if *status == MatchStatus::Unknown {
                 qualification
                     .reasons
-                    .push("Résultat inconnu : assertion sans effet sur la qualification".into());
+                    .push("Unknown result: assertion has no effect on qualification".into());
                 continue;
             }
-            ensure!(decision.state != DecisionState::Resolved, "Assertion resolved contradictoire avec la correspondance actuelle ; rescanner les sources corrigées");
+            ensure!(decision.state != DecisionState::Resolved, "The resolved assertion contradicts the current match; rescan the corrected sources");
             qualification.state = decision.state;
         }
     }
@@ -174,12 +184,12 @@ pub fn evaluate(
     signals: Option<&Signals>,
 ) -> Result<PolicyResult> {
     let qualifications = qualify(assessment, decisions)?;
-    ensure!(
-        policy.schema_version == 1,
-        "Version de politique non prise en charge"
-    );
+    ensure!(policy.schema_version == 1, "Unsupported policy version");
     age_bound(policy.max_age_seconds)?;
-    ensure!(policy.exceptions.len() <= MAX_FINDINGS, "Trop d'exceptions");
+    ensure!(
+        policy.exceptions.len() <= MAX_FINDINGS,
+        "Too many exceptions"
+    );
     let as_of = instant(&assessment.as_of)?;
     let snapshot_age = as_of - instant(&assessment.snapshot_fetched_at)?;
     let fresh = assessment.coverage.fresh
@@ -198,7 +208,7 @@ pub fn evaluate(
             .all(|f| f.status == MatchStatus::Matched)
         && fresh;
     let mut reasons = vec![format!(
-        "Instantané source={} ; date={} ; âge={}s ; limites analyse={}s politique={}s",
+        "Snapshot source={}; date={}; age={}s; limits: assessment={}s policy={}s",
         assessment.snapshot_source,
         assessment.snapshot_fetched_at,
         snapshot_age as f64 / NANOS_PER_SECOND as f64,
@@ -206,9 +216,7 @@ pub fn evaluate(
         policy.max_age_seconds
     )];
     if !complete {
-        reasons.push(
-            "Couverture incomplète ou données périmées : refus indépendant des exceptions".into(),
-        );
+        reasons.push("Incomplete coverage or stale data: refused regardless of exceptions".into());
     }
     reasons.extend(assessment.coverage.limitations.iter().cloned());
     let mut exceptions = BTreeMap::new();
@@ -216,16 +224,16 @@ pub fn evaluate(
         text(&exception.finding_id, "finding_id")?;
         ensure!(
             qualifications.contains_key(&exception.finding_id),
-            "Exception pour un résultat inconnu"
+            "Exception for an unknown result"
         );
         ensure!(
             !exceptions.contains_key(&exception.finding_id),
-            "Exception dupliquée"
+            "Duplicate exception"
         );
         ensure!(
             exception.report_digest == assessment.report_digest
                 && exception.snapshot_digest == assessment.snapshot_digest,
-            "Exception hors du périmètre rapport/instantané"
+            "Exception outside the report/snapshot scope"
         );
         text(&exception.author, "author")?;
         text(&exception.reason, "reason")?;
@@ -236,18 +244,15 @@ pub fn evaluate(
     let mut signals_by_id = BTreeMap::new();
     let mut signals_fresh = true;
     if let Some(signals) = signals {
-        ensure!(
-            signals.schema_version == 1,
-            "Version de signaux non prise en charge"
-        );
+        ensure!(signals.schema_version == 1, "Unsupported signals version");
         text(&signals.source, "source")?;
         let fetched_at = instant(&signals.fetched_at)?;
         ensure!(fetched_at <= as_of, "Signaux futurs");
-        ensure!(signals.entries.len() <= MAX_RECORDS, "Trop de signaux");
+        ensure!(signals.entries.len() <= MAX_RECORDS, "Too many signals");
         signals_fresh = as_of - fetched_at <= SIGNAL_MAX_AGE;
-        reasons.push(format!("Signaux source={} ; date={} ; fraîcheur={} ; seuil EPSS fixe=0.1 (heuristique de priorité, jamais une exemption)", signals.source, signals.fetched_at, signals_fresh));
+        reasons.push(format!("Signals source={}; date={}; fresh={}; fixed EPSS threshold=0.1 (a priority heuristic, never an exemption)", signals.source, signals.fetched_at, signals_fresh));
         if !signals_fresh {
-            reasons.push("Signaux explicitement fournis mais périmés : refus".into());
+            reasons.push("Explicitly supplied signals are stale: refused".into());
         }
         for signal in &signals.entries {
             text(&signal.id, "signal.id")?;
@@ -255,11 +260,11 @@ pub fn evaluate(
                 signal
                     .epss
                     .is_none_or(|score| score.is_finite() && (0.0..=1.0).contains(&score)),
-                "Score EPSS invalide"
+                "Invalid EPSS score"
             );
             ensure!(
                 signals_by_id.insert(signal.id.as_str(), signal).is_none(),
-                "Signal dupliqué"
+                "Duplicate signal"
             );
         }
     }
@@ -269,17 +274,27 @@ pub fn evaluate(
         let mut finding_reasons = qualification.reasons.clone();
         finding_reasons.extend(finding.limitations.iter().cloned());
         if finding.status == MatchStatus::Unknown {
-            finding_reasons.push("Correspondance inconnue : qualification et exception ne peuvent pas lever le refus".into());
+            finding_reasons.push(
+                "Unknown match: qualification and exceptions cannot override the refusal".into(),
+            );
         }
         let mut accepted_risk = false;
         if let Some((exception, is_active)) = exceptions.get(&finding.id) {
-            finding_reasons.push(format!("Acceptation du risque par {} ; raison={} ; preuves={} ; émission={} ; expiration={} ; active={}", exception.author, exception.reason, serde_json::to_string(&exception.evidence)?, exception.issued_at, exception.expires_at, is_active));
+            finding_reasons.push(format!(
+                "Risk accepted by {}; reason={}; evidence={}; issued={}; expires={}; active={}",
+                exception.author,
+                exception.reason,
+                serde_json::to_string(&exception.evidence)?,
+                exception.issued_at,
+                exception.expires_at,
+                is_active
+            ));
             if !is_active {
-                finding_reasons.push("Exception expirée ; acceptation du risque inactive".into());
+                finding_reasons.push("Expired exception; risk acceptance is inactive".into());
             }
             accepted_risk = *is_active && finding.status == MatchStatus::Matched;
             if finding.status == MatchStatus::Unknown {
-                finding_reasons.push("L'exception ne peut pas accepter un résultat inconnu".into());
+                finding_reasons.push("The exception cannot accept an unknown result".into());
             }
         }
         let matching_signals: Vec<_> = std::iter::once(&finding.id)

@@ -5,16 +5,16 @@ use std::path::PathBuf;
 pub struct AlignmentPolicyArgs {
     #[arg(long)]
     snapshot: PathBuf,
-    /// Snapshot vérifié de référence ; constate la dette sans l'approuver.
+    /// Verified baseline snapshot; records debt without approving it.
     #[arg(long)]
     baseline: PathBuf,
-    /// Politique JSON versionnée, liant le digest de référence (maximum 4 Mio).
+    /// Versioned JSON policy binding the baseline digest (maximum 4 MiB).
     #[arg(long)]
     policy: PathBuf,
-    /// Date RFC3339 explicite pour évaluer les exceptions.
+    /// Explicit RFC3339 date for evaluating exceptions.
     #[arg(long)]
     as_of: String,
-    /// Exiger aussi une exception active pour chaque divergence restante.
+    /// Also require an active exception for each remaining difference.
     #[arg(long)]
     require_reviewed: bool,
 }

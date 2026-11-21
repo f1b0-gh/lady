@@ -44,7 +44,7 @@ pub fn write(directory: &Path, mut metadata: RunMetadata, output: Output) -> Res
     let uid = unsafe { libc::geteuid() };
     ensure!(
         identity.uid() == uid && identity.mode() & 0o077 == 0,
-        "Répertoire de publication privé requis"
+        "Private publication directory required"
     );
     for name in [
         "findings.json",
@@ -86,7 +86,7 @@ pub fn write(directory: &Path, mut metadata: RunMetadata, output: Output) -> Res
         documents
             .iter()
             .all(|(name, bytes)| verified.files.get(*name) == Some(bytes)),
-        "Les documents publiés ont changé pendant leur vérification"
+        "Published documents changed during verification"
     );
     write_new(&root, "REPORT.md", report::render(&verified).as_bytes())?;
     same_directory(&root, &directory)?;
@@ -104,11 +104,11 @@ pub fn coverage(
 ) -> Result<Value> {
     ensure!(
         !paths.is_empty() && paths.len() <= 5000,
-        "Périmètre de couverture vide ou trop volumineux"
+        "Coverage scope is empty or too large"
     );
     ensure!(
         fingerprints.len() <= 1024 && unresolved.len() <= 1024,
-        "Résultats de couverture trop volumineux"
+        "Coverage results too large"
     );
     for path in paths {
         config::relative_path(path)?;
@@ -116,12 +116,15 @@ pub fn coverage(
     if let Some(hunter) = hunter_id {
         config::identifier(hunter)?;
     } else {
-        ensure!(fingerprints.is_empty(), "Résultat sans chasseur identifié");
+        ensure!(
+            fingerprints.is_empty(),
+            "Finding without an identified hunter"
+        );
     }
     let mut unresolved = unresolved.to_vec();
     let status = if hunter_id.is_none() {
         if unresolved.is_empty() {
-            unresolved.push("Aucun chasseur terminé : revue du périmètre différée.".into());
+            unresolved.push("No hunter finished: scope review deferred.".into());
         }
         "deferred"
     } else if !fingerprints.is_empty() {
@@ -143,7 +146,7 @@ pub fn coverage(
         Some(hunter) => vec![json!({
             "agent_id": hunter,
             "reviewed_paths": paths,
-            "invariant": "Revue agrégée du périmètre quick/targeted ; couverture partielle, sans garantie d’exhaustivité.",
+            "invariant": "Aggregate review of the quick/targeted scope; partial coverage, with no completeness guarantee.",
             "method": "source",
             "result": summary,
             "artifact": null
@@ -158,9 +161,9 @@ pub fn coverage(
             "subsystem": subsystem,
             "attack_class": attack_class
         },
-        "surface": "Périmètre agrégé de l’audit",
-        "boundary": "Frontières de confiance du périmètre",
-        "subsystem": "Sous-systèmes inclus, revue partielle",
+        "surface": "Aggregate audit scope",
+        "boundary": "Scope trust boundaries",
+        "subsystem": "Included subsystems, partial review",
         "attack_class": "Access control",
         "starting_paths": paths,
         "ordinary_attack_class_block": attack_class,
@@ -199,9 +202,7 @@ struct BoundedBytes(Vec<u8>);
 impl Write for BoundedBytes {
     fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
         if bytes.len() > DOCUMENT_LIMIT.saturating_sub(self.0.len()) {
-            return Err(std::io::Error::other(
-                "Document de publication trop volumineux",
-            ));
+            return Err(std::io::Error::other("Publication document too large"));
         }
         self.0.extend_from_slice(bytes);
         Ok(bytes.len())
@@ -230,7 +231,7 @@ fn absent(root: &File, name: &str) -> Result<()> {
         )
     };
     if status == 0 {
-        return Err(invalid("Une destination de publication existe déjà"));
+        return Err(invalid("A publication destination already exists"));
     }
     let error = std::io::Error::last_os_error();
     if error.raw_os_error() == Some(libc::ENOENT) {
@@ -240,7 +241,7 @@ fn absent(root: &File, name: &str) -> Result<()> {
     }
 }
 fn write_new(root: &File, name: &str, bytes: &[u8]) -> Result<()> {
-    ensure!(bytes.len() <= DOCUMENT_LIMIT, "Document trop volumineux");
+    ensure!(bytes.len() <= DOCUMENT_LIMIT, "Document too large");
     let name = CString::new(name)?;
     // SAFETY: root owns a live descriptor and name is terminated. O_EXCL and
     // O_NOFOLLOW prevent replacement or traversal of existing destinations.
@@ -267,7 +268,7 @@ fn same_directory(root: &File, path: &Path) -> Result<()> {
     let actual = files::open_directory(path)?.metadata()?;
     ensure!(
         expected.dev() == actual.dev() && expected.ino() == actual.ino(),
-        "Le répertoire de publication a changé"
+        "Publication directory changed"
     );
     Ok(())
 }

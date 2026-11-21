@@ -2,21 +2,21 @@
 use std::{ffi::OsString, io, path::PathBuf, process::ExitStatus, time::Duration};
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("Erreur du catalogue SQLite : {0}")]
+    #[error("SQLite catalog error: {0}")]
     Sqlite(#[from] rusqlite::Error),
-    #[error("Document d’audit refusé : {0}")]
+    #[error("Audit document rejected: {0}")]
     AuditDocument(#[from] crate::audit::validator::Error),
-    #[error("Authentification refusée : {message}")]
+    #[error("Authentication rejected: {message}")]
     Authentication { message: String },
-    #[error("Identité divergente : {resource}")]
+    #[error("Identity mismatch: {resource}")]
     IdentityMismatch { resource: String },
-    #[error("Configuration invalide : {message}")]
+    #[error("Invalid configuration: {message}")]
     InvalidConfiguration { message: String },
-    #[error("Chemin invalide {path:?} : {reason}")]
+    #[error("Invalid path {path:?}: {reason}")]
     InvalidPath { path: PathBuf, reason: &'static str },
-    #[error("Entrée refusée : {message}")]
+    #[error("Input rejected: {message}")]
     InvalidInput { message: String },
-    #[error("Erreur d’E/S : {0}")]
+    #[error("I/O error: {0}")]
     Io(#[from] io::Error),
     #[error("{path:?} : {source}")]
     PathIo {
@@ -24,48 +24,46 @@ pub enum Error {
         #[source]
         source: io::Error,
     },
-    #[error("JSON invalide : {0}")]
+    #[error("Invalid JSON: {0}")]
     Json(#[from] serde_json::Error),
-    #[error("Sortie non UTF-8 : {0}")]
+    #[error("Non-UTF-8 output: {0}")]
     Utf8(#[from] std::string::FromUtf8Error),
-    #[error("Octet nul dans un chemin : {0}")]
+    #[error("NUL byte in a path: {0}")]
     Nul(#[from] std::ffi::NulError),
-    #[error("Impossible de lancer {program:?} : {source}")]
+    #[error("Failed to start {program:?}: {source}")]
     ProcessSpawn {
         program: OsString,
         #[source]
         source: io::Error,
     },
-    #[error("Échec {program:?} ({status}) : {stderr}")]
+    #[error("{program:?} failed ({status}): {stderr}")]
     ProcessExit {
         program: OsString,
         status: ExitStatus,
         stderr: String,
     },
-    #[error("Délai de {program:?} dépassé ({timeout:?})")]
+    #[error("{program:?} timed out ({timeout:?})")]
     ProcessTimeout {
         program: OsString,
         timeout: Duration,
     },
-    #[error("Sortie {stream} de {program:?} trop volumineuse (limite {limit} octets)")]
+    #[error("{stream} output from {program:?} is too large (limit {limit} bytes)")]
     ProcessOutputLimit {
         program: OsString,
         stream: &'static str,
         limit: usize,
     },
-    #[error("Pipe {stream} absent pour {program:?}")]
+    #[error("Missing {stream} pipe for {program:?}")]
     MissingPipe {
         program: OsString,
         stream: &'static str,
     },
-    #[error("Évaluation Nickel refusée : {source}")]
+    #[error("Nickel evaluation rejected: {source}")]
     Nickel {
         #[source]
         source: Box<Error>,
     },
-    #[error(
-        "Verrou divergent {path:?} : examiner les changements puis exécuter lock explicitement"
-    )]
+    #[error("Lock mismatch {path:?}: review the changes, then run lock explicitly")]
     LockMismatch { path: PathBuf },
     #[error("{message} : {source}")]
     Context {
@@ -73,7 +71,7 @@ pub enum Error {
         #[source]
         source: Box<Error>,
     },
-    #[error("Commande {command} non encore portée ; aucun état modifié")]
+    #[error("Command {command} has not yet been ported; no state changed")]
     UnsupportedCommand { command: &'static str },
 }
 pub type Result<T> = std::result::Result<T, Error>;

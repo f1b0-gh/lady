@@ -106,7 +106,7 @@ pub fn alignment(graph: &Graph) -> Result<Alignment> {
         .try_fold(0usize, |count, p| {
             count
                 .checked_add(p.components.len())
-                .ok_or_else(|| invalid("Limite de composants dépassée".into()))
+                .ok_or_else(|| invalid("Component limit exceeded".into()))
         })?;
     let requirement_count = graph
         .inventory
@@ -115,16 +115,13 @@ pub fn alignment(graph: &Graph) -> Result<Alignment> {
         .try_fold(0usize, |count, p| {
             count
                 .checked_add(p.requirements.len())
-                .ok_or_else(|| invalid("Limite de déclarations dépassée".into()))
+                .ok_or_else(|| invalid("Declaration limit exceeded".into()))
         })?;
     ensure!(
         component_count <= MAX_COMPONENTS,
-        "Limite de composants dépassée"
+        "Component limit exceeded"
     );
-    ensure!(
-        requirement_count <= MAX_EDGES,
-        "Limite de déclarations dépassée"
-    );
+    ensure!(requirement_count <= MAX_EDGES, "Declaration limit exceeded");
 
     let locals = crate::deps::npm::local::LocalPackages::new(&graph.inventory);
     let python_locals = crate::deps::python::local::LocalPackages::new(&graph.inventory);
@@ -177,7 +174,7 @@ pub fn alignment(graph: &Graph) -> Result<Alignment> {
     for project in &graph.inventory.projects {
         let domain = project_domains
             .get(project.manifest.as_str())
-            .ok_or_else(|| invalid("Domaine du projet absent".into()))?;
+            .ok_or_else(|| invalid("Missing project domain".into()))?;
         for component in &project.components {
             let purl = if project.ecosystem == "npm" && crate::deps::npm::local::is_local(component)
             {
@@ -427,56 +424,61 @@ pub fn alignment(graph: &Graph) -> Result<Alignment> {
     let mut limitations = Vec::new();
     if !coverage.inventory_complete {
         limitations.push(
-            "Inventaire verrouillé absent, vide ou incomplet : alignement global non démontré"
+            "Locked inventory missing, empty or incomplete: overall alignment is not established"
                 .into(),
         );
     }
     if empty_domains > 0 {
         limitations.push(format!(
-            "{empty_domains} domaines de résolution sans composant inventorié"
+            "{empty_domains} resolution domains without inventoried components"
         ));
     }
     if !supported {
-        limitations
-            .push("Au moins un écosystème n'a pas de projection de versions qualifiée".into());
+        limitations.push("At least one ecosystem lacks a qualified version projection".into());
     }
     if unidentified_components > 0 {
         limitations.push(format!(
-            "{unidentified_components} composants sans identité de paquet qualifiée"
+            "{unidentified_components} components without a qualified package identity"
         ));
     }
     if coverage.unprojected_components > 0 {
         limitations.push(format!(
-            "{} composants de l'inventaire sans occurrence projetée correspondante",
+            "{} inventory components without a corresponding projected occurrence",
             coverage.unprojected_components
         ));
     }
     if unmapped_nodes > 0 {
         limitations.push(format!(
-            "{unmapped_nodes} occurrences projetées sans preuve correspondante dans leur domaine"
+            "{unmapped_nodes} projected occurrences without corresponding evidence in their domain"
         ));
     }
     if !activation_known {
-        limitations.push("Activation des paquets, fonctionnalités et cibles non entièrement établie par l'analyse statique".into());
+        limitations.push(
+            "Package, feature and target activation is not fully established by static analysis"
+                .into(),
+        );
     }
     if !graph.limitations.is_empty() {
         limitations.push(format!(
-            "{} limites de projection conservées dans le graphe source",
+            "{} projection limitations retained in the source graph",
             graph.limitations.len()
         ));
     }
     if !pin_audit_complete {
-        limitations.push("Classification des déclarations directes incomplète".into());
+        limitations.push("Incomplete direct declaration classification".into());
     }
     if pins.iter().any(|p| p.status == PinStatus::SourceOverride) {
-        limitations.push("Les sélections de sources sont classifiées séparément ; elles ne prouvent pas un pin de version".into());
+        limitations.push(
+            "Source selections are classified separately; they do not establish a version pin"
+                .into(),
+        );
     }
     if !pins.is_empty()
         && pins.iter().all(|p| p.status == PinStatus::ExactVersion)
         && pin_lock_consistent != Some(true)
     {
         limitations
-            .push("Concordance des pins exacts avec les cibles verrouillées non établie".into());
+            .push("Agreement between exact pins and locked targets is not established".into());
     }
     let result = Alignment {
         schema_version: 1,
@@ -493,7 +495,7 @@ pub fn alignment(graph: &Graph) -> Result<Alignment> {
     };
     ensure!(
         serde_json::to_vec(&result)?.len() <= MAX_BYTES,
-        "Rapport d'alignement supérieur à 128 Mio"
+        "Alignment report exceeds 128 MiB"
     );
     Ok(result)
 }
@@ -732,14 +734,14 @@ fn projected_purl(project: &Project, component: &Component) -> Result<Option<Str
 fn package_identity(purl: &str, component: &Component) -> Result<String> {
     let mut parsed = purl
         .parse::<packageurl::PackageUrl>()
-        .map_err(|e| invalid(format!("PURL invalide : {e}")))?;
+        .map_err(|e| invalid(format!("Invalid PURL: {e}")))?;
     ensure!(
         purl.len() <= 8192 && parsed.to_string() == purl,
-        "PURL canonique requise"
+        "Canonical PURL required"
     );
     ensure!(
         parsed.version() == Some(component.version.as_str()) && !component.version.is_empty(),
-        "Version du composant divergente de sa PURL"
+        "Component version differs from its PURL"
     );
     Ok(parsed.without_version().to_string())
 }

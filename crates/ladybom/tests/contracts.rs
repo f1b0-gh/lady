@@ -54,10 +54,40 @@ fn graph_schema_and_digest_bind_the_compact_inventory() -> Result<()> {
     let project = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/project");
     let graph = deps::graph::project(deps::scan_project(&project)?)?;
     let expected: serde_json::Value = serde_json::from_str(include_str!("fixtures/graph-v2.json"))?;
-    assert_eq!(serde_json::to_value(&graph)?, expected);
+    let historical: deps::graph::Graph = serde_json::from_value(expected.clone())?;
+    historical.validate()?;
+    assert_eq!(serde_json::to_value(&historical)?, expected);
+    let historical_digest = deps::graph::graph_digest(&historical)?;
     assert_eq!(
-        deps::graph::graph_digest(&graph)?,
+        historical_digest,
         include_str!("fixtures/graph-v2.sha256").trim()
+    );
+
+    // Translation changes human explanations, not inventory or graph structure.
+    // Keep the historical artifact and its original digest independently verifiable.
+    graph.validate()?;
+    assert_eq!(historical.limitations.len(), 5);
+    assert_eq!(graph.limitations.len(), historical.limitations.len());
+    assert!(graph.limitations.iter().all(|text| !text.trim().is_empty()));
+    assert!(historical
+        .limitations
+        .iter()
+        .all(|text| !text.trim().is_empty()));
+    assert!(graph.inventory.complete);
+    assert!(historical.inventory.complete);
+    assert!(!graph.complete());
+    assert!(!historical.complete());
+    assert_ne!(graph.limitations, historical.limitations);
+    assert_ne!(deps::graph::graph_digest(&graph)?, historical_digest);
+
+    // Restoring only the historical prose must restore every serialized field
+    // and the original digest; all identities, evidence and conditions remain bound.
+    let mut with_historical_wording = graph.clone();
+    with_historical_wording.limitations = historical.limitations;
+    assert_eq!(serde_json::to_value(&with_historical_wording)?, expected);
+    assert_eq!(
+        deps::graph::graph_digest(&with_historical_wording)?,
+        historical_digest
     );
     Ok(())
 }

@@ -5,7 +5,7 @@ use std::{io::Write, path::PathBuf};
 pub struct AlignmentPlanArgs {
     #[arg(long)]
     snapshot: PathBuf,
-    /// Rendre un plan Markdown ; JSON versionné par défaut.
+    /// Render a Markdown plan; defaults to versioned JSON.
     #[arg(long)]
     markdown: bool,
 }

@@ -65,7 +65,7 @@ impl Ladybug {
     pub fn new(binary: PathBuf) -> Result<Self> {
         ensure!(
             binary.is_absolute(),
-            "Chemin absolu du moteur LadybugDB requis"
+            "Absolute LadybugDB engine path required"
         );
         // Nix output paths can contain symlinks; resolve explicitly, never search project PATH.
         let binary = fs::canonicalize(binary)?;
@@ -78,7 +78,7 @@ impl Ladybug {
     pub fn with_timeout(mut self, timeout: Duration) -> Result<Self> {
         ensure!(
             !timeout.is_zero() && timeout <= Duration::from_secs(300),
-            "Délai LadybugDB requis entre 1 ms et 300 s"
+            "LadybugDB timeout must be between 1 ms and 300 s"
         );
         self.timeout = timeout;
         Ok(self)
@@ -134,7 +134,7 @@ impl Ladybug {
             version
                 .split_whitespace()
                 .any(|v| v.trim_start_matches('v') == ENGINE_VERSION),
-            "Version LadybugDB non qualifiée : {} (attendue {ENGINE_VERSION})",
+            "Unqualified LadybugDB version: {} (expected {ENGINE_VERSION})",
             version.trim()
         );
         super::snapshot::write_table(&scratch.path().join("nodes.parquet"), &["id"], nodes)?;
@@ -175,20 +175,20 @@ impl Ladybug {
             process::capture_input(cmd, script.as_bytes(), self.timeout, 32 * 1024 * 1024)?;
         let stdout = stdout
             .strip_prefix(b"-- Processing: empty.cypher\n")
-            .ok_or_else(|| invalid("Initialisation LadybugDB non confirmée".into()))?;
+            .ok_or_else(|| invalid("LadybugDB initialization not confirmed".into()))?;
         let responses = serde_json::Deserializer::from_slice(stdout)
             .into_iter::<Value>()
             .collect::<std::result::Result<Vec<_>, _>>()
             .map_err(|e| {
                 invalid(format!(
-                    "Réponse LadybugDB invalide : {e}; {}",
+                    "Invalid LadybugDB response: {e}; {}",
                     String::from_utf8_lossy(&stdout[..stdout.len().min(2048)])
                 ))
             })?;
         let setup = 5 + usize::from(!nodes.is_empty()) + usize::from(!relations.is_empty());
         ensure!(
             responses.len() == setup + 2 + queries.len(),
-            "Réponses LadybugDB manquantes ou inattendues"
+            "Missing or unexpected LadybugDB responses"
         );
         ensure!(
             responses[setup] == json!([{"imported_nodes":nodes.len()}])
@@ -201,7 +201,7 @@ impl Ladybug {
         graph.validate()?;
         ensure!(
             (1..=256).contains(&query.max_depth),
-            "Profondeur requise entre 1 et 256"
+            "Depth must be between 1 and 256"
         );
         let mut keys = BTreeMap::new();
         for node in &graph.components {
@@ -209,15 +209,18 @@ impl Ladybug {
         }
         ensure!(
             keys.values().any(|n| n == &query.start),
-            "Composant de départ absent"
+            "Missing starting component"
         );
         if let Some(target) = &query.target {
-            ensure!(keys.values().any(|n| n == target), "Composant cible absent");
+            ensure!(
+                keys.values().any(|n| n == target),
+                "Missing target component"
+            );
         }
         for context in &query.filter.graphs {
             ensure!(
                 graph.contexts.contains_key(context),
-                "Contexte de filtre absent"
+                "Missing filter context"
             );
         }
         let selected = |node: &NodeRef| {
@@ -225,7 +228,7 @@ impl Ladybug {
         };
         ensure!(
             selected(&query.start) && query.target.as_ref().is_none_or(selected),
-            "Départ ou cible exclus par le filtre"
+            "Start or target excluded by the filter"
         );
         let edges: Vec<_> = graph
             .dependencies
@@ -256,10 +259,10 @@ impl Ladybug {
         let responses = self.execute_graph(&nodes, &relations, depth, &[cypher])?;
         let rows = responses[0]
             .as_array()
-            .ok_or_else(|| invalid("Liste de résultats LadybugDB requise".into()))?;
+            .ok_or_else(|| invalid("LadybugDB result list required".into()))?;
         ensure!(
             rows.len() <= graph.components.len(),
-            "Cardinalité de parcours incohérente"
+            "Inconsistent traversal cardinality"
         );
         let mut hits = Vec::new();
         let adjacency: BTreeSet<_> = edges.iter().map(|e| (&e.from, &e.to)).collect();
@@ -270,22 +273,22 @@ impl Ladybug {
                 keys.get(
                     value
                         .as_str()
-                        .ok_or_else(|| invalid("Identifiant LadybugDB invalide".into()))?,
+                        .ok_or_else(|| invalid("Invalid LadybugDB identifier".into()))?,
                 )
                 .cloned()
-                .ok_or_else(|| invalid("Identifiant LadybugDB inconnu".into()))
+                .ok_or_else(|| invalid("Unknown LadybugDB identifier".into()))
             };
             let node = lookup(&row["id"])?;
             let distance = row["distance"]
                 .as_u64()
-                .ok_or_else(|| invalid("Distance absente".into()))?;
+                .ok_or_else(|| invalid("Missing distance".into()))?;
             ensure!(
                 distance >= 1 && distance <= u64::from(depth) && seen.insert(node.clone()),
-                "Distance ou résultat dupliqué invalide"
+                "Invalid distance or duplicate result"
             );
             let path = row["path"]
                 .as_array()
-                .ok_or_else(|| invalid("Chemin absent".into()))?
+                .ok_or_else(|| invalid("Missing path".into()))?
                 .iter()
                 .map(lookup)
                 .collect::<Result<Vec<_>>>()?;
@@ -293,7 +296,7 @@ impl Ladybug {
                 path.len() == distance as usize + 1
                     && path.first() == Some(&query.start)
                     && path.last() == Some(&node),
-                "Chemin LadybugDB incohérent"
+                "Inconsistent LadybugDB path"
             );
             for pair in path.windows(2) {
                 let (from, to) = if query.direction == Direction::Dependencies {
@@ -303,7 +306,7 @@ impl Ladybug {
                 };
                 ensure!(
                     adjacency.contains(&(from, to)),
-                    "Chemin hors du graphe filtré"
+                    "Path outside the filtered graph"
                 );
             }
             if distance > u64::from(query.max_depth) {
@@ -343,10 +346,10 @@ impl Ladybug {
             .collect();
         let mut limitations = graph.limitations.clone();
         if !graph.inventory.complete {
-            limitations.push("Inventaire source partiel".into());
+            limitations.push("Partial source inventory".into());
         }
         if truncated {
-            limitations.push("Parcours tronqué par la profondeur maximale".into());
+            limitations.push("Traversal truncated by maximum depth".into());
         }
         Ok(Analysis {
             engine: format!("ladybugdb/{ENGINE_VERSION}"),

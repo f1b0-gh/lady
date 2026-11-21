@@ -29,7 +29,7 @@ pub fn validate_path(path: &str) -> Result<()> {
     relative_path(path)?;
     ensure!(
         path.len() <= 4096 && path.split('/').count() <= 65,
-        "Chemin export trop long"
+        "Export path too long"
     );
     ensure!(
         !sources::excluded(
@@ -39,12 +39,12 @@ pub fn validate_path(path: &str) -> Result<()> {
                 exclude: vec![]
             }
         ),
-        "Chemin export exclu : {path}"
+        "Excluded export path: {path}"
     );
     Ok(())
 }
 pub fn validate(inventory: &Inventory) -> Result<()> {
-    ensure!(inventory.len() <= 5000, "Trop de fichiers exportés");
+    ensure!(inventory.len() <= 5000, "Too many exported files");
     let mut total = 0usize;
     for (path, entry) in inventory {
         validate_path(path)?;
@@ -54,17 +54,17 @@ pub fn validate(inventory: &Inventory) -> Result<()> {
                     .sha256
                     .bytes()
                     .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
-            "Empreinte invalide"
+            "Invalid digest"
         );
-        ensure!(entry.size <= FILE_LIMIT, "Fichier export trop volumineux");
+        ensure!(entry.size <= FILE_LIMIT, "Export file too large");
         total = total
             .checked_add(entry.size)
-            .ok_or_else(|| invalid("Volume invalide".into()))?;
-        ensure!(total <= TOTAL_LIMIT, "Budget export dépassé");
+            .ok_or_else(|| invalid("Invalid size".into()))?;
+        ensure!(total <= TOTAL_LIMIT, "Export budget exceeded");
         let mut parent = Path::new(path).parent();
         while let Some(p) = parent {
             if let Some(s) = p.to_str() {
-                ensure!(!inventory.contains_key(s), "Collision fichier/dossier");
+                ensure!(!inventory.contains_key(s), "File/directory collision");
             }
             parent = p.parent();
         }
@@ -78,14 +78,14 @@ pub fn local_bytes(root: &Path, path: &str) -> Result<(Entry, Vec<u8>)> {
         file = files::open_entry(&file, component.as_os_str())?;
     }
     let meta = file.metadata()?;
-    ensure!(meta.is_file(), "Fichier régulier requis");
+    ensure!(meta.is_file(), "Regular file required");
     let bytes = files::read_file(file.try_clone()?, FILE_LIMIT)?;
     let after = file.metadata()?;
     ensure!(
         meta.mode() == after.mode()
             && meta.ctime() == after.ctime()
             && meta.ctime_nsec() == after.ctime_nsec(),
-        "Fichier modifié pendant lecture"
+        "File changed while reading"
     );
     Ok((
         Entry {
@@ -110,7 +110,7 @@ pub fn inventory_filtered(root: &Path, exclude: &[String]) -> Result<Inventory> 
         let name = entry
             .file_name()
             .into_string()
-            .map_err(|_| invalid("Nom non UTF-8".into()))?;
+            .map_err(|_| invalid("Non-UTF-8 name".into()))?;
         let spec = Sources {
             include: vec![],
             exclude: exclude.to_vec(),
@@ -127,7 +127,7 @@ pub fn inventory_filtered(root: &Path, exclude: &[String]) -> Result<Inventory> 
             }
             include.push(name);
         }
-        ensure!(include.len() <= 20000, "Trop d’entrées");
+        ensure!(include.len() <= 20000, "Too many entries");
     }
     let baseline = sources::snapshot(
         root,
@@ -142,7 +142,7 @@ pub fn inventory_filtered(root: &Path, exclude: &[String]) -> Result<Inventory> 
         let (entry, _) = local_bytes(root, &path)?;
         ensure!(
             entry.sha256 == record.sha256 && entry.executable == record.executable,
-            "Projet modifié pendant inventaire"
+            "Project changed during inventory"
         );
         result.insert(path, entry);
     }

@@ -21,7 +21,7 @@ pub fn desired(args: &Desired) -> Result<Value> {
     let directory = files::absolute(&args.state)?;
     ensure!(
         !directory.starts_with(&project),
-        "L’état doit résider hors du projet"
+        "State must reside outside the project"
     );
     let resources = files::absolute(&args.resources)?;
     let evaluated = nickel::evaluate(&args.config, &args.mission, &resources)?;
@@ -64,7 +64,7 @@ pub fn desired(args: &Desired) -> Result<Value> {
                 .artifacts_sha256
                 .get(name)
                 .cloned()
-                .ok_or_else(|| invalid("Empreinte artefact absente".into()))?
+                .ok_or_else(|| invalid("Missing artifact digest".into()))?
         };
         artifacts.insert(name.into(), json!({"path":path,"sha256":sha256}));
     }
@@ -106,7 +106,8 @@ pub fn apply(args: &Desired) -> Result<Value> {
 }
 pub fn status(directory: &Path) -> Result<Value> {
     let lock = state::StateLock::acquire(directory)?;
-    let current = state::load(&lock.directory)?.ok_or_else(|| invalid("État absent".into()))?;
+    let current =
+        state::load(&lock.directory)?.ok_or_else(|| invalid("State is missing".into()))?;
     let backend = Backend::new(&current["context"])?;
     Ok(json!({"state":current,"observed":backend.observe(Some(&current))?}))
 }
@@ -118,7 +119,8 @@ pub fn sync(args: &crate::request::SyncArgs) -> Result<Value> {
     let selected = crate::associations::resolve(args.state.as_deref())?;
     let lock = state::StateLock::acquire(&selected.directory)?;
     crate::continuous::host::execution_directory(&lock.directory)?;
-    let current = state::load(&lock.directory)?.ok_or_else(|| invalid("État absent".into()))?;
+    let current =
+        state::load(&lock.directory)?.ok_or_else(|| invalid("State is missing".into()))?;
     if let Some(expected) = selected.expected {
         expected.verify(&current)?;
     }
@@ -126,7 +128,7 @@ pub fn sync(args: &crate::request::SyncArgs) -> Result<Value> {
     if lock.directory.join("checkout-pending.json").try_exists()? {
         ensure!(
             !args.export,
-            "Application checkout interrompue : relancer sync ou examiner --dry-run"
+            "Checkout application interrupted: run sync again or inspect with --dry-run"
         );
         let result = crate::checkout::run(&current, &lock.directory, args.applies())?;
         return Ok(result);

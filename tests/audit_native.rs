@@ -142,10 +142,10 @@ print('storage-bounds-ok')"#,
             let execution = runtime.target(&mut journal, request, Duration::from_secs(30));
             if name == "interrupt" {
                 return match execution {
-                    Err(error) if error.to_string().contains("Worker interrompu") => Ok(()),
+                    Err(error) if error.to_string().contains("Worker interrupted") => Ok(()),
                     Err(error) => Err(error),
                     Ok(_) => Err(ladyshell::error::Error::InvalidInput {
-                        message: "Interruption sans refus du reçu".into(),
+                        message: "Interruption without receipt rejection".into(),
                     }),
                 };
             }
@@ -159,7 +159,7 @@ print('storage-bounds-ok')"#,
             if !valid {
                 return Err(ladyshell::error::Error::InvalidInput {
                     message: format!(
-                        "Sonde {name} échouée ; preuves dans {}",
+                        "Probe {name} failed; evidence in {}",
                         journal.directory().display()
                     ),
                 });
@@ -222,7 +222,7 @@ fn native_agent_driver() -> Result<(), Box<dyn std::error::Error>> {
     )?;
     journal.start()?;
     journal.begin_invocation("driver-probe", Role::Recon)?;
-    let result=runtime.agent(&mut journal,"driver-probe",br#"Native driver health check. Do not use tools. Return this JSON object: {"summary":"Pilote natif disponible","reviewed_paths":[],"candidates":[],"finding_json":null,"unresolved":[]}"#,Duration::from_secs(120));
+    let result=runtime.agent(&mut journal,"driver-probe",br#"Native driver health check. Do not use tools. Return this JSON object: {"summary":"Native driver available","reviewed_paths":[],"candidates":[],"finding_json":null,"unresolved":[]}"#,Duration::from_secs(120));
     let cleaned = runtime.cleanup(&mut journal);
     journal.finish_invocation(
         "driver-probe",

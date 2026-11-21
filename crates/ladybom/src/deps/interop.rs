@@ -32,12 +32,12 @@ fn artifact(
     *total = total.saturating_add(bytes.len());
     ensure!(
         *total <= vuln::MAX_INPUT_BYTES,
-        "Dossier d’échange supérieur à 64 Mio"
+        "Interchange bundle exceeds 64 MiB"
     );
     let descriptor = json!({"path":path,"sha256":files::hash(&bytes),"bytes":bytes.len()});
     ensure!(
         artifacts.insert(path, bytes).is_none(),
-        "Collision d’artefacts d’échange"
+        "Interchange artifact collision"
     );
     Ok(descriptor)
 }
@@ -50,7 +50,7 @@ pub fn bundle(report: &Report, scope: &Scope<'_>) -> Result<Bundle> {
     for field in [scope.repository, scope.revision, scope.target_profile] {
         ensure!(
             !field.trim().is_empty() && field.len() <= 4096,
-            "Identité d’échange vide ou trop longue"
+            "Empty or excessively long interchange identity"
         );
     }
     let source_digest = vuln::digest(report)?;
@@ -68,7 +68,7 @@ pub fn bundle(report: &Report, scope: &Scope<'_>) -> Result<Bundle> {
     }
     ensure!(
         !groups.is_empty() && groups.len() <= 256,
-        "Le dossier exige entre 1 et 256 verrous ou manifests indépendants"
+        "The bundle requires between 1 and 256 independent lockfiles or manifests"
     );
     let mut artifacts = BTreeMap::new();
     let mut partitions = Vec::new();
@@ -97,13 +97,16 @@ pub fn bundle(report: &Report, scope: &Scope<'_>) -> Result<Bundle> {
             } else {
                 component.name.clone()
             };
-            ensure!(identities.insert((name, &component.version)), "Identité paquet/version ambiguë au sein d’un verrou : export séparé impossible sans perdre le contexte");
+            ensure!(identities.insert((name, &component.version)), "Ambiguous package/version identity within a lockfile: separate export would lose context");
             if let Some(purl) = &component.purl {
                 let canonical = purl
                     .parse::<packageurl::PackageUrl<'_>>()
-                    .map_err(|_| invalid("PURL d’échange invalide".into()))?
+                    .map_err(|_| invalid("Invalid interchange PURL".into()))?
                     .to_string();
-                ensure!(purls.insert(canonical), "PURL ambiguë au sein d’un verrou : export séparé impossible sans perdre le contexte");
+                ensure!(
+                    purls.insert(canonical),
+                    "Ambiguous PURL within a lockfile: separate export would lose context"
+                );
             }
         }
         let partition_id = vuln::digest(&(scope.repository, scope.target_profile, &key))?;
@@ -164,7 +167,7 @@ pub fn bundle(report: &Report, scope: &Scope<'_>) -> Result<Bundle> {
             .len()
             .saturating_add(1)
             <= vuln::MAX_INPUT_BYTES.saturating_sub(total),
-        "Dossier d’échange supérieur à 64 Mio"
+        "Interchange bundle exceeds 64 MiB"
     );
     Ok(Bundle {
         manifest,

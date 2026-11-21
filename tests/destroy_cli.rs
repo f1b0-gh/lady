@@ -71,7 +71,7 @@ esac
     let result: serde_json::Value = serde_json::from_slice(&output.stdout)?;
     assert_eq!(result["deleted"], true);
     assert!(
-        std::path::Path::new(result["export"].as_str().ok_or("export absent")?)
+        std::path::Path::new(result["export"].as_str().ok_or("Missing export")?)
             .join("manifest.json")
             .is_file()
     );

@@ -26,15 +26,15 @@ pub fn assess(
     osv::validate_snapshot(snapshot)?;
     ensure!(
         (1..=31_536_000).contains(&max_age_seconds),
-        "Âge maximal des avis hors limites"
+        "Maximum advisory age is out of bounds"
     );
     ensure!(
         serde_json::to_vec(report)?.len() <= MAX_INPUT_BYTES,
-        "Rapport de vulnérabilités trop volumineux"
+        "Vulnerability report too large"
     );
     let now = instant(as_of)?;
     let fetched = instant(&snapshot.fetched_at)?;
-    ensure!(fetched <= now, "Instantané OSV daté dans le futur");
+    ensure!(fetched <= now, "OSV snapshot is dated in the future");
     let mut coverage = Coverage {
         inventory_complete: report.complete && !report.projects.is_empty(),
         advisories_complete: snapshot.complete,
@@ -49,15 +49,15 @@ pub fn assess(
     if !coverage.inventory_complete {
         coverage
             .limitations
-            .push("Inventaire vide ou analyse statique partielle".into());
+            .push("Empty inventory or partial static analysis".into());
     }
     if !snapshot.complete {
         coverage
             .limitations
-            .push("La complétude de l’instantané OSV n’est pas déclarée".into());
+            .push("OSV snapshot completeness is not declared".into());
     }
     if !coverage.fresh {
-        coverage.limitations.push("Instantané OSV périmé".into());
+        coverage.limitations.push("Stale OSV snapshot".into());
     }
 
     let groups = alias_groups(&snapshot.advisories)?;
@@ -76,7 +76,7 @@ pub fn assess(
         if keys.is_empty() {
             coverage.matching_complete = false;
             coverage.limitations.push(format!(
-                "{} : avis actif sans paquet identifiable ; applicabilité inconnue",
+                "{}: active advisory without an identifiable package; applicability unknown",
                 record["id"].as_str().unwrap_or_default()
             ));
         }
@@ -93,7 +93,7 @@ pub fn assess(
         if !project.locked && !project.requirements.is_empty() {
             coverage.inventory_complete = false;
             coverage.limitations.push(format!(
-                "{} : exigences sans verrou pris en charge",
+                "{}: requirements without a supported lockfile",
                 project.manifest
             ));
         }
@@ -108,12 +108,12 @@ pub fn assess(
             coverage.components += 1;
             ensure!(
                 coverage.components <= MAX_RECORDS,
-                "Trop de composants à analyser"
+                "Too many components to assess"
             );
             let Some((ecosystem, name)) = public_identity(project, component) else {
                 coverage.identities_complete = false;
                 coverage.limitations.push(format!(
-                    "{reference} : identité publique non vérifiée ({}, {}, {})",
+                    "{reference}: unverified public identity ({}, {}, {})",
                     project.manifest, component.name, component.context
                 ));
                 continue;
@@ -121,7 +121,7 @@ pub fn assess(
             if !snapshot.ecosystems.iter().any(|e| e == ecosystem) {
                 coverage.advisories_complete = false;
                 coverage.limitations.push(format!(
-                    "{reference} : écosystème {ecosystem} absent de l’instantané"
+                    "{reference}: ecosystem {ecosystem} missing from the snapshot"
                 ));
                 continue;
             }
@@ -135,14 +135,11 @@ pub fn assess(
             }
             for i in candidates {
                 comparisons += 1;
-                ensure!(
-                    comparisons <= 1_000_000,
-                    "Limite de comparaisons OSV dépassée"
-                );
+                ensure!(comparisons <= 1_000_000, "OSV comparison limit exceeded");
                 compared_bytes = compared_bytes.saturating_add(record_sizes[i]);
                 ensure!(
                     compared_bytes <= 8 * MAX_INPUT_BYTES,
-                    "Budget de comparaison OSV dépassé"
+                    "OSV comparison budget exceeded"
                 );
                 let record = &snapshot.advisories[i];
                 let matched = osv::match_record(record, ecosystem, &name, &component.version)?;
@@ -154,20 +151,17 @@ pub fn assess(
                 }
                 let id = record["id"]
                     .as_str()
-                    .ok_or_else(|| invalid("Identifiant OSV absent".into()))?;
+                    .ok_or_else(|| invalid("Missing OSV identifier".into()))?;
                 let (canonical, aliases) = groups
                     .get(id)
-                    .ok_or_else(|| invalid("Groupe d’alias OSV absent".into()))?;
+                    .ok_or_else(|| invalid("Missing OSV alias group".into()))?;
                 let key = (reference.clone(), canonical.clone());
                 retained_bytes = retained_bytes.saturating_add(record_sizes[i]);
                 if !findings.contains_key(&key) {
                     retained_bytes = retained_bytes
                         .saturating_add(aliases.iter().map(String::len).sum::<usize>());
                 }
-                ensure!(
-                    retained_bytes <= MAX_INPUT_BYTES,
-                    "Preuves OSV trop volumineuses"
-                );
+                ensure!(retained_bytes <= MAX_INPUT_BYTES, "OSV evidence too large");
                 let finding = findings.entry(key).or_insert_with(|| Finding {
                     id: String::new(),
                     component_ref: reference.clone(),
@@ -192,10 +186,7 @@ pub fn assess(
                 finding.fixed_versions.extend(matched.fixed_versions);
                 finding.evidence.push(record.clone());
                 finding.limitations.extend(matched.limitations);
-                ensure!(
-                    findings.len() <= MAX_FINDINGS,
-                    "Trop de correspondances OSV"
-                );
+                ensure!(findings.len() <= MAX_FINDINGS, "Too many OSV matches");
             }
         }
     }
@@ -203,7 +194,7 @@ pub fn assess(
         coverage.inventory_complete = false;
         coverage
             .limitations
-            .push("Aucun composant verrouillé à évaluer".into());
+            .push("No locked components to assess".into());
     }
     let mut findings = findings
         .into_iter()
@@ -243,7 +234,7 @@ pub fn assess(
     };
     ensure!(
         serde_json::to_vec(&assessment)?.len() <= MAX_INPUT_BYTES,
-        "Analyse de vulnérabilités trop volumineuse"
+        "Vulnerability assessment too large"
     );
     Ok(assessment)
 }
@@ -315,7 +306,7 @@ fn alias_groups(records: &[Value]) -> Result<AliasGroups> {
         }
         let id = record["id"]
             .as_str()
-            .ok_or_else(|| invalid("Identifiant OSV absent".into()))?;
+            .ok_or_else(|| invalid("Missing OSV identifier".into()))?;
         parents.entry(id.into()).or_insert_with(|| id.into());
         for alias in record["aliases"]
             .as_array()
@@ -332,7 +323,7 @@ fn alias_groups(records: &[Value]) -> Result<AliasGroups> {
                 (right, left)
             };
             parents.insert(big, small);
-            ensure!(parents.len() <= 500_000, "Trop d’alias OSV");
+            ensure!(parents.len() <= 500_000, "Too many OSV aliases");
         }
     }
     let mut groups = BTreeMap::<String, Vec<String>>::new();

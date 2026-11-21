@@ -11,7 +11,7 @@ fn transcript(result: serde_json::Value) -> Vec<u8> {
     .into_bytes()
 }
 fn response() -> serde_json::Value {
-    json!({"summary":"Revue de la fixture", "reviewed_paths":["src/main.rs"], "candidates":[], "finding_json":null, "unresolved":[]})
+    json!({"summary":"Fixture review", "reviewed_paths":["src/main.rs"], "candidates":[], "finding_json":null, "unresolved":[]})
 }
 #[test]
 fn requires_completed_codex_turn_and_strict_controller_protocol() -> Result<(), Box<dyn Error>> {

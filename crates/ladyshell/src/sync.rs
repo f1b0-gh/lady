@@ -29,7 +29,7 @@ impl Remote<'_> {
     fn call(&self, operation: &str, path: Option<&str>) -> Result<Vec<u8>> {
         let remaining = Duration::from_secs(300)
             .checked_sub(self.started.elapsed())
-            .ok_or_else(|| invalid("Délai global sync dépassé".into()))?;
+            .ok_or_else(|| invalid("Overall sync time limit exceeded".into()))?;
         let mut command = self.backend.command();
         command.args([
             "sandbox",
@@ -49,7 +49,7 @@ impl Remote<'_> {
         if let Some(path) = path {
             command.arg("--").arg(path);
         }
-        crate::process::capture(command, remaining.min(Duration::from_secs(60)), snapshot::JSON_LIMIT).map_err(|e|e.context("Worker Rust snapshot indisponible ou refusé ; migrer explicitement le runtime de la sandbox"))
+        crate::process::capture(command, remaining.min(Duration::from_secs(60)), snapshot::JSON_LIMIT).map_err(|e|e.context("Rust snapshot worker unavailable or rejected; explicitly migrate the sandbox runtime"))
     }
 }
 impl Transport for Remote<'_> {
@@ -61,7 +61,7 @@ impl Transport for Remote<'_> {
     }
 }
 pub fn parse_inventory(bytes: &[u8]) -> Result<Inventory> {
-    ensure!(bytes.len() <= 2 * 1024 * 1024, "Inventaire trop volumineux");
+    ensure!(bytes.len() <= 2 * 1024 * 1024, "Inventory is too large");
     let value: Inventory = serde_json::from_value(crate::json::parse(bytes)?)?;
     snapshot::validate(&value)?;
     Ok(value)
@@ -121,7 +121,7 @@ pub fn sync_with(
     let before = parse_inventory(&remote.inventory()?)?;
     ensure!(
         before.keys().all(|p| !crate::sources::excluded(p, &spec)),
-        "Le worker a exporté un chemin exclu par le projet"
+        "The worker exported a path excluded by the project"
     );
     let current = records(&before);
     let changes: Vec<_> = current
@@ -144,43 +144,43 @@ pub fn sync_with(
     for (path, entry) in &before {
         ensure!(
             started.elapsed() < Duration::from_secs(300),
-            "Délai global sync dépassé"
+            "Overall sync time limit exceeded"
         );
         let data = if previous.get(path) == current.get(path) {
             let (actual, data) = snapshot::local_bytes(&source, path)?;
             ensure!(
                 &actual == entry,
-                "Source locale précédente altérée : {path}"
+                "Previous local source was altered: {path}"
             );
             data
         } else {
             let bytes = remote.file(path)?;
             ensure!(
                 bytes.len() <= snapshot::JSON_LIMIT,
-                "Réponse fichier trop volumineuse"
+                "File response is too large"
             );
             let payload: FilePayload = serde_json::from_value(crate::json::parse(&bytes)?)?;
             ensure!(
                 payload.path == *path && payload.entry == *entry,
-                "Métadonnées fichier divergentes"
+                "File metadata mismatch"
             );
             ensure!(
                 payload.data.len() <= entry.size.div_ceil(3) * 4,
-                "Base64 trop volumineux"
+                "Base64 is too large"
             );
             let data = STANDARD
                 .decode(payload.data)
-                .map_err(|e| invalid(format!("Base64 invalide : {e}")))?;
+                .map_err(|e| invalid(format!("Invalid Base64: {e}")))?;
             ensure!(
                 data.len() == entry.size && files::hash(&data) == entry.sha256,
-                "Contenu transféré divergent : {path}"
+                "Transferred content mismatch: {path}"
             );
             data
         };
         let target = project.join(path);
         let parent = target
             .parent()
-            .ok_or_else(|| invalid("Parent absent".into()))?;
+            .ok_or_else(|| invalid("Missing parent".into()))?;
         fs::create_dir_all(parent)?;
         let mut out = fs::OpenOptions::new()
             .write(true)
@@ -196,11 +196,11 @@ pub fn sync_with(
     }
     ensure!(
         before == parse_inventory(&remote.inventory()?)?,
-        "Projet sandbox modifié pendant sync ; réessayer"
+        "Sandbox project changed during sync; retry"
     );
     ensure!(
         started.elapsed() < Duration::from_secs(300),
-        "Délai global sync dépassé"
+        "Overall sync time limit exceeded"
     );
     let mut manifest = json!({"schema_version":2,"sandbox_id":text(state,"sandbox_id")?,"files":current,"changes":changes,"deletions":deletions});
     if state.get("continuous").is_some() {
@@ -214,9 +214,9 @@ pub fn sync_with(
         .file_name()
         .and_then(|s| s.to_str())
         .and_then(|s| s.strip_prefix(".incomplete-"))
-        .ok_or_else(|| invalid("Nom staging invalide".into()))?;
+        .ok_or_else(|| invalid("Invalid staging name".into()))?;
     let published = exports.join(format!("sync-{suffix}"));
-    ensure!(!published.try_exists()?, "Export déjà présent");
+    ensure!(!published.try_exists()?, "Export already exists");
     fs::rename(stage.path(), &published)?;
     files::open_directory(&exports)?.sync_all()?;
     let mut next = state.clone();
@@ -229,14 +229,17 @@ pub fn sync_with(
 fn previous(state: &Value) -> Result<(Snapshot, PathBuf)> {
     if let Some(path) = state.get("last_sync").and_then(Value::as_str) {
         let root = PathBuf::from(path);
-        ensure!(root.is_absolute(), "Export précédent absolu requis");
+        ensure!(
+            root.is_absolute(),
+            "An absolute path to the previous export is required"
+        );
         let manifest = crate::json::parse(&files::read_limited(
             &root.join("manifest.json"),
             2 * 1024 * 1024,
         )?)?;
         ensure!(
             manifest["schema_version"] == 2 && manifest["sandbox_id"] == state["sandbox_id"],
-            "Manifeste précédent incompatible"
+            "Incompatible previous manifest"
         );
         let records: Snapshot = serde_json::from_value(manifest["files"].clone())?;
         crate::continuous::host::verify_export(state, &manifest)?;
@@ -246,7 +249,10 @@ fn previous(state: &Value) -> Result<(Snapshot, PathBuf)> {
         let records: Snapshot = serde_json::from_value(state["host_sources"].clone())?;
         validate_records(&records)?;
         let root = PathBuf::from(text(state, "project_snapshot")?);
-        ensure!(root.is_absolute(), "Snapshot source absolu requis");
+        ensure!(
+            root.is_absolute(),
+            "An absolute source snapshot path is required"
+        );
         Ok((records, root))
     }
 }
@@ -287,7 +293,7 @@ pub fn exclusions(state: &Value) -> Result<Vec<String>> {
     } else {
         serde_json::from_value(value.clone())?
     };
-    ensure!(exclude.len() <= 1000, "Trop d’exclusions");
+    ensure!(exclude.len() <= 1000, "Too many exclusions");
     for path in &exclude {
         crate::config::relative_path(path)?;
     }

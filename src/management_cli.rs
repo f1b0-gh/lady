@@ -71,7 +71,7 @@ fn parse_label(value: &str) -> std::result::Result<(String, String), String> {
     value
         .split_once('=')
         .map(|(k, v)| (k.into(), v.into()))
-        .ok_or_else(|| "Format requis : clé=valeur".into())
+        .ok_or_else(|| "Expected key=value".into())
 }
 pub fn run(args: ManagementArgs) -> Result<i32> {
     let registry = if let Some(path) = args.database {
@@ -122,7 +122,7 @@ pub fn run(args: ManagementArgs) -> Result<i32> {
             for (key, value) in label {
                 if labels.insert(key, value).is_some() {
                     return Err(Error::InvalidInput {
-                        message: "Label répété".into(),
+                        message: "Duplicate label".into(),
                     });
                 }
             }

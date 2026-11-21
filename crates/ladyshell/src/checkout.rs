@@ -78,11 +78,14 @@ pub fn run(state: &Value, directory: &Path, apply: bool) -> Result<Value> {
     crate::continuous::host::execution_directory(directory)?;
     crate::continuous::host::ensure_ready(state)?;
     let project = PathBuf::from(state::text(&state["desired_inputs"], "project")?);
-    ensure!(project.is_absolute(), "Chemin projet absolu requis");
+    ensure!(
+        project.is_absolute(),
+        "An absolute project path is required"
+    );
     files::open_directory(&project)?;
     ensure!(
         !files::absolute(directory)?.starts_with(&project),
-        "L’état doit résider hors du projet"
+        "State must reside outside the project"
     );
     let pending = directory.join("checkout-pending.json");
     if let Some(value) = state::read(&pending)? {
@@ -91,7 +94,7 @@ pub fn run(state: &Value, directory: &Path, apply: bool) -> Result<Value> {
             journal.schema_version == 1
                 && journal.project == project
                 && journal.sandbox_id == state::text(state, "sandbox_id")?,
-            "Journal checkout incompatible"
+            "Incompatible checkout journal"
         );
         if apply {
             return finish(state, directory, journal);
@@ -101,7 +104,7 @@ pub fn run(state: &Value, directory: &Path, apply: bool) -> Result<Value> {
         return Ok(result);
     }
     let export = PathBuf::from(state::text(state, "last_sync")?);
-    ensure!(export.is_absolute(), "Chemin export absolu requis");
+    ensure!(export.is_absolute(), "An absolute export path is required");
     let receipt = crate::json::parse(&files::read_limited(
         &export.join("manifest.json"),
         2 * 1024 * 1024,
@@ -109,7 +112,7 @@ pub fn run(state: &Value, directory: &Path, apply: bool) -> Result<Value> {
     crate::continuous::host::verify_export(state, &receipt)?;
     ensure!(
         receipt["schema_version"] == 2 && receipt["sandbox_id"] == state["sandbox_id"],
-        "Export incompatible"
+        "Incompatible export"
     );
     let exclude = crate::sync::exclusions(state)?;
     let spec = crate::config::Sources {
@@ -126,11 +129,11 @@ pub fn run(state: &Value, directory: &Path, apply: bool) -> Result<Value> {
     let remote: Snapshot = serde_json::from_value(receipt["files"].clone())?;
     ensure!(
         remote.keys().all(|p| !crate::sources::excluded(p, &spec)),
-        "Export contenant un chemin exclu"
+        "Export contains an excluded path"
     );
     ensure!(
         records(&export.join("project"), &exclude)? == remote,
-        "Export altéré"
+        "Export was altered"
     );
     let local = records(&project, &exclude)?;
     let keys: BTreeSet<_> = base
@@ -189,7 +192,7 @@ pub fn run(state: &Value, directory: &Path, apply: bool) -> Result<Value> {
     }
     ensure!(
         conflicts.is_empty(),
-        "Conflits checkout : {} ; export conservé dans {}",
+        "Checkout conflicts: {}; export retained in {}",
         conflicts.join(", "),
         export.display()
     );
@@ -211,7 +214,7 @@ pub fn run(state: &Value, directory: &Path, apply: bool) -> Result<Value> {
             let (entry, bytes) = snapshot::local_bytes(&project, &c.path)?;
             ensure!(
                 entry.sha256 == before.sha256 && entry.executable == before.executable,
-                "Checkout modifié pendant préparation : {}",
+                "Checkout changed during preparation: {}",
                 c.path
             );
             crate::image::write_source(
@@ -242,7 +245,7 @@ fn finish(state: &Value, directory: &Path, journal: Journal) -> Result<Value> {
         let actual = current(&journal.project, &c.path)?;
         ensure!(
             actual == c.before || actual == c.after,
-            "Checkout modifié depuis le journal : {} ; sauvegarde {}",
+            "Checkout changed since the journal was written: {}; backup {}",
             c.path,
             journal.backup.display()
         );
@@ -252,7 +255,7 @@ fn finish(state: &Value, directory: &Path, journal: Journal) -> Result<Value> {
         if let Some(after) = &c.after {
             ensure!(
                 current(&journal.export.join("project"), &c.path)?.as_ref() == Some(after),
-                "Export altéré : {}",
+                "Export was altered: {}",
                 c.path
             );
         }
@@ -263,20 +266,20 @@ fn finish(state: &Value, directory: &Path, journal: Journal) -> Result<Value> {
         }
         ensure!(
             current(&journal.project, &c.path)? == c.before,
-            "Écriture concurrente détectée : {}",
+            "Concurrent write detected: {}",
             c.path
         );
         verify_mode(&journal.project, c)?;
         let parent = parent(&journal.project, &c.path, c.after.is_some())?;
         let leaf = Path::new(&c.path)
             .file_name()
-            .ok_or_else(|| invalid("Nom absent".into()))?;
+            .ok_or_else(|| invalid("Missing name".into()))?;
         let fdpath = PathBuf::from(format!("/proc/self/fd/{}", parent.as_raw_fd()));
         if let Some(after) = &c.after {
             let (entry, bytes) = snapshot::local_bytes(&journal.export.join("project"), &c.path)?;
             ensure!(
                 entry.sha256 == after.sha256 && entry.executable == after.executable,
-                "Export modifié pendant lecture"
+                "Export changed while reading"
             );
             let mut staged = tempfile::NamedTempFile::new_in(&fdpath)?;
             staged.write_all(&bytes)?;
@@ -286,7 +289,7 @@ fn finish(state: &Value, directory: &Path, journal: Journal) -> Result<Value> {
             staged.as_file().sync_all()?;
             ensure!(
                 current(&journal.project, &c.path)? == c.before,
-                "Écriture concurrente détectée : {}",
+                "Concurrent write detected: {}",
                 c.path
             );
             verify_mode(&journal.project, c)?;
@@ -302,7 +305,7 @@ fn finish(state: &Value, directory: &Path, journal: Journal) -> Result<Value> {
         } else {
             ensure!(
                 current(&journal.project, &c.path)? == c.before,
-                "Écriture concurrente détectée : {}",
+                "Concurrent write detected: {}",
                 c.path
             );
             verify_mode(&journal.project, c)?;
@@ -328,7 +331,7 @@ fn parent(root: &Path, path: &str, create: bool) -> Result<File> {
     let mut dir = files::open_directory(root)?;
     let parent = Path::new(path)
         .parent()
-        .ok_or_else(|| invalid("Parent absent".into()))?;
+        .ok_or_else(|| invalid("Missing parent".into()))?;
     for component in parent.components() {
         let name = component.as_os_str();
         if create {
@@ -401,7 +404,7 @@ fn verify_mode(root: &Path, change: &Change) -> Result<()> {
     if let Some(expected) = change.before_mode {
         ensure!(
             mode(root, &change.path)? == expected,
-            "Permissions modifiées depuis le journal : {}",
+            "Permissions changed since the journal was written: {}",
             change.path
         );
     }

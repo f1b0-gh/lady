@@ -14,19 +14,19 @@ use std::{
 
 #[derive(Debug, Subcommand)]
 pub enum InteropCommand {
-    /// Préparer un dossier neuf avec un SBOM public par verrou et des rapports privés.
+    /// Prepare a new directory with a public SBOM per lockfile and private reports.
     Bundle {
         #[arg(long)]
         report: PathBuf,
-        /// Identité stable du dépôt, conservée seulement dans les données privées.
+        /// Stable repository identity, retained only in private data.
         #[arg(long)]
         repository: String,
         #[arg(long)]
         revision: String,
-        /// Étiquette de périmètre ; ne démontre aucune activation des dépendances.
+        /// Scope label; does not establish dependency activation.
         #[arg(long)]
         target_profile: String,
-        /// Nouveau répertoire ; aucun contenu existant n’est remplacé.
+        /// New directory; no existing content is replaced.
         #[arg(long)]
         output: PathBuf,
     },
@@ -56,7 +56,7 @@ pub fn run(command: InteropCommand) -> Result<i32> {
     // never come from the report. Keep descriptors live through publication.
     let output = files::absolute(&output)?;
     let invalid_path = || Error::InvalidInput {
-        message: "Destination de dossier invalide".into(),
+        message: "Invalid bundle destination".into(),
     };
     let parent = files::open_directory(output.parent().ok_or_else(invalid_path)?)?;
     let name = output.file_name().ok_or_else(invalid_path)?;

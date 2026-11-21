@@ -117,21 +117,21 @@ impl Graph {
             && self.roots.iter().all(|r| r.condition.is_null())
     }
     pub fn validate(&self) -> Result<()> {
-        ensure!(self.schema_version == 1, "Version de graphe inconnue");
+        ensure!(self.schema_version == 1, "Unknown graph version");
         self.inventory.validate()?;
         ensure!(
             self.components.len() <= MAX_COMPONENTS
                 && self.dependencies.len() <= MAX_EDGES
                 && self.contexts.len() <= MAX_CONTEXTS
                 && self.roots.len() <= MAX_EDGES,
-            "Limites du graphe dépassées"
+            "Graph limits exceeded"
         );
         ensure!(
             serde_json::to_vec(self)?.len() <= MAX_BYTES,
-            "Graphe supérieur à 128 Mio"
+            "Graph exceeds 128 MiB"
         );
         for (path, context) in &self.contexts {
-            ensure!(*path == context.path()?, "Identité de contexte divergente");
+            ensure!(*path == context.path()?, "Context identity mismatch");
             crate::config::relative_path(&context.manifest)?;
         }
         for project in &self.inventory.projects {
@@ -147,44 +147,44 @@ impl Graph {
                 .key
                 .purl
                 .parse::<packageurl::PackageUrl>()
-                .map_err(|e| invalid(format!("PURL invalide : {e}")))?;
+                .map_err(|e| invalid(format!("Invalid PURL: {e}")))?;
             ensure!(
                 parsed.to_string() == node.key.purl && parsed.version().is_some(),
-                "PURL canonique et versionnée requise"
+                "Canonical versioned PURL required"
             );
             ensure!(
                 node.key.purl.len() <= 8192 && self.contexts.contains_key(&node.key.graph),
-                "Contexte absent ou PURL trop longue"
+                "Missing context or PURL too long"
             );
             ensure!(
                 node.component.purl.as_ref() == Some(&node.key.purl),
-                "PURL du composant divergente"
+                "Component PURL mismatch"
             );
             if parsed.ty() == "cargo" {
                 crate::deps::rust::git::validate_component(&node.component)?;
             }
             ensure!(
                 keys.insert(&node.key),
-                "Composant dupliqué dans un contexte"
+                "Duplicate component within a context"
             );
         }
         let mut edges = BTreeSet::new();
         for edge in &self.dependencies {
             ensure!(
                 keys.contains(&edge.from) && keys.contains(&edge.to),
-                "Référence de dépendance absente"
+                "Missing dependency reference"
             );
             ensure!(
                 !edge.kind.is_empty() && edge.kind.len() <= 256,
-                "Type de dépendance invalide"
+                "Invalid dependency type"
             );
             ensure!(
                 edges.insert(serde_json::to_string(edge)?),
-                "Relation dupliquée"
+                "Duplicate relationship"
             );
         }
         for root in &self.roots {
-            ensure!(keys.contains(&root.to), "Référence racine absente");
+            ensure!(keys.contains(&root.to), "Missing root reference");
             crate::config::relative_path(&root.manifest)?;
         }
         Ok(())

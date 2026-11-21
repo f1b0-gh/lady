@@ -15,24 +15,24 @@ impl DependencyConfig {
         use crate::error::ensure;
         ensure!(
             !self.projects.is_empty() && self.projects.len() <= 64,
-            "Entre 1 et 64 projets de dépendances requis"
+            "Between 1 and 64 dependency projects are required"
         );
         let mut unique = std::collections::BTreeSet::new();
         for project in &self.projects {
             crate::config::relative_path(project)?;
             ensure!(
                 unique.insert(project),
-                "Projet de dépendances dupliqué : {project}"
+                "Duplicate dependency project: {project}"
             );
             ensure!(
                 ["Cargo.toml", "pyproject.toml", "package.json"]
                     .contains(&super::basename(project)),
-                "Manifest non pris en charge : {project}"
+                "Unsupported manifest: {project}"
             );
         }
         ensure!(
             self.allowed_hosts.len() <= 64,
-            "Maximum 64 hôtes de préparation"
+            "At most 64 preparation hosts are allowed"
         );
         for host in &self.allowed_hosts {
             ensure!(
@@ -44,7 +44,7 @@ impl DependencyConfig {
                         && label
                             .bytes()
                             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')),
-                "Hôte explicite invalide : {host}"
+                "Invalid explicit host: {host}"
             );
         }
         Ok(())

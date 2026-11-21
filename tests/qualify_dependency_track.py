@@ -20,19 +20,19 @@ from check_ladybom_interop import compare, read, references, validators
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        raise ValueError("Redirection API refusée")
+        raise ValueError("API redirect rejected")
 
 
 class Api:
     def __init__(self, credentials, output):
         path = Path(credentials)
         if path.stat().st_mode & 0o077:
-            raise ValueError("Fichier d’authentification privé requis (0600)")
+            raise ValueError("Private authentication file required (0600)")
         auth = read(path)
         self.url = auth["base_url"].rstrip("/")
         url = urllib.parse.urlsplit(self.url)
         if url.scheme != "http" or url.hostname != "127.0.0.1" or url.port != 18081 or url.path or url.query or url.fragment or url.username:
-            raise ValueError("Cette qualification exige http://127.0.0.1:18081")
+            raise ValueError("This qualification requires http://127.0.0.1:18081")
         if auth.get("api_key"):
             self.auth = {"X-Api-Key": auth["api_key"]}
         else:
@@ -54,7 +54,7 @@ class Api:
             data = response.read(16 * 1024 * 1024 + 1)
             status = response.code
         if len(data) > 16 * 1024 * 1024:
-            raise ValueError("Réponse API trop volumineuse")
+            raise ValueError("API response too large")
         name = f"response-{len(self.receipts):03d}.json"
         (self.output / name).write_bytes(data)
         receipt = {"method": method, "route": route, "status": status,
@@ -85,9 +85,9 @@ class Api:
             if state.get("processing") is False and state.get("status") == "COMPLETED":
                 return token
             if state.get("status") == "FAILED":
-                raise ValueError(f"Import {kind} échoué : {token}")
+                raise ValueError(f"{kind} import failed: {token}")
             time.sleep(1)
-        raise ValueError(f"Import {kind} incomplet après 180 s : {token}")
+        raise ValueError(f"{kind} import incomplete after 180 s: {token}")
 
 
 def component_identity(component):
@@ -100,7 +100,7 @@ def graph_projection(document):
     root = document["metadata"]["component"]["bom-ref"]
     refs = {c["bom-ref"]: component_identity(c) for c in document["components"]}
     if len(set(refs.values())) != len(refs):
-        raise ValueError("Identité consommateur ambiguë dans le graphe")
+        raise ValueError("Ambiguous consumer identity in the graph")
     refs[root] = "@declared-project"
     edges = {(refs[e["ref"]], refs[target]) for e in document.get("dependencies", [])
              for target in e.get("dependsOn", [])}
@@ -116,7 +116,7 @@ def finding_states(document):
         for target in finding.get("affects", []):
             key = (finding.get("source", {}).get("name"), finding["id"], by_ref[target["ref"]])
             if key in states:
-                raise ValueError("Décision VEX dupliquée dans le résultat serveur")
+                raise ValueError("Duplicate VEX decision in the server result")
             states[key] = finding.get("analysis", {}).get("state")
     return states
 
@@ -149,7 +149,7 @@ def main():
     parser.add_argument("--credentials", type=Path, required=True)
     parser.add_argument("--inputs", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--extended-only", action="store_true", help="Nouveaux scénarios Cargo/uv, autorités, correction et changements de périmètre")
+    parser.add_argument("--extended-only", action="store_true", help="New Cargo/uv scenarios, authorities, corrections and scope changes")
     args = parser.parse_args()
     args.output.mkdir(mode=0o700, parents=False, exist_ok=False)
     api = Api(args.credentials, args.output)
@@ -166,7 +166,7 @@ def main():
     (args.output / "input-sbom.cdx.json").write_text(json.dumps(source, indent=2) + "\n")
     version = api.call("GET", "/api/version")
     if not isinstance(version, dict) or version.get("version") != "5.2.1":
-        raise ValueError("Version serveur différente de 5.2.1")
+        raise ValueError("Server version differs from 5.2.1")
     project = api.call("PUT", "/api/v1/project", {
         "name": "ladybom-inventory", "version": "synthetic-" + uuid.uuid4().hex,
         "classifier": "APPLICATION", "description": "Ladybom isolated synthetic interoperability qualification",
@@ -182,7 +182,7 @@ def main():
     expected_purls = sorted(c["purl"] for c in source["components"])
     actual_purls = sorted(c["purl"] for c in components)
     if expected_purls != actual_purls:
-        raise ValueError("Composants lus par API différents du SBOM")
+        raise ValueError("Components read through the API differ from the SBOM")
     result = {"server_version": version, "project": project_id,
               "sbom_comparison": comparison, "component_purls_preserved": True,
               "vex_states": {}, "qualification": "partial"}
@@ -190,15 +190,15 @@ def main():
     actual_edges, actual_empty = graph_projection(actual)
     root = actual["metadata"]["component"]
     if root.get("name") != project["name"] or root.get("version") != project["version"]:
-        raise ValueError("Racine différente du projet/version explicitement déclaré")
+        raise ValueError("Root differs from the explicitly declared project/version")
     if expected_edges != actual_edges:
-        raise ValueError("Relations positives différentes après correspondance racine/projet")
+        raise ValueError("Positive relationships differ after root/project mapping")
     result["positive_relations_preserved_under_declared_project_mapping"] = True
     result["inverse_paths"] = {}
     for leaf in ["pkg:npm/interop-leaf@1.0.0", "pkg:npm/interop-leaf@2.0.0"]:
         parents = inverse_ancestors(actual_edges, leaf)
         if parents != inverse_ancestors(expected_edges, leaf) or "@declared-project" not in parents:
-            raise ValueError("Parcours inverse divergent")
+            raise ValueError("Reverse traversal mismatch")
         result["inverse_paths"][leaf] = parents
     result["root_project_mapping"] = {"name": root["name"], "version": root["version"]}
     result["server_added_empty_dependency_entries"] = sorted(actual_empty - expected_empty)
@@ -208,7 +208,7 @@ def main():
     api.upload("vex", project_id, vex)
     absent = api.call("GET", f"/api/v1/vulnerability/project/{project_id}?suppressed=true")
     if absent:
-        raise ValueError("Finding inattendu avant préparation des avis synthétiques")
+        raise ValueError("Unexpected finding before synthetic advisory preparation")
     result["missing_finding_import_created_no_findings"] = True
 
     vulnerability = api.call("PUT", "/api/v1/vulnerability", {
@@ -218,10 +218,10 @@ def main():
     if api.receipts[-1]["status"] == 409:
         vulnerability = api.call("GET", "/api/v1/vulnerability/source/INTERNAL/vuln/LADYBOM-SYNTHETIC")
     if vulnerability.get("title") != "Ladybom synthetic interoperability test":
-        raise ValueError("Collision avec un avis hors qualification")
+        raise ValueError("Collision with an advisory outside the qualification scope")
     leaves = [c for c in components if c.get("name") == "interop-leaf"]
     if len(leaves) != 2:
-        raise ValueError("Deux versions synthétiques attendues")
+        raise ValueError("Two synthetic versions expected")
     for component in leaves:
         api.call("POST", f"/api/v1/vulnerability/source/INTERNAL/vuln/LADYBOM-SYNTHETIC/component/{component['uuid']}")
     for state in ["in_triage", "exploitable", "not_affected", "false_positive", "not_affected"]:
@@ -236,7 +236,7 @@ def main():
         states = vex_states(observed)
         expected = {"1.0.0": state, "2.0.0": "exploitable"}
         if states != expected:
-            raise ValueError(f"Portée/états VEX divergents : {states!r}, attendu {expected!r}")
+            raise ValueError(f"VEX scope/state mismatch: {states!r}, expected {expected!r}")
         analysis = {}
         for component in leaves:
             query = urllib.parse.urlencode({"project": project_id, "component": component["uuid"], "vulnerability": vulnerability["uuid"]})
@@ -250,12 +250,12 @@ def main():
     api.upload("vex", project_id, expired)
     expired_actual = api.call("GET", f"/api/v1/vex/cyclonedx/project/{project_id}?version=1.5")
     if vex_states(expired_actual) != {"1.0.0": "in_triage", "2.0.0": "in_triage"}:
-        raise ValueError("Le réimport explicite des décisions expirées ne rétablit pas in_triage")
+        raise ValueError("Explicit reimport of expired decisions does not restore in_triage")
     for component in leaves:
         query = urllib.parse.urlencode({"component": component["uuid"], "vulnerability": vulnerability["uuid"]})
         trail = api.call("GET", "/api/v1/analysis?" + query)
         if trail.get("isSuppressed") is not False:
-            raise ValueError("Suppression conservée après réimport explicite in_triage")
+            raise ValueError("Suppression retained after explicit in_triage reimport")
     result["explicit_expired_decision_reimport_clears_suppression"] = True
     duplicate = read(args.inputs / "duplicate-sbom.cdx.json")
     check.validate(duplicate)

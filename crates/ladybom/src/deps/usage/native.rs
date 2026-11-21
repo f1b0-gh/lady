@@ -17,17 +17,17 @@ struct Hint {
 fn string(value: &Value) -> Result<&str> {
     let text = value
         .as_str()
-        .ok_or_else(|| invalid("Rapport natif : chaîne requise".into()))?;
+        .ok_or_else(|| invalid("Native report: string required".into()))?;
     ensure!(
         !text.is_empty() && text.len() <= 4096 && !text.chars().any(char::is_control),
-        "Rapport natif : chaîne invalide"
+        "Native report: invalid string"
     );
     Ok(text)
 }
 fn array(value: &Value) -> Result<&Vec<Value>> {
     value
         .as_array()
-        .ok_or_else(|| invalid("Rapport natif : tableau requis".into()))
+        .ok_or_else(|| invalid("Native report: array required".into()))
 }
 fn path(value: &Value) -> Result<String> {
     let raw = string(value)?;
@@ -44,12 +44,9 @@ pub fn enrich(report: &mut UsageReport, tool: &str, raw: &Value) -> Result<()> {
     let bytes = serde_json::to_vec(raw)?;
     ensure!(
         bytes.len() <= 8 * 1024 * 1024,
-        "Rapport natif supérieur à 8 Mio"
+        "Native report exceeds 8 MiB"
     );
-    ensure!(
-        report.schema_version == 1,
-        "Version de rapport d’usage inconnue"
-    );
+    ensure!(report.schema_version == 1, "Unknown usage report version");
     let mut hints = Vec::new();
     match tool {
         "cargo-machete" => {
@@ -58,7 +55,7 @@ pub fn enrich(report: &mut UsageReport, tool: &str, raw: &Value) -> Result<()> {
                 None if raw.as_object().is_some_and(|object| object.is_empty()) => &[],
                 _ => {
                     return Err(invalid(
-                        "Rapport cargo-machete : objet crates ou objet vide requis".into(),
+                        "cargo-machete report: crates object or empty object required".into(),
                     ))
                 }
             };
@@ -107,11 +104,7 @@ pub fn enrich(report: &mut UsageReport, tool: &str, raw: &Value) -> Result<()> {
                 }
             }
         }
-        _ => {
-            return Err(invalid(format!(
-                "Outil d’usage non pris en charge : {tool}"
-            )))
-        }
+        _ => return Err(invalid(format!("Unsupported usage tool: {tool}"))),
     }
     ensure!(hints.len() <= 20000, "Maximum 20000 indices natifs");
     let mut matches = Vec::new();
@@ -129,7 +122,7 @@ pub fn enrich(report: &mut UsageReport, tool: &str, raw: &Value) -> Result<()> {
             .collect();
         ensure!(
             !indices.is_empty(),
-            "Indice natif sans déclaration sélectionnée : {} : {}",
+            "Native lead without a selected declaration: {}: {}",
             hint.manifest,
             hint.name
         );
@@ -140,11 +133,11 @@ pub fn enrich(report: &mut UsageReport, tool: &str, raw: &Value) -> Result<()> {
     let hash = files::hash(&bytes);
     for index in matches {
         let finding = &mut report.findings[index];
-        let evidence = format!("{tool} : absence de référence signalée (rapport sha256 {hash})");
+        let evidence = format!("{tool}: absence of references reported (report sha256 {hash})");
         if !finding.evidence.contains(&evidence) {
             finding.evidence.push(evidence);
         }
-        let limitation="Rapport externe non attesté aux sources ; indice à confirmer, sans priorité sur les références locales".to_owned();
+        let limitation="External report is not attested to the sources; lead requires confirmation and does not override local references".to_owned();
         if !finding.limitations.contains(&limitation) {
             finding.limitations.push(limitation);
         }

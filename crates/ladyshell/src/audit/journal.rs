@@ -25,6 +25,8 @@ const RESOURCE_LIMIT: usize = 1024;
 const OBLIGATION_LIMIT: usize = 1024;
 const TEXT_LIMIT: usize = 4096;
 const CONTEXT_LIMIT: usize = 64 * 1024;
+// Persisted recovery sentinel: preserve its historical bytes until an explicit
+// journal migration is defined. It also reserves a slot in full journals.
 const RECOVERY_OBLIGATION: &str =
     "Exécution interrompue : réobserver les ressources et les garanties avant toute résolution";
 
@@ -88,7 +90,7 @@ impl RunJournal {
             .keep();
         let name = created
             .file_name()
-            .ok_or_else(|| invalid("Nom du dossier d’audit absent"))?;
+            .ok_or_else(|| invalid("Missing audit directory name"))?;
         let directory = parent.join(name);
         let root = files::open_child(&parent_fd, name, true)?;
         parent_fd.sync_all()?;
@@ -156,7 +158,7 @@ impl RunJournal {
     pub fn start(&mut self) -> Result<()> {
         self.writable()?;
         if self.data.status != RunStatus::Planned {
-            return Err(invalid("Seul un audit planifié peut démarrer"));
+            return Err(invalid("Only a planned audit can start"));
         }
         let mut next = self.data.clone();
         next.status = RunStatus::Running;
@@ -170,9 +172,7 @@ impl RunJournal {
         if self.data.invocations.len() >= self.data.budget.invocations as usize
             || self.data.invocations.iter().any(|item| item.id == id)
         {
-            return Err(invalid(
-                "Budget épuisé ou identifiant d’invocation réutilisé",
-            ));
+            return Err(invalid("Budget exhausted or invocation ID reused"));
         }
         let mut next = self.data.clone();
         next.invocations.push(JournalInvocation {
@@ -190,9 +190,9 @@ impl RunJournal {
             .invocations
             .iter_mut()
             .find(|entry| entry.id == id)
-            .ok_or_else(|| invalid("Invocation inconnue"))?;
+            .ok_or_else(|| invalid("Unknown invocation"))?;
         if invocation.status.is_some() {
-            return Err(invalid("Invocation déjà terminée"));
+            return Err(invalid("Invocation already finished"));
         }
         invocation.status = Some(status);
         self.commit(next)
@@ -202,7 +202,7 @@ impl RunJournal {
     pub fn resource_intent(&mut self, name: &str, owner: &str, context: Value) -> Result<()> {
         self.running()?;
         if self.data.resources.iter().any(|entry| entry.name == name) {
-            return Err(invalid("Nom de ressource réutilisé"));
+            return Err(invalid("Resource name reused"));
         }
         let mut next = self.data.clone();
         next.resources.push(ResourceRecord {
@@ -228,13 +228,13 @@ impl RunJournal {
                 | RunStatus::Blocked
                 | RunStatus::Partial
         ) {
-            return Err(invalid("Intention active ou nettoyage explicite requis"));
+            return Err(invalid("Active intent or explicit cleanup required"));
         }
         let mut next = self.data.clone();
         let resource = resource_mut(&mut next, name)?;
         if resource.id.is_some() || resource.deleted {
             return Err(invalid(
-                "Identité de ressource déjà attribuée ou intention résolue",
+                "Resource identity already assigned or intent resolved",
             ));
         }
         resource.id = Some(id.to_owned());
@@ -248,9 +248,7 @@ impl RunJournal {
         let mut next = self.data.clone();
         let resource = resource_mut(&mut next, name)?;
         if resource.deleted || resource.id.as_deref() != Some(id) {
-            return Err(invalid(
-                "Suppression non vérifiée : identité de ressource divergente",
-            ));
+            return Err(invalid("Deletion not verified: resource identity mismatch"));
         }
         resource.deleted = true;
         self.commit(next)
@@ -264,7 +262,7 @@ impl RunJournal {
         let resource = resource_mut(&mut next, name)?;
         if resource.id.is_some() || resource.deleted {
             return Err(invalid(
-                "Résolution d’absence réservée aux intentions sans identité",
+                "Absence resolution is restricted to intents without an identity",
             ));
         }
         resource.deleted = true;
@@ -276,7 +274,7 @@ impl RunJournal {
         bounded_text(obligation)?;
         // Keep a slot for the recovery obligation even at the configured cap.
         if self.data.open_obligations.len() >= OBLIGATION_LIMIT - 1 {
-            return Err(invalid("Trop d’obligations ouvertes"));
+            return Err(invalid("Too many open obligations"));
         }
         if self
             .data
@@ -284,7 +282,7 @@ impl RunJournal {
             .iter()
             .any(|entry| entry == obligation)
         {
-            return Err(invalid("Obligation déjà enregistrée"));
+            return Err(invalid("Obligation already recorded"));
         }
         let mut next = self.data.clone();
         next.open_obligations.push(obligation.to_owned());
@@ -304,10 +302,10 @@ impl RunJournal {
         if !matches!(self.data.status, RunStatus::Planned | RunStatus::Running)
             || matches!(status, RunStatus::Planned | RunStatus::Running)
         {
-            return Err(invalid("Transition terminale d’audit interdite"));
+            return Err(invalid("Terminal audit transition forbidden"));
         }
         if status == RunStatus::Complete && self.data.status != RunStatus::Running {
-            return Err(invalid("Un audit non démarré ne peut pas être complet"));
+            return Err(invalid("An audit that has not started cannot be complete"));
         }
         let mut next = self.data.clone();
         next.status = status;
@@ -320,11 +318,11 @@ impl RunJournal {
     fn writable(&self) -> Result<()> {
         if self.poisoned {
             return Err(invalid(
-                "Écriture incertaine du journal : fermer et réouvrir le run",
+                "Journal write outcome unknown: close and reopen the run",
             ));
         }
         if self.data.status == RunStatus::Complete {
-            return Err(invalid("Audit complet immuable"));
+            return Err(invalid("Completed audit is immutable"));
         }
         Ok(())
     }
@@ -332,7 +330,7 @@ impl RunJournal {
     fn running(&self) -> Result<()> {
         self.writable()?;
         if self.data.status != RunStatus::Running {
-            return Err(invalid("Audit en cours requis"));
+            return Err(invalid("Audit must be running"));
         }
         Ok(())
     }
@@ -353,14 +351,12 @@ impl RunJournal {
         let mut bytes = serde_json::to_vec_pretty(next)?;
         bytes.push(b'\n');
         if bytes.len() > JOURNAL_LIMIT {
-            return Err(invalid("Journal d’audit trop volumineux"));
+            return Err(invalid("Audit journal too large"));
         }
         if next.status == RunStatus::Running
             && serde_json::to_vec_pretty(&interrupted_snapshot(next))?.len() >= JOURNAL_LIMIT
         {
-            return Err(invalid(
-                "Journal trop volumineux pour enregistrer une interruption",
-            ));
+            return Err(invalid("Journal too large to record an interruption"));
         }
         let directory = fd_path(&self.root);
         let destination = directory.join(JOURNAL_FILE);
@@ -399,7 +395,7 @@ fn trusted_directory(directory: &File, private: bool) -> Result<()> {
         || metadata.mode() & if private { 0o077 } else { 0o022 } != 0
     {
         return Err(invalid(format!(
-            "Dossier d’audit non privé ou propriétaire divergent (mode {:o}, uid {})",
+            "Audit directory is not private or has a different owner (mode {:o}, uid {})",
             metadata.mode() & 0o777,
             metadata.uid()
         )));
@@ -415,7 +411,7 @@ fn private_regular(metadata: &Metadata) -> Result<()> {
         || metadata.mode() & 0o077 != 0
     {
         return Err(invalid(
-            "Fichier d’audit non privé, partagé ou non régulier",
+            "Audit file is not private, is shared or is not a regular file",
         ));
     }
     Ok(())
@@ -427,7 +423,7 @@ fn acquire_lock(directory: &Path, root: &File) -> Result<StateLock> {
     let observed = files::open_directory(directory)?.metadata()?;
     let pinned = root.metadata()?;
     if observed.dev() != pinned.dev() || observed.ino() != pinned.ino() {
-        return Err(invalid("Dossier d’audit remplacé pendant le verrouillage"));
+        return Err(invalid("Audit directory replaced while acquiring the lock"));
     }
     private_regular(&files::open_child(root, ".lock".as_ref(), false)?.metadata()?)?;
     Ok(lock)
@@ -443,7 +439,7 @@ fn resource_mut<'a>(data: &'a mut JournalData, name: &str) -> Result<&'a mut Res
     data.resources
         .iter_mut()
         .find(|resource| resource.name == name)
-        .ok_or_else(|| invalid("Ressource inconnue"))
+        .ok_or_else(|| invalid("Unknown resource"))
 }
 
 fn interrupt_pending(data: &mut JournalData) {
@@ -475,7 +471,7 @@ fn identifier(value: &str) -> Result<()> {
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || b"_-".contains(&byte))
     {
-        return Err(invalid("Identifiant d’audit invalide ou trop long"));
+        return Err(invalid("Audit ID invalid or too long"));
     }
     Ok(())
 }
@@ -483,7 +479,7 @@ fn identifier(value: &str) -> Result<()> {
 fn bounded_text(value: &str) -> Result<()> {
     if value.trim().is_empty() || value.len() > TEXT_LIMIT || value.chars().any(char::is_control) {
         return Err(invalid(
-            "Texte du journal vide, trop long ou contenant un contrôle",
+            "Journal text is empty, too long or contains a control character",
         ));
     }
     Ok(())
@@ -494,7 +490,7 @@ fn validate_budget(budget: &Budget) -> Result<()> {
         || budget.invocations as usize > INVOCATION_LIMIT
         || budget.seconds == 0
     {
-        return Err(invalid("Budget du journal nul ou dépassant le plafond"));
+        return Err(invalid("Journal budget is zero or exceeds the limit"));
     }
     Ok(())
 }
@@ -505,14 +501,14 @@ fn validate_digest(value: &str) -> Result<()> {
             .bytes()
             .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
     {
-        return Err(invalid("Empreinte de plan SHA-256 invalide"));
+        return Err(invalid("Invalid plan SHA-256 hash"));
     }
     Ok(())
 }
 
 fn validate(data: &JournalData) -> Result<()> {
     if data.schema_version != 1 {
-        return Err(invalid("Version du journal d’audit incompatible"));
+        return Err(invalid("Incompatible audit journal version"));
     }
     identifier(&data.run_id)?;
     validate_digest(&data.plan_sha256)?;
@@ -521,9 +517,7 @@ fn validate(data: &JournalData) -> Result<()> {
         || data.resources.len() > RESOURCE_LIMIT
         || data.open_obligations.len() > OBLIGATION_LIMIT
     {
-        return Err(invalid(
-            "Décompte du journal au-delà du budget ou des plafonds",
-        ));
+        return Err(invalid("Journal counts exceed the budget or limits"));
     }
     let mut invocations = BTreeSet::new();
     for invocation in &data.invocations {
@@ -532,7 +526,7 @@ fn validate(data: &JournalData) -> Result<()> {
             || (invocation.status.is_none() && data.status != RunStatus::Running)
         {
             return Err(invalid(
-                "Invocation dupliquée ou état d’invocation incohérent",
+                "Duplicate invocation or inconsistent invocation state",
             ));
         }
     }
@@ -544,11 +538,11 @@ fn validate(data: &JournalData) -> Result<()> {
             bounded_text(id)?;
         }
         if !resources.insert(&resource.name) {
-            return Err(invalid("Nom de ressource dupliqué"));
+            return Err(invalid("Duplicate resource name"));
         }
         let context = serde_json::to_vec(&resource.context)?;
         if context.len() > CONTEXT_LIMIT {
-            return Err(invalid("Contexte de ressource trop volumineux"));
+            return Err(invalid("Resource context too large"));
         }
         crate::json::parse(&context)?;
     }
@@ -556,7 +550,7 @@ fn validate(data: &JournalData) -> Result<()> {
     for obligation in &data.open_obligations {
         bounded_text(obligation)?;
         if !obligations.insert(obligation) {
-            return Err(invalid("Obligation dupliquée"));
+            return Err(invalid("Duplicate obligation"));
         }
     }
     if data.status == RunStatus::Running
@@ -566,15 +560,15 @@ fn validate(data: &JournalData) -> Result<()> {
             .iter()
             .any(|entry| entry == RECOVERY_OBLIGATION)
     {
-        return Err(invalid("Réserve d’obligation de reprise absente"));
+        return Err(invalid("Missing recovery obligation reserve"));
     }
     if data.cleanup_verified != data.resources.iter().all(|resource| resource.deleted) {
-        return Err(invalid("État de nettoyage incohérent avec les ressources"));
+        return Err(invalid("Cleanup state inconsistent with resources"));
     }
     if data.status == RunStatus::Planned
         && (!data.invocations.is_empty() || !data.resources.is_empty() || data.environment_verified)
     {
-        return Err(invalid("Effets enregistrés avant le démarrage du run"));
+        return Err(invalid("Effects recorded before the run started"));
     }
     if data.status == RunStatus::Complete
         && (!data.environment_verified
@@ -586,7 +580,7 @@ fn validate(data: &JournalData) -> Result<()> {
                 .any(|invocation| invocation.status != Some(InvocationStatus::Finished)))
     {
         return Err(invalid(
-            "Audit complet interdit : exécution, environnement ou obligations non résolus",
+            "Audit cannot be complete: execution, environment or obligations unresolved",
         ));
     }
     Ok(())

@@ -61,18 +61,16 @@ fn source_override() -> Classification {
     (
         PinStatus::SourceOverride,
         None,
-        Some("La déclaration sélectionne une source spécifique, sans épinglage de version du registre".into()),
+        Some("The declaration selects a custom source without pinning a registry version".into()),
     )
 }
 
 fn classify(ecosystem: &str, requirement: &Requirement) -> Classification {
     if !matches!(ecosystem, "rust" | "npm" | "python") {
-        return unsupported(format!(
-            "Classification des épinglages indisponible pour {ecosystem}"
-        ));
+        return unsupported(format!("Pin classification unavailable for {ecosystem}"));
     }
     if requirement.kind.starts_with("group:") && requirement.kind.ends_with(":include") {
-        return unsupported("L’inclusion d’un groupe ne déclare pas une version de paquet");
+        return unsupported("Group inclusion does not declare a package version");
     }
     if let Some(classification) = classify_source(ecosystem, &requirement.source) {
         return classification;
@@ -90,7 +88,7 @@ fn classify_source(ecosystem: &str, source: &Value) -> Option<Classification> {
     match source {
         Value::Null => None,
         Value::String(value) if ecosystem == "python" => Some(if value.trim().is_empty() {
-            unsupported("Source directe Python vide")
+            unsupported("Empty direct Python source")
         } else {
             source_override()
         }),
@@ -103,7 +101,7 @@ fn classify_source(ecosystem: &str, source: &Value) -> Option<Classification> {
                 .is_some_and(|version| !version.is_string())
             {
                 return Some(unsupported(
-                    "Le champ version de la déclaration doit être textuel",
+                    "The declaration's version field must be a string",
                 ));
             }
             let keys: &[&str] = match ecosystem {
@@ -116,21 +114,21 @@ fn classify_source(ecosystem: &str, source: &Value) -> Option<Classification> {
             for key in keys {
                 if let Some(value) = table.get(*key) {
                     if !value.as_str().is_some_and(|value| !value.trim().is_empty()) {
-                        return Some(unsupported(format!("Sélecteur de source {key} invalide")));
+                        return Some(unsupported(format!("Invalid source selector {key}")));
                     }
                     selected = true;
                 }
             }
             if let Some(workspace) = table.get("workspace") {
                 if workspace != &Value::Bool(true) {
-                    return Some(unsupported("Sélecteur de source workspace invalide"));
+                    return Some(unsupported("Invalid workspace source selector"));
                 }
                 selected = true;
             }
             if selected {
                 Some(source_override())
             } else if ecosystem == "python" {
-                Some(unsupported("Table de source Python non reconnue"))
+                Some(unsupported("Unrecognized Python source table"))
             } else {
                 None
             }
@@ -145,12 +143,10 @@ fn classify_source(ecosystem: &str, source: &Value) -> Option<Classification> {
             }) {
                 Some(source_override())
             } else {
-                Some(unsupported(
-                    "Liste de sources conditionnelles Python invalide",
-                ))
+                Some(unsupported("Invalid conditional Python source list"))
             }
         }
-        _ => Some(unsupported("Format de source de déclaration non reconnu")),
+        _ => Some(unsupported("Unrecognized declaration source format")),
     }
 }
 
@@ -160,9 +156,7 @@ fn cargo_pin(constraint: &str) -> Classification {
     }
     let requirement = match semver::VersionReq::parse(constraint) {
         Ok(requirement) => requirement,
-        Err(error) => {
-            return unsupported(format!("Contrainte de version Cargo invalide : {error}"))
-        }
+        Err(error) => return unsupported(format!("Invalid Cargo version constraint: {error}")),
     };
     if requirement.comparators.is_empty() {
         return plain(PinStatus::Unconstrained);
@@ -228,7 +222,7 @@ fn npm_pin(constraint: &str) -> Classification {
             valid_part(name)
         };
         if !valid_name || version.is_some_and(|version| version.trim().is_empty()) {
-            return unsupported("Alias npm invalide");
+            return unsupported("Invalid npm alias");
         }
         return match version {
             None => plain(PinStatus::Unconstrained),
@@ -255,9 +249,7 @@ fn npm_registry_pin(constraint: &str) -> Classification {
     }
     match node_semver::Range::parse(constraint) {
         Ok(_) => plain(PinStatus::Range),
-        Err(error) => unsupported(format!(
-            "Sélecteur de version npm non pris en charge : {error}"
-        )),
+        Err(error) => unsupported(format!("Unsupported npm version selector: {error}")),
     }
 }
 
@@ -267,19 +259,13 @@ fn python_pin(constraint: &str) -> Classification {
     }
     let specifiers = match constraint.parse::<pep440_rs::VersionSpecifiers>() {
         Ok(specifiers) => specifiers,
-        Err(error) => {
-            return unsupported(format!(
-                "Spécificateur de version Python invalide : {error}"
-            ))
-        }
+        Err(error) => return unsupported(format!("Invalid Python version specifier: {error}")),
     };
     if specifiers
         .iter()
         .any(|specifier| *specifier.operator() == pep440_rs::Operator::ExactEqual)
     {
-        return unsupported(
-            "L’égalité arbitraire Python ne constitue pas un épinglage de version concret",
-        );
+        return unsupported("Python arbitrary equality does not establish a concrete version pin");
     }
     if specifiers.len() == 1 && *specifiers[0].operator() == pep440_rs::Operator::Equal {
         return exact(specifiers[0].version());

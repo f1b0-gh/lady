@@ -86,7 +86,7 @@ fn go_inputs_changed_after_snapshot_are_rejected() -> TestResult {
             .err()
             .ok_or("changed Go input accepted")?;
         assert!(
-            error.to_string().contains("Source modifiée pendant scan"),
+            error.to_string().contains("Source changed during scan"),
             "{error}"
         );
     }

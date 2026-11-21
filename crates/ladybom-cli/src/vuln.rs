@@ -15,9 +15,9 @@ const DEFAULT_MAX_AGE: u64 = 604800;
 
 #[derive(Debug, Subcommand)]
 pub enum VulnCommand {
-    /// Importer des fichiers OSV locaux ; aucune connexion ni exécution.
+    /// Import local OSV files; no network connection or execution.
     Import {
-        /// Chaque fichier contient un objet OSV ou un tableau d’objets OSV.
+        /// Each file contains an OSV object or an array of OSV objects.
         #[arg(long, required = true)]
         input: Vec<PathBuf>,
         #[arg(long)]
@@ -26,13 +26,13 @@ pub enum VulnCommand {
         fetched_at: String,
         #[arg(long, required = true, value_parser = ["crates.io", "npm", "PyPI"])]
         ecosystem: Vec<String>,
-        /// Assertion explicite du producteur sur la couverture des écosystèmes.
+        /// Explicit producer assertion about ecosystem coverage.
         #[arg(long)]
         complete: bool,
         #[arg(long)]
         output: PathBuf,
     },
-    /// Comparer un rapport natif à un instantané OSV, à une date explicite.
+    /// Compare a native report with an OSV snapshot at an explicit date.
     Assess {
         #[arg(long)]
         report: PathBuf,
@@ -45,7 +45,7 @@ pub enum VulnCommand {
         #[arg(long)]
         output: Option<PathBuf>,
     },
-    /// Recalculer l’analyse et appliquer une politique locale stricte.
+    /// Recompute the assessment and apply a strict local policy.
     Check {
         #[arg(long)]
         report: PathBuf,
@@ -62,7 +62,7 @@ pub enum VulnCommand {
         #[arg(long)]
         output: Option<PathBuf>,
     },
-    /// Recalculer l’analyse et exporter son VEX CycloneDX 1.5 séparé.
+    /// Recompute the assessment and export its separate CycloneDX 1.5 VEX.
     Vex {
         #[arg(long)]
         report: PathBuf,
@@ -74,10 +74,10 @@ pub enum VulnCommand {
         max_age_seconds: u64,
         #[arg(long)]
         decisions: Option<PathBuf>,
-        /// Références BOM-Link par défaut ; composants locaux sans qualification serveur.
+        /// BOM-Link references by default; local components do not establish server qualification.
         #[arg(long, default_value = "bom-link", value_parser = ["bom-link", "local-components"])]
         profile: String,
-        /// Projection publique par défaut ; détails natifs privés sur demande explicite.
+        /// Public projection by default; private native details require an explicit request.
         #[arg(long, default_value = "public", value_parser = ["public", "private-detailed"])]
         export_profile: String,
         #[arg(long)]
@@ -110,9 +110,7 @@ struct BoundedWriter<W> {
 impl<W: Write> Write for BoundedWriter<W> {
     fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
         if bytes.len() > vuln::MAX_INPUT_BYTES.saturating_sub(self.written) {
-            return Err(std::io::Error::other(
-                "Sortie vulnérabilités supérieure à 64 Mio",
-            ));
+            return Err(std::io::Error::other("Vulnerability output exceeds 64 MiB"));
         }
         let count = self.inner.write(bytes)?;
         self.written += count;
@@ -159,19 +157,19 @@ pub fn run(command: VulnCommand) -> Result<i32> {
                 let bytes = files::read_limited(&path, remaining)?;
                 remaining = remaining
                     .checked_sub(bytes.len())
-                    .ok_or_else(|| invalid("Import OSV trop volumineux"))?;
+                    .ok_or_else(|| invalid("OSV import too large"))?;
                 let value = vuln::parse_json(&bytes)?;
                 let records = match value {
                     Value::Array(records) => records,
                     Value::Object(_) => vec![value],
                     _ => {
                         return Err(invalid(
-                            "Un objet OSV ou un tableau d’objets OSV est requis",
+                            "An OSV object or an array of OSV objects is required",
                         ))
                     }
                 };
                 if records.len() > vuln::MAX_RECORDS.saturating_sub(advisories.len()) {
-                    return Err(invalid("Trop d’avis OSV dans l’import"));
+                    return Err(invalid("Too many OSV advisories in the import"));
                 }
                 advisories.extend(records);
             }
@@ -263,7 +261,7 @@ pub fn run(command: VulnCommand) -> Result<i32> {
             let profile = match profile.as_str() {
                 "bom-link" => vuln::vex::Profile::BomLink,
                 "local-components" => vuln::vex::Profile::LocalComponents,
-                _ => return Err(invalid("Profil VEX inconnu")),
+                _ => return Err(invalid("Unknown VEX profile")),
             };
             let export_profile = if export_profile == "private-detailed" {
                 ladybom::deps::cyclonedx::ExportProfile::PrivateDetailed

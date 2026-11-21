@@ -31,17 +31,17 @@ pub struct Limits {
 }
 impl AuditConfig {
     pub fn validate(&self) -> Result<()> {
-        check(!self.scope_paths.is_empty(), "Périmètre d’audit vide")?;
+        check(!self.scope_paths.is_empty(), "Empty audit scope")?;
         for paths in [&self.scope_paths, &self.exclude_paths] {
             let mut seen = BTreeSet::new();
             for p in paths {
                 relative_path(p)?;
-                check(seen.insert(p), "Chemin d’audit dupliqué")?;
+                check(seen.insert(p), "Duplicate audit path")?;
             }
         }
         check(
             self.budget.invocations > 0 && self.budget.seconds > 0,
-            "Budget d’audit nul",
+            "Zero audit budget",
         )?;
         check(
             self.limits.cpu_seconds >= 5
@@ -49,7 +49,7 @@ impl AuditConfig {
                 && self.limits.processes > 0
                 && self.limits.files > 0
                 && self.limits.disk_bytes > 0,
-            "Limites d’audit invalides : CPU au moins 5 secondes et autres limites positives",
+            "Invalid audit limits: CPU must be at least 5 seconds and other limits must be positive",
         )?;
         for (name, tool) in &self.tools {
             identifier(name)?;
@@ -64,14 +64,11 @@ impl AuditConfig {
                         .version
                         .bytes()
                         .all(|b| b.is_ascii_alphanumeric() || b".-+".contains(&b)),
-                "Version d’outil d’audit exacte requise",
+                "Exact audit tool version required",
             )?;
-            check(
-                tool.phase == "runtime",
-                "Phase d’outil d’audit non supportée",
-            )?;
+            check(tool.phase == "runtime", "Unsupported audit tool phase")?;
         }
-        check(self.checks.len() <= 128, "Trop de commandes d’audit")?;
+        check(self.checks.len() <= 128, "Too many audit commands")?;
         for command in &self.checks {
             check(
                 !command.is_empty()
@@ -79,7 +76,7 @@ impl AuditConfig {
                     && command
                         .iter()
                         .all(|s| !s.is_empty() && s.len() <= 4096 && !s.contains('\0')),
-                "Commande d’audit invalide",
+                "Invalid audit command",
             )?;
         }
         Ok(())

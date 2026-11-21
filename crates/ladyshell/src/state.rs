@@ -64,7 +64,7 @@ pub fn create_directory(path: &Path) -> Result<()> {
             _ => {
                 return Err(Error::InvalidPath {
                     path: path.clone(),
-                    reason: "Chemin d’état non normalisé",
+                    reason: "State path is not normalized",
                 })
             }
         }
@@ -73,7 +73,7 @@ pub fn create_directory(path: &Path) -> Result<()> {
     // SAFETY: geteuid has no preconditions.
     ensure!(
         meta.uid() == unsafe { libc::geteuid() } && meta.mode() & 0o022 == 0,
-        "Dossier d’état requis : propriétaire courant, sans écriture groupe/autres"
+        "State directory must be owned by the current user, without group/other write access"
     );
     Ok(())
 }
@@ -94,7 +94,7 @@ fn lock_file_at(parent: &File, directory: &Path, name: &str, exclusive: bool) ->
     let meta = file.metadata()?;
     ensure!(
         meta.is_file() && meta.nlink() == 1,
-        "Fichier de verrou non régulier ou partagé"
+        "Lock file is not regular or is shared"
     );
     // SAFETY: file owns a valid descriptor; the lock is released by closing it.
     let result = unsafe {
@@ -109,7 +109,7 @@ fn lock_file_at(parent: &File, directory: &Path, name: &str, exclusive: bool) ->
         )
     };
     if result < 0 {
-        return Err(Error::Io(std::io::Error::last_os_error()).context(format!("État {} occupé ({name}) ; attendre la fin de l’opération/session, ne pas supprimer le verrou",directory.display())));
+        return Err(Error::Io(std::io::Error::last_os_error()).context(format!("State {} is busy ({name}); wait for the operation/session to finish, do not delete the lock",directory.display())));
     }
     Ok(file)
 }
@@ -121,7 +121,7 @@ impl StateLock {
         // SAFETY: geteuid has no preconditions.
         ensure!(
             meta.uid() == unsafe { libc::geteuid() } && meta.mode() & 0o022 == 0,
-            "Dossier d’état requis : propriétaire courant, sans écriture groupe/autres"
+            "State directory must be owned by the current user, without group/other write access"
         );
         let lock = Self {
             _file: lock_file_at(&parent, directory, ".lock", true)?,
@@ -146,7 +146,7 @@ impl StateLock {
                 && current.ino() == pinned.ino()
                 && current.uid() == unsafe { libc::geteuid() }
                 && current.mode() & 0o022 == 0,
-            "Dossier d’état remplacé ou permissions modifiées pendant l’opération"
+            "State directory replaced or permissions changed during the operation"
         );
         Ok(())
     }
@@ -177,7 +177,7 @@ pub fn text<'a>(value: &'a Value, field: &str) -> Result<&'a str> {
         .get(field)
         .and_then(Value::as_str)
         .filter(|s| !s.is_empty())
-        .ok_or_else(|| invalid(format!("Champ requis : {field}")))
+        .ok_or_else(|| invalid(format!("Required field: {field}")))
 }
 pub fn load(directory: &Path) -> Result<Option<Value>> {
     let state = read(&directory.join("state.json"))?;
@@ -189,7 +189,7 @@ pub fn load(directory: &Path) -> Result<Option<Value>> {
 pub(crate) fn validate(value: &Value) -> Result<()> {
     ensure!(
         value["schema_version"] == 2,
-        "Format d’état incompatible : utiliser migrate-state vers un nouveau dossier"
+        "Incompatible state format: use migrate-state to a new directory"
     );
     for field in [
         "sandbox_name",
@@ -206,7 +206,7 @@ pub(crate) fn validate(value: &Value) -> Result<()> {
     }
     ensure!(
         value["context"]["gateway"].is_string() && value["context"]["workspace"].is_string(),
-        "Contexte d’état absent"
+        "Missing state context"
     );
     Ok(())
 }

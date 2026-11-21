@@ -52,7 +52,7 @@ pub fn validate_policy(actual: &Value, expected: &Value, binary: Option<&str>) -
     for key in ["version", "landlock", "process", "filesystem_policy"] {
         if actual[key] != expected[key] {
             return Err(invalid(format!(
-                "Politique d’audit divergente : {key} ; observée={} ; attendue={}",
+                "Audit policy mismatch: {key}; observed={}; expected={}",
                 actual[key], expected[key]
             )));
         }
@@ -69,29 +69,29 @@ pub fn validate_policy(actual: &Value, expected: &Value, binary: Option<&str>) -
             .contains(&k.as_str())
         })
     }) {
-        return Err(invalid("Champ de politique d’audit inconnu"));
+        return Err(invalid("Unknown audit policy field"));
     }
     let rules = actual.get("network_policies").and_then(Value::as_object);
     let Some(binary) = binary else {
         if actual.get("network_policies").is_some() && !rules.is_some_and(|r| r.is_empty()) {
-            return Err(invalid("Réseau interdit pour la cible d’audit"));
+            return Err(invalid("Network forbidden for the audit target"));
         }
         return Ok(());
     };
-    let rules = rules.ok_or_else(|| invalid("Politique réseau d’agent absente"))?;
+    let rules = rules.ok_or_else(|| invalid("Missing agent network policy"))?;
     if !rules.contains_key("openai_codex") {
-        return Err(invalid("Règle Codex absente"));
+        return Err(invalid("Missing Codex rule"));
     }
     let endpoints = expected["network_policies"]["openai_codex"]["endpoints"]
         .as_array()
-        .ok_or_else(|| invalid("Endpoints attendus absents"))?;
+        .ok_or_else(|| invalid("Missing expected endpoints"))?;
     for rule in rules.values() {
         let bins = rule["binaries"]
             .as_array()
-            .ok_or_else(|| invalid("Identité réseau absente"))?;
+            .ok_or_else(|| invalid("Missing network identity"))?;
         let hosts = rule["endpoints"]
             .as_array()
-            .ok_or_else(|| invalid("Endpoints réseau absents"))?;
+            .ok_or_else(|| invalid("Missing network endpoints"))?;
         if bins.is_empty()
             || hosts.is_empty()
             || bins.iter().any(|b| *b != json!({"path":binary}))
@@ -101,9 +101,7 @@ pub fn validate_policy(actual: &Value, expected: &Value, binary: Option<&str>) -
                     .any(|k| !["name", "binaries", "endpoints"].contains(&k.as_str()))
             })
         {
-            return Err(invalid(
-                "Permission réseau supplémentaire dans l’agent d’audit",
-            ));
+            return Err(invalid("Additional network permission in the audit agent"));
         }
     }
     Ok(())
@@ -189,7 +187,7 @@ impl NativeRuntime {
         let result = capture(command, Duration::from_secs(120), 4 * 1024 * 1024);
         if let Some(actual) = self.backend.sandbox_identity(&name)? {
             if actual["labels"]["ladyshell.audit.owner"] != owner {
-                return Err(invalid("Propriété de sandbox d’audit divergente"));
+                return Err(invalid("Audit sandbox ownership mismatch"));
             }
             journal.resource_created(&name, state::text(&actual, "id")?)?;
         }
@@ -208,7 +206,7 @@ impl NativeRuntime {
                 "--policy",
                 final_path
                     .to_str()
-                    .ok_or_else(|| invalid("Chemin de politique non UTF-8"))?,
+                    .ok_or_else(|| invalid("Policy path is not UTF-8"))?,
                 "--wait",
                 "--timeout",
                 "30",
@@ -223,7 +221,7 @@ impl NativeRuntime {
             .resources
             .iter()
             .find(|r| r.name == name)
-            .ok_or_else(|| invalid("Sandbox non journalisée"))?;
+            .ok_or_else(|| invalid("Sandbox not recorded in the journal"))?;
         retry_provider_attach(
             Duration::from_secs(120),
             |timeout| {
@@ -286,11 +284,11 @@ impl NativeRuntime {
             .resources
             .iter()
             .find(|r| r.name == name)
-            .ok_or_else(|| invalid("Sandbox non journalisée"))?;
+            .ok_or_else(|| invalid("Sandbox not recorded in the journal"))?;
         let observed = self
             .backend
             .sandbox_identity(name)?
-            .ok_or_else(|| invalid("Sandbox d’audit absente"))?;
+            .ok_or_else(|| invalid("Missing audit sandbox"))?;
         validate_sandbox_identity(&observed, record)?;
         let actual = crate::json::parse(
             &self
@@ -334,7 +332,7 @@ impl NativeRuntime {
         let name = Self::name(journal, "ladyshell-audit-");
         let owner = Self::owner(journal);
         if volume(&name)?.is_some() {
-            return Err(invalid("Volume d’audit déjà existant"));
+            return Err(invalid("Audit volume already exists"));
         }
         journal.resource_intent(&name, &owner, self.context("volume"))?;
         let mut cmd = Command::new("docker");
@@ -381,7 +379,7 @@ impl NativeRuntime {
         super::worker::validate_request(&request)?;
         if request.artifacts.iter().map(|a| a.max_bytes).sum::<u64>() > 16 * 1024 * 1024 {
             return Err(invalid(
-                "Preuves demandées au-delà du plafond de transport 16 Mio",
+                "Requested evidence exceeds the 16 MiB transport limit",
             ));
         }
         let volume = self.volume(journal)?;
@@ -390,7 +388,7 @@ impl NativeRuntime {
         self.verify_sandbox(journal, &name, &policy, false)?;
         let timeout = timeout.saturating_sub(started.elapsed());
         if timeout.as_secs() == 0 {
-            return Err(invalid("Durée épuisée avant exécution cible"));
+            return Err(invalid("Time budget exhausted before target execution"));
         }
         request.timeout_seconds = request.timeout_seconds.min(timeout.as_secs());
         let mut cmd = self.backend.command();
@@ -416,7 +414,7 @@ impl NativeRuntime {
         )?;
         let receipt: WorkerReceipt = serde_json::from_value(crate::json::parse(&raw)?)?;
         if !receipt.stopped || receipt.invocation_id != request.invocation_id {
-            return Err(invalid("Arrêt de la cible non établi"));
+            return Err(invalid("Target termination not established"));
         }
         self.remove_one(journal, &name)?;
         self.remove_one(journal, &volume)?;
@@ -437,7 +435,7 @@ impl NativeRuntime {
         self.verify_sandbox(journal, &name, &policy, true)?;
         let timeout = timeout.saturating_sub(started.elapsed());
         if timeout.as_secs() == 0 {
-            return Err(invalid("Durée épuisée avant invocation modèle"));
+            return Err(invalid("Time budget exhausted before model invocation"));
         }
         let mut cmd = self.backend.command();
         cmd.args([
@@ -485,7 +483,7 @@ impl NativeRuntime {
             .iter()
             .find(|r| r.name == name)
             .cloned()
-            .ok_or_else(|| invalid("Ressource inconnue"))?;
+            .ok_or_else(|| invalid("Unknown resource"))?;
         cleanup_resource(journal, &resource)
     }
     pub fn cleanup(&self, journal: &mut RunJournal) -> Result<()> {
@@ -501,9 +499,9 @@ fn validate_provider_status(
 ) -> Result<()> {
     let targets = value["targets"]
         .as_array()
-        .ok_or_else(|| invalid("Reçu provider absent"))?;
+        .ok_or_else(|| invalid("Missing provider receipt"))?;
     if targets.len() != 1 {
-        return Err(invalid("Reçu provider ambigu"));
+        return Err(invalid("Ambiguous provider receipt"));
     }
     let target = &targets[0];
     let desired = &target["receipt"]["desired"];
@@ -531,7 +529,7 @@ fn validate_provider_status(
         .iter()
         .any(|key| desired[key].as_str().is_none_or(str::is_empty) || desired[key] != observed[key])
     {
-        return Err(invalid("Provider non prêt ou reçu divergent"));
+        return Err(invalid("Provider not ready or receipt mismatch"));
     }
     Ok(())
 }
@@ -549,9 +547,7 @@ fn retry_provider_attach(
             result => return result,
         }
     }
-    Err(invalid(
-        "Limite de tentatives d’attachement provider atteinte",
-    ))
+    Err(invalid("Provider attachment attempt limit reached"))
 }
 
 fn attachment_remaining(started: Instant, timeout: Duration) -> Result<Duration> {
@@ -606,7 +602,7 @@ fn validate_sandbox_identity(observed: &Value, record: &ResourceRecord) -> Resul
         || observed["labels"]["ladyshell.audit.owner"] != record.owner
         || observed["phase"] != "Ready"
     {
-        return Err(invalid("Identité ou état de sandbox d’audit divergent"));
+        return Err(invalid("Audit sandbox identity or state mismatch"));
     }
     Ok(())
 }
@@ -622,7 +618,7 @@ fn validate_attachment_bootstrap(
     validate_policy(policy, bootstrap, None)?;
     if *providers != json!({"providers":[],"next_page_token":""}) {
         return Err(invalid(
-            "Provider déjà attaché ou observation incomplète avant attachement",
+            "Provider already attached or observation incomplete before attachment",
         ));
     }
     Ok(())
@@ -642,9 +638,9 @@ fn volume(name: &str) -> Result<Option<Value>> {
             let values = crate::json::parse(&result?)?;
             let rows = values
                 .as_array()
-                .ok_or_else(|| invalid("Observation volume invalide"))?;
+                .ok_or_else(|| invalid("Invalid volume observation"))?;
             if rows.len() != 1 || rows[0]["Name"] != name {
-                return Err(invalid("Identité volume divergente"));
+                return Err(invalid("Volume identity mismatch"));
             }
             Ok(Some(rows[0].clone()))
         }
@@ -663,7 +659,7 @@ fn verify_volume_owner(v: &Value, owner: &str, workspace: &str) -> Result<()> {
         || v["Labels"]["openshell.ai/sandbox-attachable"] != "true"
         || v["Labels"]["openshell.ai/sandbox-attachable-workspace"] != workspace
     {
-        return Err(invalid("Volume hors du périmètre d’audit"));
+        return Err(invalid("Volume outside the audit scope"));
     }
     Ok(())
 }
@@ -686,7 +682,7 @@ fn cleanup_resource(journal: &mut RunJournal, resource: &ResourceRecord) -> Resu
             }
             None => None,
         },
-        _ => return Err(invalid("Type de ressource d’audit inconnu")),
+        _ => return Err(invalid("Unknown audit resource type")),
     };
     let Some((id, owner)) = observed else {
         if let Some(id) = &resource.id {
@@ -701,7 +697,7 @@ fn cleanup_resource(journal: &mut RunJournal, resource: &ResourceRecord) -> Resu
         || resource.id.as_ref().is_some_and(|expected| expected != &id)
     {
         return Err(invalid(
-            "Refus de supprimer une ressource d’identité divergente",
+            "Refusing to delete a resource with a different identity",
         ));
     }
     if resource.id.is_none() {
@@ -710,14 +706,14 @@ fn cleanup_resource(journal: &mut RunJournal, resource: &ResourceRecord) -> Resu
     if resource.context["kind"] == "sandbox" {
         backend.call(&["sandbox", "delete", &resource.name])?;
         if backend.sandbox_identity(&resource.name)?.is_some() {
-            return Err(invalid("Suppression sandbox non confirmée"));
+            return Err(invalid("Sandbox deletion not confirmed"));
         }
     } else {
         let mut cmd = Command::new("docker");
         cmd.args(["volume", "rm", &resource.name]);
         capture(cmd, Duration::from_secs(30), 1024 * 1024)?;
         if volume(&resource.name)?.is_some() {
-            return Err(invalid("Suppression volume non confirmée"));
+            return Err(invalid("Volume deletion not confirmed"));
         }
     }
     journal.resource_deleted(&resource.name, &id)
@@ -926,8 +922,7 @@ mod provider_tests {
                         );
                         *documents[document]
                             .pointer_mut(pointer)
-                            .ok_or_else(|| invalid("Pointeur de fixture absent"))? =
-                            changed.clone();
+                            .ok_or_else(|| invalid("Missing fixture pointer"))? = changed.clone();
                     }
                     validate_attachment_bootstrap(
                         &documents["identity"],
@@ -981,7 +976,7 @@ mod provider_tests {
         ] {
             let mut bad = good.clone();
             *bad.pointer_mut(pointer)
-                .ok_or_else(|| invalid("Test pointer absent"))? = Value::Null;
+                .ok_or_else(|| invalid("Missing test pointer"))? = Value::Null;
             assert!(
                 validate_provider_status(&bad, "agent", "id", "provider", "default").is_err(),
                 "{pointer}"
