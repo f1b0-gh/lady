@@ -1,0 +1,10 @@
+{
+  "name": "ladybom-explorer-demo",
+  "version": "1.0.0",
+  "private": true,
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "demo-api": "^1.0.0",
+    "demo-web": "^2.0.0"
+  }
+}
