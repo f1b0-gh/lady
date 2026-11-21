@@ -97,6 +97,39 @@ Private repository rulesets depend on the GitHub plan. Public fixtures do not
 qualify those permissions. Disabled Actions or organization policy are reported,
 not bypassed. Setup is not a background scheduler or unattended approval service.
 
+### Command options
+
+Use `ladyhost help COMMAND` or `ladyhost COMMAND --help` for offline help.
+Options take separate values (`--state PATH`); only `--check` may repeat.
+`--json` is available on all four commands below and prints machine-readable
+results instead of the human summary.
+
+| Command | Required selection and optional behavior |
+| --- | --- |
+| `init` | `--state DIR` selects private setup state. For new setup, supply `--repo OWNER/REPO`, `--app-name SLUG` and project checks, or use `--spec FILE`. Without `--apply`, show the plan; with it, perform or resume setup. |
+| `doctor` | Use `--state DIR`, or `--config FILE --integration FILE` for an existing host configuration and retained integration defaults. The latter accepts `--workflow FILE`, a JSON object with `path` and exact UTF-8 `content`. |
+| `uninstall` | `--state DIR` selects owned resources; `--apply` performs the removal shown by the default plan. |
+| `review-conflict` | `--config FILE --candidate FULL_OID` selects the host package and exact commit. `--render` produces review text before signing; add `--json` to include it in structured output. |
+
+New `init` setups accept these project selections:
+
+| Option | Meaning and default |
+| --- | --- |
+| `--repo OWNER/REPO` | Required existing GitHub repository. |
+| `--app-name SLUG` | Required globally unique App name: lowercase ASCII letters, digits and hyphens, at most 34 characters. |
+| `--workspace PATH` | Actual local Git checkout root; defaults to the current directory. |
+| `--target BRANCH` | Target branch; defaults to `main`. |
+| `--check JSON_ARGV` | One CI command as a JSON array, such as `'["cargo","test","--locked"]'`. Supply 1–16 commands, in execution order, unless adopting a workflow. |
+| `--gh PATH`, `--jj PATH` | Select the host executables; otherwise resolve `gh` and `jj` on PATH. |
+| `--signing-key PATH` | Existing private Ed25519 key; otherwise generate a separate signing key. |
+| `--ci-check NAME` | Actions check required for integration; defaults to `ci/ladyhost`. |
+| `--workflow-path PATH` | Repository-relative workflow path; defaults to `.github/workflows/ladyhost.yml`. |
+| `--adopt-workflow` | Preserve an existing exact-push workflow instead of generating one; select its path and check name with the preceding options. |
+| `--spec FILE` | Read a JSON `setup::Spec` instead of project flags. Combine only with `--state`, `--apply` and `--json`; host filesystem paths inside the spec must be absolute. |
+
+For a saved setup, `init --state DIR --apply` reuses the recorded selections.
+Keep the same directory through browser consent, CI and review steps.
+
 ## Publish and integrate
 
 Use the private configuration produced by setup. Independently check the
@@ -126,6 +159,19 @@ requirement. Setup's integration defaults supply policy, not candidate authority
 helper. Moving/rebuilding the bound executable requires explicit verification
 and rebinding. `credential CONFIG <get|store|erase>` is a Git protocol entry point,
 not an agent credential API. Keep App keys and forge/signing credentials on the host.
+
+`ladyhost-jjpr` takes positional arguments, with no `--json` or `--apply` flag.
+`CONFIG` is the private host configuration, `BOOKMARK` is the selected Jujutsu
+bookmark, and `REQUEST` is an integration-request JSON file:
+
+| Invocation | Purpose |
+| --- | --- |
+| `preflight CONFIG` | Query and verify the authenticated forge account and repository identity; print JSON. |
+| `plan CONFIG BOOKMARK` | Preview publication of the selected bookmark; may query the forge. |
+| `submit CONFIG BOOKMARK` | Publish the selected candidate and update its PR. |
+| `inspect-integration CONFIG REQUEST` | Inspect the exact integration candidate and policy; print JSON. |
+| `integrate CONFIG REQUEST` | Recheck and integrate the candidate selected by the request; print JSON. |
+| `git-helper CONFIG` | Install the bound credential helper in the private checkout. |
 
 ## Conflict review
 

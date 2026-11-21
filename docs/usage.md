@@ -5,6 +5,12 @@ selection, runtime identity, ownership, provider and effective policy before
 execution. Ladybom's static inventory grants no network or installation rights.
 Git credentials, signing keys and publication authority stay on the host.
 
+Use `ladyshell help COMMAND [SUBCOMMAND]` for exact syntax, or add `--help`
+to a command. Help does not load configuration, credentials or sandbox state.
+`--version` prints the installed version. The `artifact` forwarding command is
+the exception: use `ladyshell help artifact` for local help; `artifact --help`
+starts the separately installed Ladyboot executable.
+
 ## Prerequisites
 
 Use the [build instructions](development.md) from the Lady repository root.
@@ -62,6 +68,19 @@ are refused. Tool versions must exist in the selected recipes. Rust selections
 include 1.98.1 (Cargo 1.98.0) and 1.99.1 (Cargo 1.99.1); adding a tool does not
 allow downloading its dependencies. See [dependency preparation](dependencies.md).
 
+`lock`, `plan` and `apply` share these options:
+
+| Option | Meaning |
+| --- | --- |
+| `--config FILE` | Required Nickel configuration; its directory bounds evaluator imports. |
+| `--project DIR` | Required host checkout from which the configured sources are selected. |
+| `--state DIR` | Required private directory for this environment's state, exports and recovery records. Reuse it for later commands. |
+| `--resources DIR` | Required trusted Lady resource tree described above. |
+| `--codex FILE`, `--codex-code-mode-host FILE` | Both required; native executables whose identities enter the lock. |
+| `--mission NAME` | Select a configured mission; defaults to `dev`. |
+| `--lock FILE` | Override the lock location. Otherwise `sandbox.ncl` with mission `dev` uses sibling `sandbox.dev.lock.json`. `lock` writes it; `plan` and `apply` verify it. |
+| `--ladybom FILE` | Optional Ladybom JSON inventory, verified against the independently selected sources and bound into the lock. Use the same input throughout preparation. |
+
 Set the two Codex paths to actual native ELF files, not wrapper scripts or links:
 
 ```sh
@@ -112,11 +131,19 @@ is 300 seconds by default, with `--timeout` accepting 1–86400 seconds. Session
 hold a lease that blocks environment mutation. Provider credentials remain in
 the gateway; the agent receives an opaque reference and account routing identity.
 
+`status`, `check`, `run`, `shell`, `chat` and `resume` require `--state DIR`.
+`shell` opens an interactive shell, `chat` starts Codex and `resume` opens its
+session-resumption flow. The last three take no trailing program arguments.
+Only `run` takes `--timeout`; `check` selects the retained mission checks without
+a command argument.
+
 `sync` applies nonconflicting changes to the host checkout by default. `--export`
 only retains an export; `--json` selects machine output. `--dry-run` leaves the
 checkout unchanged but writes an export and updates `last_sync`. Source changes
 are compared against the common base; different concurrent edits refuse the
 application rather than guessing a merge. Existing host modes are preserved.
+For `sync` alone, omitting `--state` selects the sandbox associated with the
+current project. `--dry-run` and `--export` are mutually exclusive.
 
 Exports and pre-change backups remain in the private state. An interrupted
 checkout application leaves `checkout-pending.json`; repeat `sync` to recover
@@ -134,6 +161,10 @@ ladyshell run --state "$STATE_DIR" --sync --timeout 600 -- python experiment.py
 changes; a failed command retains an export without applying it. The experiment
 is never retried automatically. A pre-existing pending checkout operation needs
 explicit recovery first. Manual sync never stages or commits Git changes.
+`--cleanup` on `run`, `shell`, `chat` or `resume` requires `--sync` and requests
+export and deletion of the owned sandbox after the session finishes, including
+after a failed command. Retained state and exports remain available. Leave it
+unset when you intend to continue using the environment.
 
 ## Continuous Sandboxing
 
@@ -146,6 +177,12 @@ ladyshell cs init --state "$STATE_DIR" --task task-123
 ladyshell cs checkpoint --state "$STATE_DIR" --attempt checkpoint-1 --epoch 0
 ladyshell cs status --state "$STATE_DIR"
 ```
+
+`cs init` requires the stable `--task` identifier. `checkpoint` requires a unique
+`--attempt` for a new operation and the current `--epoch` from `cs status`;
+reuse that attempt only to recover the same operation. `cs status`, `resume`
+and `replace` all require `--state`; `resume` also requires the acknowledged
+`--epoch`. These generation checks prevent a stale session from resuming work.
 
 Finish managed sessions before checkpointing. The checkpoint retains exports
 before and after stop/start, terminates old writers and fences execution.
@@ -172,6 +209,11 @@ ladyshell cs resume --state "$STATE_DIR" --epoch 1
 # If it is replacement_required:
 ladyshell cs replace --state "$STATE_DIR"
 ```
+
+`cs refresh` uses all the preparation options in the table above, plus required
+`--attempt` and `--context FILE`. Here `--project` selects the complete next
+source tree. `reconcile-checkpoint` requires both `--before-tree` and
+`--after-tree` hashes from the retained discrepancy, never guessed values.
 
 Replacement creates and verifies a fresh owned sandbox, advances the epoch and
 retires the recorded old instance. Interrupted retirement blocks execution;
@@ -206,11 +248,25 @@ an explicit SQLite snapshot under `$XDG_STATE_HOME/ladyshell/management`
 missing observations never establish deletion. Labels, notes and reversible
 archiving are host metadata. `status` performs the separate provider observation.
 
+All `manage` commands print JSON. `--database FILE` selects another SQLite file
+in a private directory and can appear before or after its subcommand:
+
+| Command | Options and selection |
+| --- | --- |
+| `manage refresh` | Import current local associations into the catalog. No filters. |
+| `manage list` | Filter by `--project DIR`, `--status retained\|deletion-pending\|deleted`, or `--label KEY=VALUE`. `--include-archived` and `--include-deleted` reveal hidden entries; selecting `--status deleted` also reveals deleted entries. `--limit` defaults to 100 (range 1–1000); `--after ID` continues after a catalog identity. |
+| `manage show ID` | Inspect one identity, including archived or deleted entries. |
+| `manage annotate ID` | Set repeatable `--label KEY=VALUE`, remove repeatable `--remove-label KEY`, or replace `--note TEXT`. `--archive` and `--unarchive` are mutually exclusive and do not delete a sandbox. |
+| `manage history ID` | Read changes after the numeric `--after` sequence (default 0), with `--limit` defaulting to 100 (range 1–1000). |
+
 `destroy` exports work and deletes only the verified owned sandbox; state and
 exports survive. `--discard-work` explicitly abandons export. `destroy --all`
 affects registered current instances, refuses incomplete discovery and reports
 per-instance failures. Historical retained instances lacking ownership/export
 proof remain blocked. No unrelated sandbox is discovered or adopted for cleanup.
+Select exactly one of `--state DIR` and `--all`. `--dry-run` is available only
+with `--all` and makes no writes or OpenShell calls. `delete` is an alias for
+`destroy`; `--discard-work` can be used for either selection and skips export.
 
 ## Host publication and recovery
 
@@ -225,9 +281,12 @@ ladyshell run --state "$STATE_DIR" --sync \
   --policy /absolute/private/publish.json -- python experiment.py
 ```
 
-The three publication options require `--sync`. A host policy outside exported
-sources can select signing and independent checks; neither is inferred from
-agent reports. Example policy:
+`--publish REMOTE` requires `--sync`, `--branch NAME` and `--message TEXT` on
+`run`, `shell`, `chat` and `resume`. The branch must be the existing selected
+checkout branch; the message becomes the commit message. Optional `--policy FILE`
+requires `--publish`. This host policy outside exported sources can select
+signing and independent checks; neither is inferred from agent reports.
+Example policy:
 
 ```json
 {
@@ -260,20 +319,39 @@ Uncertain pushes retain receipts and block new automatic publication. Observe
 before retrying; retry retains the same object and lease. `reconcile --abandon`
 archives an attempt without undoing remote effects or discarding evidence.
 Changed signing trust requires a new explicit policy/attempt, not edited receipts.
+Every `publication` command requires `--state`. `check` requires both a retained
+`--export DIR` and `--policy FILE`. `publish` requires `--export`, `--remote`,
+`--branch` and `--message`; its `--policy` is optional. `reconcile` without flags
+observes the retained attempt; `--retry` and `--abandon` are mutually exclusive.
 
 ## Managed tasks and review
 
 `task prepare --repository REPO --directory TASK --branch agent/task --base main`
-creates an isolated worktree. `task start` additionally provisions its environment.
-Use `task inspect --state TASK/state --export EXPORT` for verified retained files;
-`--live` requires the worker's preview capability and provides metadata only.
-`task complete --state TASK/state` exports and removes its owned sandbox.
+creates an isolated worktree in `TASK/project`, with state in `TASK/state`.
+The repository, directory and new branch are required; `--base` defaults to
+`HEAD`. Keep `TASK` outside the source checkout. `task start` takes the same
+options plus required `--config`, `--resources`, `--codex` and
+`--codex-code-mode-host`, and optional `--mission` (default `dev`), `--lock`
+and `--ladybom`. It prepares the worktree and provisions its environment using
+an existing lock.
+
+Other task commands require `--state TASK/state`. `status` reads retained task
+and recovery state. `inspect --export EXPORT` selects verified retained files;
+without `--export`, it uses `last_sync`. Its mutually exclusive `--live` mode
+requires the worker's preview capability and provides metadata only.
+`salvage --export EXPORT` applies selected retained work to the host checkout;
+`refresh --upstream REVISION` explicitly selects an upstream revision.
+`complete` exports and removes the owned sandbox.
 
 `stack record`, `stack status` and `stack restack` retain parent identities.
 Changed parents block descendant publication. Restack creates a separate candidate
 requiring new checks, signatures and review; it preserves earlier work.
 `task refresh` supports independent tasks only, not retained stack membership.
-Use `ladyshell help task` and `ladyshell help stack` for exact inputs.
+Each `stack` command requires `--directory DIR` for its manifest. `record` also
+requires `--state DIR`, whose checkpoint must have a confirmed publication;
+optional `--parent STATE` selects an already recorded parent. `restack` requires
+`--state` and uses its recorded parent unless `--onto PARENT_STATE` selects another
+recorded checkpoint. `status` needs only the stack directory.
 
 Tangled review uses an explicitly trusted host configuration. Schema 2 requires
 an external compatible AT host connector; Lady does not install or authorize
@@ -289,13 +367,57 @@ capabilities. Without this policy, human review remains unknown/unsupported.
 `review merge-check` observes current readiness; `review merge` is a separate
 explicit host operation that rechecks signatures, checks, review and exact refs.
 Unknown outcomes require readback. Never replay uncertain ticket/patch writes
-or edit recovery journals. Use each subcommand's help for its required bindings.
+or edit recovery journals.
+
+All `review` commands except `merge-reconcile` require `--state DIR` and
+`--config FILE` for the host-owned review JSON configuration:
+
+| Command | Additional inputs and behavior |
+| --- | --- |
+| `submit` | Requires `--created-at YYYY-MM-DDTHH:MM:SSZ`, `--target-base COMMIT` and `--title TEXT`. `--target-branch` defaults to `main`; `--body` defaults to empty. `--resubmit` and `--ticket KEY` require each other. |
+| `status`, `reconcile` | Observe a retained round or recover an uncertain operation. No additional options. |
+| `feedback` | Collect feedback; optional `--deliver` also sends it into the task. |
+| `owner-decision` | Requires `--decision approved\|changes_requested\|withdrawn` and exact `--head`, `--base`, `--patch-uri`, `--patch-cid`; optional `--explanation TEXT` records the reason. |
+| `handoff` | Reserve a successor using required `--from-state`, `--from-attempt`, `--head`, `--base` and `--policy`; does not publish it. |
+| `select-ticket` | Resolve uncertain ticket creation with required `--ticket-uri` and `--ticket-cid`. |
+| `abandon-ticket` | Retain an uncertain creation intent with required `--explanation`; does not claim remote rollback. |
+| `rebind-credentials` | Explicitly bind retained intents to newer credentials for the same owner. |
+| `merge-check`, `merge` | Require `--policy`, `--remote`, `--head` and `--expected-target` to bind exact commits and host acceptance policy. `--branch` is required for `merge-check`, but defaults to `main` for `merge`. |
+| `merge-reconcile` | Requires only `--state`; optional `--retry` retries the retained merge attempt. |
+
+## Dependency validation and system images
+
+`deps prune validate --state DIR --plan FILE` runs the declared checks inside a
+verified sandbox against a Ladybom removal plan. It prints the validation receipt
+to stdout unless `--output FILE` selects a new receipt file. Exit status is 0 for
+passed checks and 2 for a completed validation whose checks failed. Use
+[dependency graphs](dependency-graphs.md) to analyze and plan removals first;
+[dependency preparation](dependencies.md) explains how inputs reach the sandbox.
+
+```sh
+ladyshell deps prune validate --state "$STATE_DIR" \
+  --plan /absolute/private/prune-plan.json --output /absolute/private/prune-receipt.json
+```
+
+`artifact` forwards every argument unchanged to `ladyboot` from `PATH`, or to
+the executable selected by `LADYSHELL_BOOTC_BIN`. Install Ladyboot separately and
+use its [command guide](../crates/ladyboot/README.md) for profiles, locks and bootc
+image construction. This forwarding command does not build an OpenShell sandbox.
 
 ## Audits and development checks
 
 [Native audit usage](audits/usage.md) distinguishes document validation from
 confined execution and explains recovery. [The run contract](audits/run-format.md)
 defines retained evidence; successful verification is not proof of authenticity.
+
+`audit plan --state DIR` previews scope and missing capabilities; `audit run`
+uses the same state and executes the audit. Both accept `--profile quick|targeted`
+to override the profile retained in the audit configuration. Other audit commands
+use positional paths: `verify RUN`, `recover RUN`, `compare OLD NEW`,
+`export RUN --destination NEW_DIR`, and `validate findings|coverage FILE`.
+`recover` resumes cleanup without replaying the target. `validate` checks the
+document format; `verify` checks a native run's evidence. Export destinations
+must be new directories. See the audit guide for configuration and result limits.
 
 ```sh
 cargo fmt --all --check

@@ -50,7 +50,7 @@ exact-pin policy even after the version divergence disappears.
 
 ## Reproduce the Explorer view
 
-The README screenshot uses the unmodified UI from
+The [Ladybom guide screenshot](../../crates/ladybom-cli/README.md#inspect-dependency-differences) uses the unmodified UI from
 [Ladybug Explorer revision `d132ba5`](https://github.com/LadybugDB/explorer/tree/d132ba5da9b9db24771e0c97376eeab6cf301c33)
 and its own `@ladybugdb/core` **0.19.1**. Explorer is MIT-licensed; its
 [license](https://github.com/LadybugDB/explorer/blob/d132ba5da9b9db24771e0c97376eeab6cf301c33/LICENSE)

@@ -5,6 +5,13 @@ Ladybom separates explicit artifact collection from static source scanning.
 executables selected by the caller; `artifact export` runs no process and needs
 neither the original rootfs nor a Nix daemon.
 
+For Go sources, [`scan`](dependencies.md#go-source-inventory) reads `go.mod`,
+`go.work`, checksum and vendor metadata without running Go. Checksum files
+provide integrity records, not the selected build list; on their own they do
+not produce resolved components. Source inventories remain unlocked, with
+resolution and advisory coverage gaps explicit. The collection workflow below
+instead binds Go build metadata to delivered binary hashes.
+
 Build [the CLI](../crates/ladybom-cli/README.md), then invoke it from PATH or use
 `./target/debug/ladybom` from the repository root:
 
