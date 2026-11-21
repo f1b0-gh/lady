@@ -113,7 +113,7 @@ fn lists_retained_instances_without_provider_calls_or_file_changes() -> Result {
     assert!(human.status.success(), "{human:?}");
     let text = String::from_utf8(human.stdout)?;
     assert!(text.contains("stopped") && text.contains("previous-id"));
-    assert!(text.contains("OpenShell non interrogé"));
+    assert!(text.contains("OpenShell was not queried"));
     assert_eq!(
         tree(root.path())?,
         before,

@@ -14,7 +14,7 @@ use std::{io::Write, path::PathBuf};
 #[command(
     name = "ladybom",
     version,
-    about = "Analyse statique des dépendances et simulations de retrait"
+    about = "Static dependency analysis and removal simulations"
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -23,49 +23,49 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum DepsCommand {
-    /// Collecter et exporter le SBOM d’un artefact avec provenance explicite.
+    /// Collect and export an artifact SBOM with explicit provenance.
     Artifact {
         #[command(subcommand)]
         command: artifact::ArtifactCommand,
     },
-    /// Préparer des artefacts publics séparés par verrou, sans publication réseau.
+    /// Prepare public artifacts separated by lockfile, without network publication.
     Interop {
         #[command(subcommand)]
         command: interop::InteropCommand,
     },
-    /// Importer, corréler et exporter VXDF avec revue technique explicite.
+    /// Import, correlate and export VXDF with explicit technical review.
     Vxdf {
         #[command(subcommand)]
         command: vxdf::VxdfCommand,
     },
-    /// Évaluer les vulnérabilités depuis des avis OSV locaux, sans réseau.
+    /// Assess vulnerabilities using local OSV advisories, without network access.
     Vuln {
         #[command(subcommand)]
         command: vuln::VulnCommand,
     },
-    /// Détecter, simuler et valider les retraits de dépendances.
+    /// Detect, simulate and validate dependency removals.
     Prune {
         #[command(subcommand)]
         command: prune::PruneCommand,
     },
-    /// Exporter et analyser des graphes de dépendances conservateurs.
+    /// Export and analyze conservative dependency graphs.
     Graph {
         #[command(subcommand)]
         command: GraphCommand,
     },
-    /// Inventorier les manifests et verrous sans exécuter le projet ni accéder au réseau.
+    /// Inventory manifests and lockfiles without executing the project or accessing the network.
     Scan {
         #[arg(long)]
         project: PathBuf,
-        /// Périmètre JSON {include, exclude}, limité à 1 Mio, identique à Ladyshell.
+        /// JSON scope {include, exclude}, limited to 1 MiB, identical to Ladyshell's.
         #[arg(long)]
         sources: Option<PathBuf>,
         #[arg(long)]
         json: bool,
-        /// Exporter un SBOM JSON CycloneDX 1.5 à partir de l’inventaire statique.
+        /// Export a CycloneDX 1.5 JSON SBOM from the static inventory.
         #[arg(long, conflicts_with = "json")]
         cyclonedx: bool,
-        /// public omet les données opaques ; private-detailed peut contenir des secrets.
+        /// public omits opaque data; private-detailed may contain secrets.
         #[arg(long, requires = "cyclonedx", value_parser = ["public", "private-detailed"])]
         export_profile: Option<String>,
     },
@@ -101,7 +101,7 @@ pub fn run(args: Cli) -> Result<i32> {
                 for project in &report.projects {
                     writeln!(
                         stdout,
-                        "{} : {} ({}, {} exigences, {} composants verrouillés)",
+                        "{}: {} ({}, {} requirements, {} locked components)",
                         project.root,
                         project.ecosystem,
                         project.manager,
@@ -118,11 +118,11 @@ pub fn run(args: Cli) -> Result<i32> {
                 }
                 writeln!(
                     stdout,
-                    "Scan {} ; aucune installation effectuée.",
+                    "Scan {}; no installation performed.",
                     if report.complete {
-                        "complet"
+                        "complete"
                     } else {
-                        "partiel"
+                        "partial"
                     }
                 )?;
             }
@@ -133,32 +133,32 @@ pub fn run(args: Cli) -> Result<i32> {
 
 #[derive(Debug, Subcommand)]
 pub enum GraphCommand {
-    /// Publier un nouveau snapshot Parquet immuable, sans exécution ni réseau.
+    /// Publish a new immutable Parquet snapshot, without execution or network access.
     Export {
         #[arg(long)]
         project: PathBuf,
-        /// Même périmètre JSON que scan --sources et Ladyshell.
+        /// Same JSON scope as scan --sources and Ladyshell.
         #[arg(long)]
         sources: Option<PathBuf>,
         #[arg(long)]
         output: PathBuf,
     },
-    /// Lire et vérifier un snapshot et ses contextes.
+    /// Read and verify a snapshot and its contexts.
     Inspect {
         #[arg(long)]
         snapshot: PathBuf,
     },
-    /// Parcourir les dépendances, ou un chemin vers une cible.
+    /// Traverse dependencies, or a path to a target.
     Query(QueryArgs),
-    /// Parcourir les dépendants potentiellement affectés par une PURL.
+    /// Traverse dependents potentially affected by a PURL.
     Impact(QueryArgs),
-    /// Vérifier les versions par verrou et les pins déclarés ; expliquer avec Ladybug.
+    /// Check versions by lockfile and declared pins; explain with Ladybug.
     Alignment(alignment::AlignmentArgs),
-    /// Préparer un plan statique de réduction des doublons, sans choisir de version.
+    /// Prepare a static duplicate reduction plan without selecting a version.
     AlignmentPlan(alignment_plan::AlignmentPlanArgs),
-    /// Contrôler les divergences contre une référence et des exceptions temporaires.
+    /// Check differences against a baseline and temporary exceptions.
     AlignmentPolicy(alignment_policy::AlignmentPolicyArgs),
-    /// Comparer deux snapshots vérifiés.
+    /// Compare two verified snapshots.
     Diff {
         #[arg(long)]
         before: PathBuf,
@@ -170,12 +170,12 @@ pub enum GraphCommand {
 pub struct QueryArgs {
     #[arg(long)]
     snapshot: PathBuf,
-    /// Chemin absolu du CLI LadybugDB 0.17.1 de confiance.
+    /// Absolute path to the trusted LadybugDB 0.17.1 CLI.
     #[arg(long)]
     engine: PathBuf,
     #[arg(long)]
     purl: String,
-    /// Obligatoire si la PURL apparaît dans plusieurs contextes.
+    /// Required if the PURL appears in multiple contexts.
     #[arg(long)]
     graph: Option<String>,
     #[arg(long)]
@@ -188,10 +188,10 @@ pub struct QueryArgs {
     depth: u32,
     #[arg(long, default_value_t = 60)]
     timeout_secs: u64,
-    /// Types d'arêtes autorisés avant parcours, répétable.
+    /// Edge types allowed before traversal; repeatable.
     #[arg(long)]
     kind: Vec<String>,
-    /// Contextes autorisés aux deux extrémités, répétable.
+    /// Contexts allowed at both ends; repeatable.
     #[arg(long)]
     context: Vec<String>,
     #[arg(long)]
@@ -242,7 +242,7 @@ fn run_graph(command: GraphCommand) -> Result<i32> {
                     .filter(|n| n.key.purl == purl && context.is_none_or(|g| n.key.graph == g))
                     .collect();
                 if candidates.len() != 1 {
-                    return Err(ladybom::error::Error::InvalidInput { message: format!("PURL absente ou ambiguë ({purl}) : préciser --graph ou --target-graph ; voir graph inspect") });
+                    return Err(ladybom::error::Error::InvalidInput { message: format!("Missing or ambiguous PURL ({purl}): specify --graph or --target-graph; see graph inspect") });
                 }
                 Ok(candidates[0].key.clone())
             };

@@ -17,15 +17,12 @@ pub struct EnvironmentLock {
 pub fn artifact_hash(path: &Path) -> Result<String> {
     let mut file = files::open_regular(path)?;
     let before = file.metadata()?;
-    ensure!(
-        before.len() <= 1024 * 1024 * 1024,
-        "Artefact trop volumineux"
-    );
+    ensure!(before.len() <= 1024 * 1024 * 1024, "Artifact is too large");
     let mut magic = [0; 4];
     file.read_exact(&mut magic)?;
     ensure!(
         &magic == b"\x7fELF",
-        "Binaire ELF natif requis : {}",
+        "A native ELF binary is required: {}",
         path.display()
     );
     let mut hash = Sha256::new();
@@ -38,7 +35,7 @@ pub fn artifact_hash(path: &Path) -> Result<String> {
             break;
         }
         total += n;
-        ensure!(total <= 1024 * 1024 * 1024, "Artefact trop volumineux");
+        ensure!(total <= 1024 * 1024 * 1024, "Artifact is too large");
         hash.update(&buffer[..n]);
     }
     let after = file.metadata()?;
@@ -49,7 +46,7 @@ pub fn artifact_hash(path: &Path) -> Result<String> {
             && before.mtime_nsec() == after.mtime_nsec()
             && before.ctime() == after.ctime()
             && before.ctime_nsec() == after.ctime_nsec(),
-        "Artefact modifié pendant lecture"
+        "Artifact changed while reading"
     );
     Ok(format!("{:x}", hash.finalize()))
 }
@@ -92,7 +89,7 @@ pub fn create(
     )?;
     ensure!(
         audit.contains_key("resources/audit/security-audit/SKILL.md"),
-        "Distribution audit absente"
+        "Missing audit distribution"
     );
     for (path, record) in audit {
         recipes_sha256.insert(path, record.sha256);
@@ -122,7 +119,7 @@ pub fn create(
 }
 pub fn verify(path: &Path, expected: &EnvironmentLock) -> Result<()> {
     let data = files::read_limited(path, 8 * 1024 * 1024)
-        .map_err(|e| e.context("Verrou absent ou illisible : exécuter lock explicitement"))?;
+        .map_err(|e| e.context("Lock is missing or unreadable: run lock explicitly"))?;
     let actual: EnvironmentLock = serde_json::from_value(crate::json::parse(&data)?)?;
     if serde_json::to_value(actual)? != serde_json::to_value(expected)? {
         return Err(Error::LockMismatch { path: path.into() });

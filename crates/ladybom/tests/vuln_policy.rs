@@ -109,7 +109,7 @@ fn expired_decision_returns_to_triage_at_exact_boundary() -> ladybom::error::Res
     assert!(result.findings[0]
         .reasons
         .iter()
-        .any(|r| r.contains("expir")));
+        .any(|r| r == "Expired decision; reverting to in_triage"));
     assert_eq!(
         vex_json(&a, Some(&d))?["vulnerabilities"][0]["analysis"]["state"],
         "in_triage"

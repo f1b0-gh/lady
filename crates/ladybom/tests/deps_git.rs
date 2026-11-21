@@ -69,7 +69,7 @@ fn registry_and_two_git_commits_are_distinct_and_ambiguous_roots_stay_unresolved
     assert!(graph
         .limitations
         .iter()
-        .any(|l| l.contains("racine non résolue")));
+        .any(|l| l.contains("root requirement not resolved unambiguously")));
     Ok(())
 }
 

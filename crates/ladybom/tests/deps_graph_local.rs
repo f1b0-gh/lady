@@ -241,7 +241,7 @@ fn shared_lock_projection_is_once_per_lock_and_preserves_member_roots() -> Resul
         .filter(|l| l.contains(" -> "))
         .collect();
     assert_eq!(edge_limits.len(), 1);
-    assert!(edge_limits[0].starts_with("Cargo.lock :"));
+    assert!(edge_limits[0].starts_with("Cargo.lock:"));
     assert_eq!(
         serde_json::to_value(&graph)?,
         serde_json::to_value(graph::project(report)?)?

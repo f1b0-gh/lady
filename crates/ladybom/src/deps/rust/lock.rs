@@ -45,7 +45,7 @@ pub(super) fn metadata(content: &str, lock: &cargo_lock::Lockfile) -> Result<Vec
             ensure!(
                 raw["name"].as_str() == Some(package.name.as_str())
                     && raw["version"].as_str() == Some(package.version.to_string().as_str()),
-                "Ordre des paquets Cargo divergent"
+                "Cargo package order differs"
             );
             let mut metadata = serde_json::to_value(package)?;
             if let Some(source) = raw
@@ -58,12 +58,12 @@ pub(super) fn metadata(content: &str, lock: &cargo_lock::Lockfile) -> Result<Vec
             if let Some(dependencies) = raw.get("dependencies").and_then(toml::Value::as_array) {
                 ensure!(
                     dependencies.len() == package.dependencies.len(),
-                    "Dépendances Cargo divergentes"
+                    "Cargo dependencies differ"
                 );
                 for (i, dependency) in dependencies.iter().enumerate() {
                     let dependency = dependency
                         .as_str()
-                        .ok_or_else(|| invalid("Référence Cargo textuelle requise".into()))?;
+                        .ok_or_else(|| invalid("Textual Cargo reference required".into()))?;
                     let mut parts = dependency.split_whitespace();
                     let name = parts.next().unwrap_or_default();
                     let version = parts.next();
@@ -71,7 +71,7 @@ pub(super) fn metadata(content: &str, lock: &cargo_lock::Lockfile) -> Result<Vec
                         let source = source
                             .strip_prefix('(')
                             .and_then(|s| s.strip_suffix(')'))
-                            .ok_or_else(|| invalid("Source de référence Cargo invalide".into()))?;
+                            .ok_or_else(|| invalid("Invalid Cargo reference source".into()))?;
                         git::validate_selector(source)?;
                         if source.starts_with("git+") {
                             metadata["dependencies"][i]["source"] = source.into();
@@ -89,7 +89,7 @@ pub(super) fn metadata(content: &str, lock: &cargo_lock::Lockfile) -> Result<Vec
                         }
                         ensure!(
                             candidates.len() <= 1,
-                            "Référence Cargo abrégée ambiguë : {dependency}"
+                            "Ambiguous abbreviated Cargo reference: {dependency}"
                         );
                         if let Some(source) = candidates
                             .first()

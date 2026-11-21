@@ -113,13 +113,13 @@ fn separates_duplicate_cross_domain_and_source_review_actions() -> TestResult {
 fn coverage_gaps_precede_known_duplicates_and_unsupported_inventory() -> TestResult {
     let mut partial = duplicate_graph()?;
     partial.inventory.complete = false;
-    partial.limitations.push("preuve manquante".into());
+    partial.limitations.push("missing evidence".into());
     let plan = graph::plan_alignment(&partial)?;
     let value = serde_json::to_value(&plan)?;
     assert_eq!(value["actions"][0]["kind"], "complete_coverage");
     assert_eq!(value["actions"][1]["kind"], "review_lock_resolution");
     assert!(!plan.analysis_complete);
-    assert!(plan.limitations.iter().any(|s| s == "preuve manquante"));
+    assert!(plan.limitations.iter().any(|s| s == "missing evidence"));
     let mut unsupported = project("", vec![package("1.2.3", "node_modules/shared")]);
     unsupported.ecosystem = "unsupported".into();
     let plan = graph::plan_alignment(&snapshot(vec![unsupported])?)?;
@@ -154,7 +154,7 @@ fn no_duplicates_produces_no_migration_but_keeps_evidence_gates() -> TestResult 
     ] {
         assert!(gates.iter().any(|gate| gate["id"] == id), "missing {id}");
     }
-    assert!(plan.to_markdown()?.contains("Aucune action de réduction"));
+    assert!(plan.to_markdown()?.contains("No reduction action"));
     Ok(())
 }
 
@@ -333,7 +333,7 @@ fn excessive_contexts_and_invalid_version_evidence_are_refused() -> TestResult {
         .err()
         .ok_or("accepted excessive contexts")?
         .to_string()
-        .contains("Limites du graphe"));
+        .contains("Graph limits"));
     let mut graph = duplicate_graph()?;
     graph.components[0].component.version = "9.0.0".into();
     assert!(graph::plan_alignment(&graph).is_err());

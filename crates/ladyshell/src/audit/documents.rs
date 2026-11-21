@@ -8,7 +8,7 @@ pub const DOCUMENT_LIMIT: usize = 5 * 1024 * 1024;
 pub fn validate_file(mode: Mode, path: &Path) -> Result<Value> {
     let file = files::open_regular(path)?;
     if file.metadata()?.nlink() != 1 {
-        return Err(invalid("Document partagé par liens physiques"));
+        return Err(invalid("Document shared through hard links"));
     }
     let bytes = files::read_file(file, DOCUMENT_LIMIT)?;
     let count = crate::audit::validator::validate(mode, &bytes)?;

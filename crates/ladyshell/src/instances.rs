@@ -24,7 +24,7 @@ pub fn list_at(registry: &Path) -> Result<Value> {
 pub(crate) fn inventory_at(registry: &Path, include_deleted: bool) -> Result<Value> {
     let registry_text = registry.to_str().ok_or_else(|| Error::InvalidPath {
         path: registry.to_path_buf(),
-        reason: "Chemin de registre UTF-8 requis",
+        reason: "A UTF-8 registry path is required",
     })?;
     let mut report = json!({"schema_version":1,"scope":"registered_local_states",
         "registry":registry_text,"provider_checked":false,"complete":true,
@@ -38,11 +38,11 @@ pub(crate) fn inventory_at(registry: &Path, include_deleted: bool) -> Result<Val
     let lock = match files::open_child(&directory, ".lock".as_ref(), false) {
         Ok(lock) => {
             let metadata = lock.metadata()?;
-            ensure!(metadata.nlink() == 1, "Verrou du registre partagé interdit");
+            ensure!(metadata.nlink() == 1, "Shared registry lock is not allowed");
             // SAFETY: lock owns this descriptor; closing it releases our shared lock.
             if unsafe { libc::flock(lock.as_raw_fd(), libc::LOCK_SH | libc::LOCK_NB) } < 0 {
                 return Err(Error::Io(std::io::Error::last_os_error())
-                    .context("Registre occupé ; relancer ladyshell list"));
+                    .context("Registry is busy; run ladyshell list again"));
             }
             Some(lock)
         }
@@ -76,7 +76,7 @@ pub(crate) fn inventory_at(registry: &Path, include_deleted: bool) -> Result<Val
                     && normal_absolute(&association.project)
                     && normal_absolute(&association.directory)
                     && !association.directory.starts_with(&association.project),
-                "Association incompatible"
+                "Incompatible association"
             );
             Ok(association)
         })();
@@ -122,7 +122,7 @@ fn inspect_association(
         let current = read_at(directory, "state.json")?;
         if let Some(current) = &current {
             state::validate(current)?;
-            ensure!(valid_identity(current), "Identité d’état incomplète");
+            ensure!(valid_identity(current), "Incomplete state identity");
         }
         Ok(current)
     })();
@@ -262,7 +262,7 @@ fn private_directory(directory: &File) -> Result<()> {
     // SAFETY: geteuid has no preconditions.
     ensure!(
         metadata.uid() == unsafe { libc::geteuid() } && metadata.mode() & 0o022 == 0,
-        "Dossier d’état requis : propriétaire courant, sans écriture groupe/autres"
+        "State directory must be owned by the current user, without group/other write access"
     );
     Ok(())
 }
@@ -287,15 +287,15 @@ fn missing(error: &Error) -> bool {
 fn diagnostic(report: &mut Value, association: &Path, directory: Option<&Path>, code: &str) {
     report["complete"] = json!(false);
     let message = match code {
-        "registry_limit" => "Limite de 1 000 associations atteinte",
-        "missing_registry_lock" => "Registre peuplé sans verrou existant",
-        "invalid_association" => "Association invalide ou illisible",
-        "invalid_state" => "État invalide ou illisible",
-        "missing_state" => "État absent",
-        "stale_association" => "Association périmée : identité divergente",
-        "invalid_deletion_receipt" => "Reçu de suppression invalide ou illisible",
-        "invalid_retained_instance" => "Ancienne instance enregistrée invalide",
-        _ => "Entrée non vérifiée",
+        "registry_limit" => "Limit of 1,000 associations reached",
+        "missing_registry_lock" => "Populated registry without an existing lock",
+        "invalid_association" => "Invalid or unreadable association",
+        "invalid_state" => "Invalid or unreadable state",
+        "missing_state" => "State is missing",
+        "stale_association" => "Stale association: identity mismatch",
+        "invalid_deletion_receipt" => "Invalid or unreadable deletion receipt",
+        "invalid_retained_instance" => "Invalid recorded previous instance",
+        _ => "Unverified entry",
     };
     if let Some(diagnostics) = report["diagnostics"].as_array_mut() {
         diagnostics.push(json!({"association":association.to_str(),
@@ -311,24 +311,24 @@ fn invalid(message: String) -> Error {
 pub fn write(report: &Value, output: &mut impl Write) -> Result<()> {
     writeln!(
         output,
-        "Instances enregistrées localement — OpenShell non interrogé (présence et état inconnus)."
+        "Locally registered instances — OpenShell was not queried (presence and status unknown)."
     )?;
-    writeln!(output, "Registre : {}", report["registry"])?;
+    writeln!(output, "Registry: {}", report["registry"])?;
     if let Some(instances) = report["instances"].as_array() {
         for instance in instances {
             let kind = if instance["kind"] == "previous" {
-                "ancienne"
+                "previous"
             } else {
-                "courante"
+                "current"
             };
             let status = if instance["recorded_status"] == "deletion_pending" {
-                "suppression en attente"
+                "deletion pending"
             } else {
-                "conservée"
+                "retained"
             };
             writeln!(
                 output,
-                "{} ({}) — {kind}, {status} — {} / {}\n  projet : {}\n  état : {}",
+                "{} ({}) — {kind}, {status} — {} / {}\n  project: {}\n  state: {}",
                 instance["sandbox_name"],
                 instance["sandbox_id"],
                 instance["gateway"],
@@ -339,7 +339,7 @@ pub fn write(report: &Value, output: &mut impl Write) -> Result<()> {
         }
         writeln!(
             output,
-            "{} instance(s) ; {} suppression(s) confirmée(s) exclue(s).",
+            "{} instance(s); {} confirmed deletion(s) excluded.",
             instances.len(),
             report["excluded_deleted"]
         )?;
@@ -348,7 +348,7 @@ pub fn write(report: &Value, output: &mut impl Write) -> Result<()> {
         for diagnostic in diagnostics {
             writeln!(
                 output,
-                "Inventaire incomplet : {} — association {} ; état {}",
+                "Incomplete inventory: {} — association {}; state {}",
                 diagnostic["message"], diagnostic["association_display"], diagnostic["directory"]
             )?;
         }

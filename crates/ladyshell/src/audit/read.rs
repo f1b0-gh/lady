@@ -23,10 +23,10 @@ impl Reader {
     pub fn read(&mut self, name: &str, limit: usize) -> Result<&[u8]> {
         crate::config::relative_path(name)?;
         if self.files.contains_key(name) {
-            return Err(invalid("Fichier dupliqué"));
+            return Err(invalid("Duplicate file"));
         }
         if self.files.len() >= 1029 {
-            return Err(invalid("Trop de fichiers dans le run"));
+            return Err(invalid("Too many files in the run"));
         }
         let mut parent = self.root.try_clone()?;
         let mut parts = name.split('/').peekable();
@@ -38,9 +38,9 @@ impl Reader {
                 file = Some(files::open_child(&parent, part.as_ref(), false)?);
             }
         }
-        let file = file.ok_or_else(|| invalid("Chemin vide"))?;
+        let file = file.ok_or_else(|| invalid("Empty path"))?;
         if file.metadata()?.nlink() != 1 {
-            return Err(invalid("Liens physiques multiples interdits"));
+            return Err(invalid("Multiple hard links forbidden"));
         }
         let bytes = files::read_file(file, limit.min(RUN_LIMIT.saturating_sub(self.total)))?;
         self.total += bytes.len();
@@ -48,6 +48,6 @@ impl Reader {
         self.files
             .get(name)
             .map(Vec::as_slice)
-            .ok_or_else(|| invalid("Document absent"))
+            .ok_or_else(|| invalid("Missing document"))
     }
 }

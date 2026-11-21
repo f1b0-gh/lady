@@ -78,12 +78,9 @@ pub struct WorkerArtifact {
 }
 
 pub fn validate_request(request: &WorkerRequest) -> Result<()> {
-    ensure!(
-        request.schema_version == 1,
-        "Version du worker non supportée"
-    );
+    ensure!(request.schema_version == 1, "Unsupported worker version");
     identifier(&request.invocation_id)?;
-    ensure!(request.timeout_seconds > 0, "Délai du worker nul");
+    ensure!(request.timeout_seconds > 0, "Zero worker timeout");
     let limits = &request.limits;
     ensure!(
         limits.cpu_seconds >= 5
@@ -92,7 +89,7 @@ pub fn validate_request(request: &WorkerRequest) -> Result<()> {
             && limits.processes <= 2048
             && limits.files > 0
             && limits.disk_bytes > 0,
-        "Limites du worker invalides"
+        "Invalid worker limits"
     );
     ensure!(
         !request.command.is_empty()
@@ -101,12 +98,12 @@ pub fn validate_request(request: &WorkerRequest) -> Result<()> {
                 .command
                 .iter()
                 .all(|arg| !arg.is_empty() && arg.len() <= 4096 && !arg.contains('\0')),
-        "Commande du worker invalide"
+        "Invalid worker command"
     );
     ensure!(
         request.sources.len() <= SOURCE_COUNT_LIMIT
             && request.sources.len() <= limits.files as usize,
-        "Trop de sources pour le worker"
+        "Too many sources for the worker"
     );
     let mut source_paths = BTreeSet::new();
     let mut directories = BTreeSet::new();
@@ -115,7 +112,7 @@ pub fn validate_request(request: &WorkerRequest) -> Result<()> {
         validate_path(&source.path)?;
         ensure!(
             source_paths.insert(source.path.as_str()),
-            "Source dupliquée"
+            "Duplicate source"
         );
         ensure!(
             source.sha256.len() == 64
@@ -123,15 +120,15 @@ pub fn validate_request(request: &WorkerRequest) -> Result<()> {
                     .sha256
                     .bytes()
                     .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)),
-            "Empreinte source invalide"
+            "Invalid source hash"
         );
-        ensure!(source.size <= ARTIFACT_LIMIT, "Source trop volumineuse");
+        ensure!(source.size <= ARTIFACT_LIMIT, "Source too large");
         source_bytes = source_bytes
             .checked_add(source.size)
-            .ok_or_else(|| invalid("Volume source débordant"))?;
+            .ok_or_else(|| invalid("Source volume overflow"))?;
         ensure!(
             source_bytes <= limits.disk_bytes && source_bytes <= RECEIPT_LIMIT,
-            "Volume source excessif"
+            "Source volume exceeds limit"
         );
         let mut cursor = source.path.as_str();
         while let Some((parent, _)) = cursor.rsplit_once('/') {
@@ -148,11 +145,11 @@ pub fn validate_request(request: &WorkerRequest) -> Result<()> {
             .saturating_add(directories.len())
             .saturating_add(8)
             <= limits.files as usize,
-        "Limite de fichiers insuffisante pour les sources et les caches"
+        "File limit insufficient for sources and caches"
     );
     ensure!(
         request.artifacts.len() <= 1022,
-        "Trop d’artefacts demandés, logs réservés inclus"
+        "Too many artifacts requested, including reserved logs"
     );
     let mut ids = BTreeSet::from(["stdout", "stderr"]);
     let mut paths = BTreeSet::from(["stdout.txt", "stderr.txt"]);
@@ -162,22 +159,22 @@ pub fn validate_request(request: &WorkerRequest) -> Result<()> {
         validate_path(&artifact.path)?;
         ensure!(
             ids.insert(artifact.id.as_str()),
-            "Identifiant d’artefact réservé ou dupliqué"
+            "Reserved or duplicate artifact ID"
         );
         ensure!(
             paths.insert(artifact.path.as_str()),
-            "Chemin d’artefact réservé ou dupliqué"
+            "Reserved or duplicate artifact path"
         );
         ensure!(
             artifact.max_bytes > 0 && artifact.max_bytes <= ARTIFACT_LIMIT,
-            "Limite d’artefact invalide"
+            "Invalid artifact limit"
         );
         artifact_bytes = artifact_bytes
             .checked_add(artifact.max_bytes)
-            .ok_or_else(|| invalid("Volume d’artefacts débordant"))?;
+            .ok_or_else(|| invalid("Artifact volume overflow"))?;
         ensure!(
             artifact_bytes <= RECEIPT_LIMIT,
-            "Volume cumulé d’artefacts excessif"
+            "Aggregate artifact volume exceeds limit"
         );
     }
     reject_path_collisions(&paths)?;
@@ -188,7 +185,7 @@ fn validate_path(path: &str) -> Result<()> {
     relative_path(path)?;
     ensure!(
         path.len() <= 4096 && path.split('/').all(|part| part.len() <= 255),
-        "Chemin trop long"
+        "Path too long"
     );
     Ok(())
 }
@@ -197,7 +194,7 @@ fn reject_path_collisions(paths: &BTreeSet<&str>) -> Result<()> {
     for path in paths {
         let mut cursor = *path;
         while let Some((parent, _)) = cursor.rsplit_once('/') {
-            ensure!(!paths.contains(parent), "Collision fichier/répertoire");
+            ensure!(!paths.contains(parent), "File/directory collision");
             cursor = parent;
         }
     }
@@ -208,7 +205,7 @@ pub fn execute(request: WorkerRequest) -> Result<WorkerReceipt> {
     validate_request(&request)?;
     ensure!(
         cfg!(all(target_os = "linux", target_arch = "x86_64")),
-        "Worker réservé à Linux x86_64"
+        "Worker restricted to Linux x86_64"
     );
     let (scratch, source, cgroup) = verify_environment(&request.limits)?;
     protect_worker()?;
@@ -233,10 +230,10 @@ pub fn execute(request: WorkerRequest) -> Result<WorkerReceipt> {
     let captured = run_target(&request, &work_path, &producer_path, timeout)?;
     let cpu_usage_usec = cpu_usage(&cgroup)?
         .checked_sub(cpu_before)
-        .ok_or_else(|| invalid("Compteur CPU régressif"))?;
+        .ok_or_else(|| invalid("CPU counter decreased"))?;
     ensure!(
         cpu_usage_usec <= request.limits.cpu_seconds.saturating_mul(1_000_000),
-        "Limite CPU dépassée ; reçu refusé"
+        "CPU limit exceeded; receipt rejected"
     );
     let mut artifacts = vec![
         artifact("stdout", "stdout.txt", captured.stdout),
@@ -307,7 +304,7 @@ fn verify_no_capabilities() -> Result<()> {
     ensure!(
         data.iter()
             .all(|word| word.effective == 0 && word.permitted == 0 && word.inheritable == 0),
-        "Capabilities interdites : les limites de processus doivent rester obligatoires"
+        "Capabilities forbidden: process limits must remain mandatory"
     );
     Ok(())
 }
@@ -320,35 +317,32 @@ fn verify_environment(limits: &Limits) -> Result<(File, File, File)> {
     }
     ensure!(
         [real, effective, saved] == [10001; 3],
-        "Le worker exige l’UID 10001 réel, effectif et sauvegardé dans la sandbox d’audit"
+        "Worker requires real, effective and saved UID 10001 in the audit sandbox"
     );
     verify_no_capabilities()?;
     let scratch = files::open_directory(Path::new("/audit/scratch"))?;
     let metadata = scratch.metadata()?;
     ensure!(
         metadata.uid() == 10001 && metadata.mode() & 0o077 == 0,
-        "Scratch non privé ou propriétaire divergent"
+        "Scratch is not private or has a different owner"
     );
     // SAFETY: scratch owns its descriptor; statfs points to valid writable storage.
     let mut stat: libc::statfs = unsafe { std::mem::zeroed() };
     if unsafe { libc::fstatfs(scratch.as_raw_fd(), &mut stat) } < 0 {
         return Err(std::io::Error::last_os_error().into());
     }
-    ensure!(
-        stat.f_type == libc::TMPFS_MAGIC,
-        "Scratch tmpfs obligatoire"
-    );
+    ensure!(stat.f_type == libc::TMPFS_MAGIC, "Scratch must use tmpfs");
     ensure!(
         stat.f_bsize > 0 && stat.f_blocks > 0 && stat.f_files > 0,
-        "Quotas tmpfs non vérifiables"
+        "Cannot verify tmpfs quotas"
     );
     let bytes = stat
         .f_blocks
         .checked_mul(stat.f_bsize as u64)
-        .ok_or_else(|| invalid("Quota tmpfs débordant"))?;
+        .ok_or_else(|| invalid("Tmpfs quota overflow"))?;
     ensure!(
         bytes <= limits.disk_bytes && stat.f_files <= u64::from(limits.files),
-        "Quotas tmpfs supérieurs aux limites demandées"
+        "Tmpfs quotas exceed requested limits"
     );
     let source = files::open_directory(Path::new("/audit/source"))?;
     root_owned(&source.metadata()?)?;
@@ -360,10 +354,10 @@ fn verify_environment(limits: &Limits) -> Result<(File, File, File)> {
     let path = lines
         .next()
         .and_then(|line| line.strip_prefix("0::"))
-        .ok_or_else(|| invalid("Cgroup v2 unifié requis"))?;
+        .ok_or_else(|| invalid("Unified cgroup v2 required"))?;
     ensure!(
         lines.next().is_none() && path.starts_with('/'),
-        "Appartenance cgroup ambiguë"
+        "Ambiguous cgroup membership"
     );
     let relative = path.trim_start_matches('/');
     if !relative.is_empty() {
@@ -376,18 +370,18 @@ fn verify_environment(limits: &Limits) -> Result<(File, File, File)> {
     }
     ensure!(
         stat.f_type == libc::CGROUP2_SUPER_MAGIC,
-        "Contrôles cgroup v2 natifs obligatoires"
+        "Native cgroup v2 controls required"
     );
     let memory = finite_number(&read_control(&cgroup, "memory.max")?, "memory.max")?;
     ensure!(
         memory > 0 && memory <= limits.memory_bytes,
-        "Limite mémoire cgroup insuffisante"
+        "Insufficient cgroup memory limit"
     );
     verify_cpu_max(&read_control(&cgroup, "cpu.max")?)?;
     let processes = finite_number(&read_control(&cgroup, "pids.max")?, "pids.max")?;
     ensure!(
         processes > 0 && processes <= 2048,
-        "Limite globale de processus cgroup insuffisante"
+        "Insufficient aggregate cgroup process limit"
     );
     Ok((scratch, source, cgroup))
 }
@@ -405,17 +399,17 @@ fn finite_number(value: &str, name: &str) -> Result<u64> {
     value
         .trim()
         .parse()
-        .map_err(|_| invalid(format!("Limite finie {name} obligatoire")))
+        .map_err(|_| invalid(format!("Finite {name} limit required")))
 }
 
 fn verify_cpu_max(value: &str) -> Result<()> {
     let fields: Vec<_> = value.split_whitespace().collect();
-    ensure!(fields.len() == 2, "cpu.max invalide");
+    ensure!(fields.len() == 2, "Invalid cpu.max");
     let quota = finite_number(fields[0], "cpu.max quota")?;
     let period = finite_number(fields[1], "cpu.max period")?;
     ensure!(
         quota > 0 && period > 0 && period <= 100_000 && quota <= period,
-        "cpu.max exige au plus un CPU et une période de 100 ms maximum"
+        "cpu.max requires at most one CPU and a period of at most 100 ms"
     );
     Ok(())
 }
@@ -425,17 +419,17 @@ fn cpu_usage(root: &File) -> Result<u64> {
     let mut usage = None;
     for line in stat.lines() {
         if let Some(value) = line.strip_prefix("usage_usec ") {
-            ensure!(usage.is_none(), "Compteur CPU dupliqué");
+            ensure!(usage.is_none(), "Duplicate CPU counter");
             usage = Some(finite_number(value, "cpu.stat usage_usec")?);
         }
     }
-    usage.ok_or_else(|| invalid("Compteur CPU absent"))
+    usage.ok_or_else(|| invalid("Missing CPU counter"))
 }
 
 fn root_owned(metadata: &Metadata) -> Result<()> {
     ensure!(
         metadata.uid() == 0 && metadata.mode() & 0o022 == 0,
-        "Source image non détenue exclusivement par root"
+        "Image source not exclusively owned by root"
     );
     Ok(())
 }
@@ -475,7 +469,7 @@ fn create_directory(parent: &File, name: &str, allow_existing: bool) -> Result<F
     // SAFETY: geteuid has no preconditions.
     ensure!(
         directory.metadata()?.uid() == unsafe { libc::geteuid() },
-        "Répertoire scratch de propriétaire divergent"
+        "Scratch directory owner mismatch"
     );
     Ok(directory)
 }
@@ -487,7 +481,7 @@ fn identifier_component(name: &str) -> Result<()> {
             && name != ".."
             && !name.contains('/')
             && !name.contains('\0'),
-        "Composant invalide"
+        "Invalid component"
     );
     Ok(())
 }
@@ -497,13 +491,10 @@ fn copy_source(source: &File, work: &File, entry: &SourceFile) -> Result<()> {
     let metadata = source_file.metadata()?;
     ensure!(
         metadata.nlink() == 1 && metadata.len() == entry.size,
-        "Type ou taille source divergent"
+        "Source type or size mismatch"
     );
     let bytes = read_stable(source_file, entry.size)?;
-    ensure!(
-        files::hash(&bytes) == entry.sha256,
-        "Empreinte source divergente"
-    );
+    ensure!(files::hash(&bytes) == entry.sha256, "Source hash mismatch");
     let mut parent = work.try_clone()?;
     let mut parts = entry.path.split('/').peekable();
     while let Some(part) = parts.next() {
@@ -548,7 +539,7 @@ fn read_stable(file: File, limit: u64) -> Result<Vec<u8>> {
     let before = file.metadata()?;
     ensure!(
         before.is_file() && before.nlink() == 1 && before.len() <= limit && limit <= ARTIFACT_LIMIT,
-        "Type, liens ou volume d’artefact refusés"
+        "Artifact type, links or volume rejected"
     );
     let mut bytes = Vec::new();
     let mut reader = file.take(limit + 1);
@@ -558,7 +549,7 @@ fn read_stable(file: File, limit: u64) -> Result<Vec<u8>> {
         same_file(&before, &after)
             && bytes.len() as u64 == before.len()
             && bytes.len() as u64 <= limit,
-        "Artefact modifié pendant lecture"
+        "Artifact changed during reading"
     );
     Ok(bytes)
 }
@@ -689,19 +680,19 @@ fn stop_group(group: i32, start: Instant) -> Result<()> {
         }
         ensure!(
             start.elapsed() < Duration::from_secs(2),
-            "Arrêt complet des descendants non établi"
+            "Complete descendant termination not established"
         );
         for pid in direct_children()? {
             ensure!(
                 start.elapsed() < Duration::from_secs(2),
-                "Arrêt complet des descendants non établi"
+                "Complete descendant termination not established"
             );
             kill_owned_group_child(pid, group)?;
         }
         loop {
             ensure!(
                 start.elapsed() < Duration::from_secs(2),
-                "Arrêt complet des descendants non établi"
+                "Complete descendant termination not established"
             );
             let mut status = 0;
             // SAFETY: only children in this invocation's immutable group are
@@ -743,18 +734,18 @@ fn direct_children() -> Result<BTreeSet<i32>> {
     }
     ensure!(
         stat.f_type == libc::PROC_SUPER_MAGIC,
-        "Inventaire enfants procfs natif requis"
+        "Native procfs child inventory required"
     );
     let mut children = BTreeSet::new();
     let mut read_threads = 0;
     for (index, entry) in std::fs::read_dir(process.join("task"))?.enumerate() {
-        ensure!(index < 2048, "Trop de threads du worker");
+        ensure!(index < 2048, "Too many worker threads");
         let entry = entry?;
         let name = entry.file_name();
         ensure!(
             name.to_str()
                 .is_some_and(|name| !name.is_empty() && name.bytes().all(|b| b.is_ascii_digit())),
-            "Identité de thread procfs invalide"
+            "Invalid procfs thread identity"
         );
         let bytes = match files::read_limited(&entry.path().join("children"), 64 * 1024) {
             Ok(bytes) => bytes,
@@ -765,18 +756,18 @@ fn direct_children() -> Result<BTreeSet<i32>> {
         };
         read_threads += 1;
         for word in std::str::from_utf8(&bytes)
-            .map_err(|_| invalid("Liste enfants non UTF-8"))?
+            .map_err(|_| invalid("Child list is not UTF-8"))?
             .split_whitespace()
         {
-            let pid: i32 = word.parse().map_err(|_| invalid("PID enfant invalide"))?;
+            let pid: i32 = word.parse().map_err(|_| invalid("Invalid child PID"))?;
             ensure!(
                 pid > 0 && children.len() < 2048,
-                "Liste enfants hors limites"
+                "Child list exceeds limits"
             );
             children.insert(pid);
         }
     }
-    ensure!(read_threads > 0, "Liste enfants procfs indisponible");
+    ensure!(read_threads > 0, "Procfs child list unavailable");
     Ok(children)
 }
 
@@ -789,7 +780,7 @@ fn disappeared_proc_thread(error: &crate::error::Error) -> bool {
 }
 
 fn kill_owned_group_child(pid: i32, group: i32) -> Result<()> {
-    ensure!(pid > 0 && group > 0, "PID et groupe positifs requis");
+    ensure!(pid > 0 && group > 0, "Positive PID and group required");
     // SAFETY: initialized siginfo storage, positive PID, and WNOWAIT retain any
     // exited child. No reap occurs between this ownership proof and the signal.
     let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
@@ -831,7 +822,7 @@ fn kill_owned_group_child(pid: i32, group: i32) -> Result<()> {
 }
 
 fn group_children_absent(group: i32) -> Result<bool> {
-    ensure!(group > 0, "Groupe positif requis");
+    ensure!(group > 0, "Positive group required");
     // SAFETY: this observes only the invocation's children without reaping them.
     let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
     let result = unsafe {
@@ -868,7 +859,7 @@ fn run_target(
 ) -> Result<Captured> {
     let _lock = EXECUTION_LOCK
         .lock()
-        .map_err(|_| invalid("Worker concurrent ou interrompu"))?;
+        .map_err(|_| invalid("Concurrent or interrupted worker"))?;
     let _scope = ProcessScope::enter()?;
     let mut command = Command::new(&request.command[0]);
     command
@@ -917,12 +908,12 @@ fn run_target(
         .child
         .stdout
         .take()
-        .ok_or_else(|| invalid("Pipe stdout absent"))?;
+        .ok_or_else(|| invalid("Missing stdout pipe"))?;
     let mut err = guard
         .child
         .stderr
         .take()
-        .ok_or_else(|| invalid("Pipe stderr absent"))?;
+        .ok_or_else(|| invalid("Missing stderr pipe"))?;
     set_nonblocking(&out)?;
     set_nonblocking(&err)?;
     let mut captured = Captured {
@@ -953,7 +944,7 @@ fn run_target(
     captured.output_limited |= drain_after_stop(&mut err, &mut captured.stderr)?;
     ensure!(
         !INTERRUPTED.load(Ordering::Relaxed),
-        "Worker interrompu ; descendants arrêtés"
+        "Worker interrupted; descendants terminated"
     );
     Ok(captured)
 }
@@ -1028,7 +1019,7 @@ fn install_child_filter() -> std::io::Result<()> {
 
 #[cfg(not(all(target_os = "linux", target_arch = "x86_64")))]
 fn install_child_filter() -> std::io::Result<()> {
-    Err(std::io::Error::other("Architecture seccomp non supportée"))
+    Err(std::io::Error::other("Unsupported seccomp architecture"))
 }
 
 fn set_nonblocking(stream: &impl AsRawFd) -> Result<()> {
@@ -1170,11 +1161,11 @@ mod tests {
         let directory = tempfile::tempdir()?;
         let missing = files::read_limited(&directory.path().join("children"), 64 * 1024)
             .err()
-            .ok_or_else(|| invalid("La fixture doit être absente"))?;
+            .ok_or_else(|| invalid("Fixture must be absent"))?;
         // open_regular wraps this real ENOENT in contextual validation information.
         assert!(disappeared_proc_thread(&missing));
         assert!(disappeared_proc_thread(
-            &missing.context("Contexte supplémentaire")
+            &missing.context("Additional context")
         ));
         for errno in [
             libc::EACCES,
@@ -1187,12 +1178,10 @@ mod tests {
                 path: directory.path().join("children"),
                 source: std::io::Error::from_raw_os_error(errno),
             }
-            .context("Lecture enfants");
+            .context("Reading children");
             assert!(!disappeared_proc_thread(&error), "masked errno {errno}");
         }
-        assert!(!disappeared_proc_thread(&invalid(
-            "Fichier trop volumineux"
-        )));
+        assert!(!disappeared_proc_thread(&invalid("File too large")));
         Ok(())
     }
 
@@ -1481,7 +1470,7 @@ mod tests {
         let pid: i32 = fs::read_to_string(path)?
             .trim()
             .parse()
-            .map_err(|_| invalid("PID synthétique invalide"))?;
+            .map_err(|_| invalid("Invalid synthetic PID"))?;
         // SAFETY: signal zero only observes existence of the recorded synthetic process.
         assert_eq!(unsafe { libc::kill(pid, 0) }, -1, "process {pid} survived");
         assert_eq!(
@@ -1516,7 +1505,7 @@ mod tests {
     fn cleanup_handles_a_leader_already_reaped_by_the_group_wait() -> Result<()> {
         let _lock = EXECUTION_LOCK
             .lock()
-            .map_err(|_| invalid("Verrou test empoisonné"))?;
+            .map_err(|_| invalid("Test lock poisoned"))?;
         let _scope = ProcessScope::enter()?;
         let directory = tempfile::tempdir()?;
         let child = Command::new("/bin/bash")

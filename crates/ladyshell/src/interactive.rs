@@ -40,7 +40,7 @@ pub fn command(
         command.args([name, "--", "/bin/bash", "-i"]);
     } else {
         let account =
-            auth::account_id(account.ok_or_else(|| invalid("Identifiant de routage requis"))?)?;
+            auth::account_id(account.ok_or_else(|| invalid("A routing identifier is required"))?)?;
         command.args([
             "--env",
             &format!("CODEX_ACCOUNT_ID={account}"),
@@ -93,7 +93,7 @@ pub fn run_with_options(
     crate::continuous::host::execution_directory(&lock.directory)?;
     let lease = SessionLock::acquire(directory, false)?;
     let state = state::load(directory)?.ok_or_else(|| {
-        invalid("État absent : appliquer un environnement avant de lancer une session")
+        invalid("State is missing; apply an environment before starting a session")
     })?;
     let backend = Backend::new(&state["context"])?;
     crate::continuous::native::admit(&state)?;
@@ -109,13 +109,13 @@ pub fn run_with_options(
             state["desired_inputs"]["evaluated"]["config"].clone()
         } else {
             state::read(&PathBuf::from(state::text(&state, "build_dir")?).join("config.json"))?
-                .ok_or_else(|| invalid("Configuration de build absente"))?
+                .ok_or_else(|| invalid("Missing build configuration"))?
         };
         backend.verify_provider(state::text(&config["sandbox"], "provider")?)?;
         let home = if let Some(home) = std::env::var_os("CODEX_HOME") {
             PathBuf::from(home)
         } else {
-            PathBuf::from(std::env::var_os("HOME").ok_or_else(|| invalid("HOME absent"))?)
+            PathBuf::from(std::env::var_os("HOME").ok_or_else(|| invalid("HOME is missing"))?)
                 .join(".codex")
         };
         Some(auth::host_account(&home.join("auth.json"))?)
@@ -136,7 +136,7 @@ pub fn terminal_status(command: &mut Command) -> Result<i32> {
     use std::os::unix::process::CommandExt;
     let _serial = TERMINAL_LOCK
         .lock()
-        .map_err(|_| invalid("Gestion du terminal indisponible"))?;
+        .map_err(|_| invalid("Terminal handling is unavailable"))?;
     let mut signals = SignalGuard::install()?;
     let previous_mask = signals.mask;
     // SAFETY: pre_exec invokes only the async-signal-safe sigprocmask syscall.

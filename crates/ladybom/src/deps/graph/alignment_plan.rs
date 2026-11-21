@@ -70,7 +70,7 @@ pub fn plan_alignment(graph: &Graph) -> Result<AlignmentPlan> {
         actions.push(action(
             AlignmentPlanActionKind::CompleteCoverage,
             Vec::new(),
-            "Compléter le périmètre, les inventaires verrouillés, les identités et les déclarations non qualifiées avant toute conclusion globale.",
+            "Complete the scope, locked inventories, identities and unqualified declarations before drawing any overall conclusion.",
         ));
     }
     let mut identity_groups = BTreeMap::<(String, String), Vec<usize>>::new();
@@ -95,7 +95,7 @@ pub fn plan_alignment(graph: &Graph) -> Result<AlignmentPlan> {
             actions.push(action(
                 AlignmentPlanActionKind::ReviewLockResolution,
                 vec![index],
-                "Étudier une résolution commune dans ce verrou, après collecte de toutes les contraintes et revue des avis actuels. Aucune version observée n'est sélectionnée ou déclarée compatible.",
+                "Investigate a common resolution within this lockfile after collecting all constraints and reviewing current advisories. No observed version is selected or declared compatible.",
             ));
         }
     }
@@ -109,7 +109,7 @@ pub fn plan_alignment(graph: &Graph) -> Result<AlignmentPlan> {
         actions.push(action(
             AlignmentPlanActionKind::ReviewParentMigration,
             vec![index],
-            "Si les contraintes empêchent une résolution commune, étudier la mise à jour des parents et les adaptations des consommateurs. Vérifier leurs manifests publiés ; préférer une évolution maintenue et justifier tout fork ou adaptateur par son coût récurrent.",
+            "If constraints prevent a common resolution, investigate parent updates and consumer changes. Verify their published manifests; prefer maintained updates and justify any fork or adapter by its recurring cost.",
         ));
     }
     for difference in &alignment.cross_domain {
@@ -123,7 +123,7 @@ pub fn plan_alignment(graph: &Graph) -> Result<AlignmentPlan> {
         actions.push(action(
             AlignmentPlanActionKind::ReviewCrossDomain,
             indices,
-            "Examiner séparément les contraintes de chaque verrou, puis l'intérêt d'une convergence. Cet écart entre domaines ne constitue pas un doublon dans un même verrou.",
+            "Review each lockfile's constraints separately, then assess the benefit of convergence. This difference across domains is not a duplicate within one lockfile.",
         ));
     }
     let ecosystems: BTreeMap<_, _> = alignment
@@ -134,7 +134,7 @@ pub fn plan_alignment(graph: &Graph) -> Result<AlignmentPlan> {
     for (index, variant) in alignment.source_variants.iter().enumerate() {
         let ecosystem = ecosystems
             .get(variant.domain.as_str())
-            .ok_or_else(|| invalid("Domaine de variante absent".into()))?;
+            .ok_or_else(|| invalid("Missing variant domain".into()))?;
         let mut indices = BTreeSet::new();
         // Native spellings and group display labels can differ for one PURL.
         // Join the authoritative domain/identity/source, including unprojected
@@ -174,13 +174,13 @@ pub fn plan_alignment(graph: &Graph) -> Result<AlignmentPlan> {
                     identity.clone(),
                     serde_json::to_string(&source)?,
                 ))
-                .ok_or_else(|| invalid("Groupe de variante de source absent".into()))?;
+                .ok_or_else(|| invalid("Missing source variant group".into()))?;
             indices.insert(*group);
         }
         let mut review = action(
             AlignmentPlanActionKind::ReviewSourceVariants,
             indices.into_iter().collect(),
-            "Vérifier la provenance et l'identité de chaque fournisseur. Ne pas fusionner ces sources par simple égalité de nom et ne pas changer de fournisseur pour masquer une dette de versions.",
+            "Verify each provider's provenance and identity. Do not merge these sources solely because their names match or change providers to hide version debt.",
         );
         review.source_variant_index = Some(index);
         actions.push(review);
@@ -233,11 +233,11 @@ pub fn plan_alignment(graph: &Graph) -> Result<AlignmentPlan> {
     occurrences.sort_by(|a, b| a.node.cmp(&b.node));
     let limitations = alignment.limitations.iter().chain(&graph.limitations)
         .cloned().chain([
-            "Contraintes transitives complètes inconnues : une arête verrouillée et ses preuves natives ne remplacent pas les manifests des parents ; aucun parent connu ne signifie pas absence de dépendant.".into(),
-            "Seuls les parents immédiats et racines projetés sont joints. Les déclarations directes disponibles sont conservées dans alignment.pins ; leur correspondance avec une racine peut rester inconnue.".into(),
-            "Inventaire de toutes les versions verrouillées, y compris build/test, optionnelles et toutes plateformes ; aucune preuve d'activation ni sélection automatique de version.".into(),
-            "Aucun avis de sécurité actuel ni test consommateur n'est évalué par ce plan. Aucun verrou, référence, dette ou exception n'est modifié.".into(),
-            "Entrée et chaque format de sortie limités à 128 Mio ; limites du graphe conservées : 100000 composants, 500000 arêtes et racines, 4096 contextes. Un dépassement est refusé, sans troncature favorable.".into(),
+            "Complete transitive constraints are unknown: a locked edge and its native evidence do not replace parent manifests; no known parent does not establish the absence of dependents.".into(),
+            "Only projected immediate parents and roots are included. Available direct declarations are retained in alignment.pins; their correspondence with a root may remain unknown.".into(),
+            "Inventory of all locked versions, including build/test, optional dependencies and all platforms; no proof of activation or automatic version selection.".into(),
+            "This plan evaluates no current security advisory or consumer test. No lockfile, baseline, debt or exception is modified.".into(),
+            "Input and each output format are limited to 128 MiB; graph limits remain: 100000 components, 500000 edges and roots, 4096 contexts. Exceeding a limit is refused, without favorable truncation.".into(),
         ]).collect::<BTreeSet<_>>().into_iter().collect();
     let plan = AlignmentPlan {
         schema_version: 1,
@@ -272,11 +272,11 @@ fn action(
 
 fn gates() -> Vec<AlignmentPlanGate> {
     [
-        ("source_scope", "Établir indépendamment les sources et verrous maintenus ; conserver périmètre, révision et empreintes. Vérifier identité, source et contexte de chaque candidat."),
-        ("resolution_constraints", "Collecter les contraintes complètes des parents, alias, fonctionnalités, cibles, versions de langage et remplacements ; vérifier la résolution native reproductible dans chaque contexte explicitement autorisé."),
-        ("current_advisories", "Contrôler les candidats puis les verrous finaux contre les avis actuels de chaque écosystème : transitives, optionnelles, build/test et toutes plateformes, wrappers, bindings et bibliothèques natives séparément. Conserver provenance, fraîcheur, paramètres, résultats et findings existants. Une source absente, périmée ou non prise en charge reste bloquante ; ne pas introduire de version connue affectée."),
-        ("consumer_validation", "Valider les consommateurs, fonctionnalités et plateformes maintenus avec leurs tests, puis comparer de nouveaux snapshots et leurs empreintes. L'exécution exige un environnement autorisé distinct du scan."),
-        ("pins_and_policy", "Contrôler séparément les pins avec graph alignment --check, puis la politique contre la référence revue et les avis de sécurité. Une dette backlog n'est pas approuvée. Toute exception exige responsable, périmètre, versions, sources, preuves, coût de maintenance et expiration ; aucun renouvellement automatique de référence ou exception."),
+        ("source_scope", "Independently establish maintained sources and lockfiles; retain scope, revision and digests. Verify each candidate's identity, source and context."),
+        ("resolution_constraints", "Collect complete constraints for parents, aliases, features, targets, language versions and overrides; verify reproducible native resolution in each explicitly authorized context."),
+        ("current_advisories", "Check candidates, then final lockfiles, against current advisories for each ecosystem: transitive, optional, build/test and all platforms, checking wrappers, bindings and native libraries separately. Retain provenance, freshness, parameters, results and existing findings. A missing, stale or unsupported source remains blocking; do not introduce a version known to be affected."),
+        ("consumer_validation", "Validate maintained consumers, features and platforms with their tests, then compare new snapshots and their digests. Execution requires an authorized environment separate from scanning."),
+        ("pins_and_policy", "Check pins separately with graph alignment --check, then check policy against the reviewed baseline and security advisories. Backlog debt is not approved. Every exception requires an owner, scope, versions, sources, evidence, maintenance cost and expiry; no automatic renewal of a baseline or exception."),
     ].into_iter().map(|(id, instruction)| AlignmentPlanGate { id: id.into(), instruction: instruction.into() }).collect()
 }
 
@@ -288,9 +288,7 @@ impl Write for ByteBudget {
     fn write(&mut self, buffer: &[u8]) -> std::io::Result<usize> {
         self.bytes = self.bytes.saturating_add(buffer.len());
         if self.bytes > MAX_BYTES {
-            return Err(std::io::Error::other(
-                "Plan d'alignement supérieur à 128 Mio",
-            ));
+            return Err(std::io::Error::other("Alignment plan exceeds 128 MiB"));
         }
         Ok(buffer.len())
     }
@@ -303,31 +301,31 @@ impl AlignmentPlan {
     /// Render untrusted evidence as inert text, with the same 128 MiB output cap.
     pub fn to_markdown(&self) -> Result<String> {
         let mut out = Markdown::default();
-        out.push("# Plan de réduction des doublons\n\nEmpreinte du graphe : ")?;
+        out.push("# Duplicate reduction plan\n\nGraph digest: ")?;
         out.text(&self.graph_digest)?;
         out.push(if self.analysis_complete {
-            "\n\nCouverture de l'analyse : complète.\n"
+            "\n\nAnalysis coverage: complete.\n"
         } else {
-            "\n\nCouverture de l'analyse : incomplète, bloquante.\n"
+            "\n\nAnalysis coverage: incomplete, blocking.\n"
         })?;
-        out.push("\nAucune remédiation approuvée. Les versions sont observées, sans choix de version compatible ou corrigée. Tous les contrôles ci-dessous sont requis avant adoption.\n\n## Actions ordonnées\n\n")?;
+        out.push("\nNo remediation approved. Versions are observed without selecting a compatible or fixed version. All checks below are required before adoption.\n\n## Ordered actions\n\n")?;
         if self.actions.is_empty() {
-            out.push("Aucune action de réduction identifiée dans l'inventaire couvert.\n")?;
+            out.push("No reduction action identified in the covered inventory.\n")?;
         }
         for (index, action) in self.actions.iter().enumerate() {
             out.push(&format!("{}. ", index + 1))?;
             out.text(&action.instruction)?;
             if !action.group_indices.is_empty() {
-                out.push(" Groupes : ")?;
+                out.push(" Groups: ")?;
                 out.text(&serde_json::to_string(&action.group_indices)?)?;
                 out.push(".")?;
             }
             if let Some(variant) = action.source_variant_index {
-                out.push(&format!(" Variante de source : {variant}."))?;
+                out.push(&format!(" Source variant: {variant}."))?;
             }
             out.push("\n")?;
         }
-        out.push("\n## Preuves des groupes concernés\n")?;
+        out.push("\n## Evidence for affected groups\n")?;
         let selected: BTreeSet<_> = self.actions.iter().flat_map(|a| &a.group_indices).collect();
         let domains: BTreeMap<_, _> = self
             .alignment
@@ -340,79 +338,79 @@ impl AlignmentPlan {
                 .alignment
                 .groups
                 .get(*index)
-                .ok_or_else(|| invalid("Groupe du plan absent".into()))?;
-            out.push(&format!("\n### Groupe {index}\n\nIdentité : "))?;
+                .ok_or_else(|| invalid("Missing plan group".into()))?;
+            out.push(&format!("\n### Group {index}\n\nIdentity: "))?;
             out.text(&group.identity)?;
-            out.push("\n\nDomaine : ")?;
+            out.push("\n\nDomain: ")?;
             out.text(&group.domain)?;
-            out.push("\n\nSource : ")?;
+            out.push("\n\nSource: ")?;
             out.text(&serde_json::to_string(&group.source)?)?;
             if let Some(domain) = domains.get(group.domain.as_str()) {
-                out.push("\n\nManifests : ")?;
+                out.push("\n\nManifests: ")?;
                 out.text(&serde_json::to_string(&domain.manifests)?)?;
-                out.push("\n\nVerrou : ")?;
+                out.push("\n\nLockfile: ")?;
                 out.text(&serde_json::to_string(&domain.lockfile)?)?;
             }
             out.push("\n\n")?;
             for version in &group.versions {
-                out.push("- Version observée : ")?;
+                out.push("- Observed version: ")?;
                 out.text(&version.version)?;
                 out.push(&format!(
-                    " ; {} occurrence(s) projetée(s).\n",
+                    "; {} projected occurrence(s).\n",
                     version.nodes.len()
                 ))?;
                 for node in &version.nodes {
-                    out.push("  Contexte : ")?;
+                    out.push("  Context: ")?;
                     out.text(&node.graph)?;
-                    out.push(" ; PURL : ")?;
+                    out.push("; PURL: ")?;
                     out.text(&node.purl)?;
                     out.push("\n")?;
                 }
             }
         }
-        out.push("\n## Contextes et parents immédiats\n\n")?;
+        out.push("\n## Contexts and immediate parents\n\n")?;
         for occurrence in &self.occurrences {
-            out.push("- Occurrence : ")?;
+            out.push("- Occurrence: ")?;
             out.text(&serde_json::to_string(&occurrence.node)?)?;
-            out.push(" ; contexte natif : ")?;
+            out.push("; native context: ")?;
             out.text(&occurrence.native_context)?;
             if let Some(context) = self.contexts.get(&occurrence.node.graph) {
-                out.push(" ; contexte projeté : ")?;
+                out.push("; projected context: ")?;
                 out.text(&serde_json::to_string(context)?)?;
             }
-            out.push(" ; source : ")?;
+            out.push("; source: ")?;
             out.text(&serde_json::to_string(&occurrence.source)?)?;
-            out.push(". Contraintes transitives complètes : inconnues.\n")?;
+            out.push(". Complete transitive constraints: unknown.\n")?;
             for parent in &occurrence.parents {
-                out.push("  Parent immédiat et preuve native : ")?;
+                out.push("  Immediate parent and native evidence: ")?;
                 out.text(&serde_json::to_string(parent)?)?;
                 out.push("\n")?;
             }
             for root in &occurrence.roots {
-                out.push("  Racine : ")?;
+                out.push("  Root: ")?;
                 out.text(&serde_json::to_string(root)?)?;
                 out.push("\n")?;
             }
         }
-        out.push("\n## Variantes de source\n\n")?;
+        out.push("\n## Source variants\n\n")?;
         for (index, variant) in self.alignment.source_variants.iter().enumerate() {
-            out.push(&format!("- Variante {index} : "))?;
+            out.push(&format!("- Variant {index}: "))?;
             out.text(&serde_json::to_string(variant)?)?;
             out.push("\n")?;
         }
-        out.push("\n## Déclarations directes disponibles\n\n")?;
+        out.push("\n## Available direct declarations\n\n")?;
         for pin in &self.alignment.pins {
             out.push("- ")?;
             out.text(&serde_json::to_string(pin)?)?;
             out.push("\n")?;
         }
-        out.push("\n## Contrôles requis avant adoption\n\n")?;
+        out.push("\n## Required checks before adoption\n\n")?;
         for gate in &self.gates {
             out.push("- ")?;
             out.text(&gate.instruction)?;
             out.push("\n")?;
         }
-        out.push("\n## Couverture et limites\n\n")?;
+        out.push("\n## Coverage and limitations\n\n")?;
         out.text(&serde_json::to_string(&self.alignment.coverage)?)?;
         out.push("\n\n")?;
         for limitation in &self.limitations {
@@ -432,7 +430,7 @@ impl Markdown {
     fn push(&mut self, text: &str) -> Result<()> {
         ensure!(
             self.output.len().saturating_add(text.len()) <= MAX_BYTES,
-            "Plan Markdown supérieur à 128 Mio"
+            "Markdown plan exceeds 128 MiB"
         );
         self.output.push_str(text);
         Ok(())

@@ -14,7 +14,7 @@ class StaleTargets(unittest.TestCase):
         vex, current = self.fixtures()
         current["components"][0]["purl"] = "pkg:npm/leaf@3.0.0"
         current["components"][0]["version"] = "3.0.0"
-        with self.assertRaisesRegex(ValueError, "absente"):
+        with self.assertRaisesRegex(ValueError, "missing"):
             check_current_local_targets(vex, current)
 
     def test_current_target_must_be_unique_and_identity_consistent(self):

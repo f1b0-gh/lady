@@ -5,7 +5,7 @@ use std::io::{Read, Write};
 fn main() {
     let mut exit_status = 0;
     let mut raw = std::env::args_os().skip(1);
-    // Forward before Clap can consume separators or interpret bootc flags.
+    // Preserve legacy arguments, including separators and non-UTF-8 paths.
     let result = if raw.next().as_deref() == Some(std::ffi::OsStr::new("artifact")) {
         ladyshell_cli::artifact_cli::run(ladyshell_cli::artifact_cli::ArtifactArgs {
             arguments: raw.collect(),
@@ -109,7 +109,7 @@ fn main() {
                 print_json(value)?;
                 if blocked {
                     Err(ladyshell::error::Error::InvalidInput {
-                        message: "Audit bloqué ; examiner blockers".into(),
+                        message: "Audit blocked; inspect blockers".into(),
                     })
                 } else {
                     Ok(())
@@ -124,7 +124,7 @@ fn main() {
                 )?;
                 if plan["blocked"] == true {
                     Err(ladyshell::error::Error::InvalidInput {
-                        message: "Plan bloqué ; examiner actions et dependency_scan".into(),
+                        message: "Plan blocked; inspect actions and dependency_scan".into(),
                     })
                 } else {
                     Ok(())
@@ -164,7 +164,7 @@ fn main() {
         }
     };
     if let Err(error) = result {
-        let _ = writeln!(std::io::stderr().lock(), "Erreur : {error}");
+        let _ = writeln!(std::io::stderr().lock(), "Error: {error}");
         if let ladyshell::error::Error::AuditDocument(
             ladyshell::audit::validator::Error::Validation(messages),
         ) = &error
@@ -275,7 +275,7 @@ fn audit_worker() -> ladyshell::error::Result<serde_json::Value> {
         .read_to_end(&mut input)?;
     if input.len() > INPUT_LIMIT {
         return Err(ladyshell::error::Error::InvalidInput {
-            message: "Requête du worker d’audit supérieure à 16 Mio".into(),
+            message: "Audit worker request exceeds 16 MiB".into(),
         });
     }
     let request: ladyshell::audit::worker::WorkerRequest =

@@ -205,7 +205,7 @@ fn failed_attempt_or_open_obligation_cannot_become_complete() -> TestResult {
             },
         )?;
         if !failed {
-            journal.add_obligation("Validation indépendante manquante")?;
+            journal.add_obligation("Missing independent validation")?;
         }
         assert!(journal.finish(RunStatus::Complete).is_err());
         journal.finish(RunStatus::Partial)?;

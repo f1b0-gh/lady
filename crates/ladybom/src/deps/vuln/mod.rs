@@ -22,7 +22,7 @@ pub fn timestamp(value: &str) -> Result<i64> {
 }
 
 pub fn instant(value: &str) -> Result<OffsetDateTime> {
-    OffsetDateTime::parse(value, &Rfc3339).map_err(|_| invalid("Date RFC 3339 invalide".into()))
+    OffsetDateTime::parse(value, &Rfc3339).map_err(|_| invalid("Invalid RFC 3339 date".into()))
 }
 
 pub const MAX_RECORDS: usize = 100_000;

@@ -126,7 +126,7 @@ pub fn identifier(s: &str) -> Result<()> {
             && s.as_bytes()[0].is_ascii_lowercase()
             && s.bytes()
                 .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'_' || c == b'-'),
-        "Identifiant invalide : {s}"
+        "Invalid identifier: {s}"
     );
     Ok(())
 }
@@ -146,13 +146,13 @@ impl Config {
         if let Some(audit) = &self.audit {
             audit.validate()?;
         }
-        ensure!(self.schema_version == 1, "schema_version 1 requis");
+        ensure!(self.schema_version == 1, "schema_version 1 is required");
         identifier(&self.name)?;
         ensure!(
             self.image == Image::default(),
-            "Image supportée : Nix, openshell-native, x86_64-linux"
+            "Supported image: Nix, openshell-native, x86_64-linux"
         );
-        ensure!(self.sync.mode == "files", "Mode sync non supporté");
+        ensure!(self.sync.mode == "files", "Unsupported sync mode");
         relative_path(&self.sync.destination)?;
         ensure!(
             !["state.json", "operation.json", "plan.json", ".lock"].contains(
@@ -161,9 +161,9 @@ impl Config {
                     .destination
                     .split('/')
                     .next()
-                    .ok_or_else(|| invalid("Destination absente".into()))?
+                    .ok_or_else(|| invalid("Missing destination".into()))?
             ),
-            "Destination réservée"
+            "Reserved destination"
         );
         for path in self.sources.include.iter().chain(&self.sources.exclude) {
             relative_path(path)?;
@@ -177,17 +177,20 @@ impl Config {
         }
         for (name, tool) in &self.tools {
             identifier(name)?;
-            ensure!(tool.phase == "runtime", "Phase runtime requise");
+            ensure!(tool.phase == "runtime", "The runtime phase is required");
             let parts: Vec<_> = tool.version.split('.').collect();
             ensure!(
                 parts.len() == 3
                     && parts
                         .iter()
                         .all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit())),
-                "Version exacte x.y.z requise"
+                "An exact x.y.z version is required"
             );
         }
-        ensure!(!self.missions.is_empty(), "Au moins une mission requise");
+        ensure!(
+            !self.missions.is_empty(),
+            "At least one mission is required"
+        );
         ensure!(self.missions.len() <= 1024, "Maximum 1024 missions");
         for (name, mission) in &self.missions {
             identifier(name)?;
@@ -195,49 +198,52 @@ impl Config {
                 relative_path(path)?;
             }
             for tool in &mission.tools {
-                ensure!(self.tools.contains_key(tool), "Outil inconnu : {tool}");
+                ensure!(self.tools.contains_key(tool), "Unknown tool: {tool}");
             }
             for parent in &mission.depends_on {
                 ensure!(
                     self.missions.contains_key(parent),
-                    "Mission inconnue : {parent}"
+                    "Unknown mission: {parent}"
                 );
             }
             for command in &mission.checks {
                 ensure!(
                     !command.is_empty()
                         && command.iter().all(|a| !a.is_empty() && !a.contains('\0')),
-                    "Liste d’arguments non vides requise"
+                    "A list of nonempty arguments is required"
                 );
             }
         }
         for request in &self.permissions.network {
             identifier(&request.tool)?;
-            ensure!(request.port > 0, "Port invalide");
+            ensure!(request.port > 0, "Invalid port");
             ensure!(
                 !request.host.is_empty()
                     && request.host.split(['.', '-']).all(|p| !p.is_empty()
                         && p.bytes()
                             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())),
-                "Hôte réseau explicite requis"
+                "An explicit network host is required"
             );
             ensure!(
                 !request.justification.trim().is_empty(),
-                "Justification requise"
+                "A justification is required"
             );
         }
         for request in &self.permissions.filesystem {
             ensure!(
                 ["read", "write"].contains(&request.access.as_str()),
-                "Accès invalide"
+                "Invalid access"
             );
-            ensure!(request.path.starts_with('/'), "Chemin absolu requis");
+            ensure!(
+                request.path.starts_with('/'),
+                "An absolute path is required"
+            );
             if request.path != "/" {
                 relative_path(&request.path[1..])?;
             }
             ensure!(
                 !request.justification.trim().is_empty(),
-                "Justification requise"
+                "A justification is required"
             );
         }
         // Validate the entire graph, including missions not selected by this invocation.
@@ -266,12 +272,9 @@ impl Config {
                 order.push(current.into());
                 continue;
             }
-            ensure!(
-                visiting.insert(current.into()),
-                "Cycle de missions : {current}"
-            );
+            ensure!(visiting.insert(current.into()), "Mission cycle: {current}");
             let Some(mission) = self.missions.get(current) else {
-                bail!("Mission inconnue : {current}")
+                bail!("Unknown mission: {current}")
             };
             stack.push((current, true));
             for parent in mission.depends_on.iter().rev() {
@@ -291,13 +294,13 @@ impl Config {
             let m = self
                 .missions
                 .get(name)
-                .ok_or_else(|| invalid(format!("Mission inconnue : {name}")))?;
+                .ok_or_else(|| invalid(format!("Unknown mission: {name}")))?;
             for tool in &m.tools {
                 tools.insert(
                     tool.clone(),
                     self.tools
                         .get(tool)
-                        .ok_or_else(|| invalid(format!("Outil inconnu : {tool}")))?
+                        .ok_or_else(|| invalid(format!("Unknown tool: {tool}")))?
                         .clone(),
                 );
             }

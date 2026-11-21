@@ -28,7 +28,7 @@ pub struct Report {
 }
 pub fn scan(root: &Path, files: &Snapshot, config: &ResolvedConfig) -> Result<Report> {
     use std::collections::BTreeSet;
-    let expression=regex::Regex::new(r"(?i)\b(node(?:\.js|js)?|npx|npm|pnpm|yarn|pip|pip3|uv|cargo|go|git|curl|wget|docker|make|pytest|zig|python3|python|rustc|rustup|lean|lake|elan|kani|hax|creusot|nix|fstar\.exe|z3|bash|awk|cmp|grep|sed|find)\b").map_err(|e|Error::InvalidInput{message:format!("Scanner : {e}")})?;
+    let expression=regex::Regex::new(r"(?i)\b(node(?:\.js|js)?|npx|npm|pnpm|yarn|pip|pip3|uv|cargo|go|git|curl|wget|docker|make|pytest|zig|python3|python|rustc|rustup|lean|lake|elan|kani|hax|creusot|nix|fstar\.exe|z3|bash|awk|cmp|grep|sed|find)\b").map_err(|e|Error::InvalidInput{message:format!("Scanner: {e}")})?;
     let mut supplied: BTreeSet<String> = [
         "bash", "git", "curl", "python", "python3", "awk", "cmp", "grep", "sed", "find", "env",
     ]
@@ -63,7 +63,7 @@ pub fn scan(root: &Path, files: &Snapshot, config: &ResolvedConfig) -> Result<Re
         let data = crate::files::read_limited(&root.join(name), 16 * 1024 * 1024)?;
         if crate::files::hash(&data) != record.sha256 {
             return Err(Error::InvalidInput {
-                message: format!("Source modifiée pendant scan : {name}"),
+                message: format!("Source changed during scan: {name}"),
             });
         }
         if data.len() > 1024 * 1024 {
@@ -148,7 +148,7 @@ pub fn scan(root: &Path, files: &Snapshot, config: &ResolvedConfig) -> Result<Re
             .file_name()
             .and_then(|s| s.to_str())
             .ok_or_else(|| Error::InvalidInput {
-                message: "Commande check invalide".into(),
+                message: "Invalid check command".into(),
             })?;
         observations.push(observation(
             tool.into(),

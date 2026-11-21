@@ -18,8 +18,8 @@ pub(crate) fn project_with_origins(report: Report) -> Result<ProjectedGraph> {
     for project in &report.projects {
         count = count
             .checked_add(project.components.len())
-            .ok_or_else(|| invalid("Limite de composants dépassée".into()))?;
-        ensure!(count <= MAX_COMPONENTS, "Limite de composants dépassée");
+            .ok_or_else(|| invalid("Component limit exceeded".into()))?;
+        ensure!(count <= MAX_COMPONENTS, "Component limit exceeded");
     }
     let manifests = SelectedManifests::new(&report);
     let locals = LocalPackages {
@@ -51,7 +51,7 @@ pub(crate) fn project_with_origins(report: Report) -> Result<ProjectedGraph> {
             .unwrap_or(&project.manifest);
         let owner = owners
             .get(owner_name)
-            .ok_or_else(|| invalid("Propriétaire de verrou absent".into()))?;
+            .ok_or_else(|| invalid("Missing lockfile owner".into()))?;
         let projection_project = if matches!(project.ecosystem.as_str(), "rust" | "npm") {
             *owner
         } else {
@@ -72,7 +72,7 @@ pub(crate) fn project_with_origins(report: Report) -> Result<ProjectedGraph> {
         }
         let projection = projections
             .get(cache_key)
-            .ok_or_else(|| invalid("Projection de verrou absente".into()))?;
+            .ok_or_else(|| invalid("Missing lockfile projection".into()))?;
         project_roots(
             &mut graph,
             project,
@@ -84,7 +84,7 @@ pub(crate) fn project_with_origins(report: Report) -> Result<ProjectedGraph> {
     for root in &graph.roots {
         if !root.condition.is_null() {
             graph.limitations.push(format!(
-                "{} : conditions racines non évaluées pour {}",
+                "{}: root conditions not evaluated for {}",
                 root.manifest, root.to.purl
             ));
         }
@@ -121,14 +121,14 @@ fn project_components(
     if !project.locked {
         graph
             .limitations
-            .push(format!("{} : verrou absent", project.manifest));
+            .push(format!("{}: missing lockfile", project.manifest));
     }
     let mut keys = Vec::new();
     for (index, component) in components.iter().enumerate() {
         validate_metadata(project, component)?;
         if !node_condition(component).is_null() {
             graph.limitations.push(format!(
-                "{} : conditions de paquet non évaluées pour {}",
+                "{}: package conditions not evaluated for {}",
                 scope, component.name
             ));
         }
@@ -154,14 +154,14 @@ fn project_components(
         let Some(purl) = &projected.purl else {
             keys.push(None);
             graph.limitations.push(format!(
-                "{} : composant sans PURL {} ({}) conservé dans l'inventaire",
+                "{}: component without PURL {} ({}) retained in the inventory",
                 scope, component.name, component.context
             ));
             continue;
         };
         let native = match project.ecosystem.as_str() {
             "npm" if local.is_some() => {
-                let identity = local.ok_or_else(|| invalid("Identité locale absente".into()))?;
+                let identity = local.ok_or_else(|| invalid("Missing local identity".into()))?;
                 json!({"local_source":identity.source,"installation_path":component.context})
             }
             "npm" => {
@@ -224,19 +224,19 @@ fn project_components(
         keys.push(Some(key.clone()));
         ensure!(
             local_nodes.insert(key.clone()),
-            "Composant dupliqué dans le projet"
+            "Duplicate component in the project"
         );
         let content = serde_json::to_string(&projected)?;
         if let Some(previous) = nodes_seen.get(&key) {
             ensure!(
                 *previous == content,
-                "Composant divergent dans un verrou partagé"
+                "Component differs within a shared lockfile"
             );
         } else {
             nodes_seen.insert(key.clone(), content);
             ensure!(
                 graph.components.len() < MAX_COMPONENTS,
-                "Limite de composants dépassée"
+                "Component limit exceeded"
             );
             graph.components.push(Node {
                 key,
@@ -264,7 +264,7 @@ fn project_components(
                     Value::Null
                 } else {
                     graph.limitations.push(format!(
-                        "{scope} : conditions du lien local non évaluées {}",
+                        "{scope}: local link conditions not evaluated {}",
                         component.context
                     ));
                     json!({"from":from_condition,"to":to_condition})
@@ -279,7 +279,7 @@ fn project_components(
                 if edges_seen.insert(serde_json::to_string(&edge)?) {
                     ensure!(
                         graph.dependencies.len() < MAX_EDGES,
-                        "Limite de relations dépassée"
+                        "Relationship limit exceeded"
                     );
                     graph.dependencies.push(edge);
                 }
@@ -366,13 +366,13 @@ fn project_components(
             }
             other => graph
                 .limitations
-                .push(format!("Projection non qualifiée : {other}")),
+                .push(format!("Unqualified projection: {other}")),
         }
         for (name, kind, mut condition, evidence) in requests {
             let targets = resolver.resolve(project, components, Some(i), &name, &evidence);
             if targets.len() != 1 || keys[targets[0]].is_none() {
                 graph.limitations.push(format!(
-                    "{} : référence non résolue sans ambiguïté {} -> {name}",
+                    "{}: reference not resolved unambiguously {} -> {name}",
                     scope, component.name
                 ));
                 continue;
@@ -389,7 +389,7 @@ fn project_components(
                 .unwrap_or(false)
             {
                 graph.limitations.push(format!(
-                    "{} : contrainte non satisfaite ou non qualifiée pour {} -> {name}",
+                    "{}: constraint not satisfied or not qualified for {} -> {name}",
                     scope, component.name
                 ));
                 continue;
@@ -401,7 +401,7 @@ fn project_components(
             }
             if !condition.is_null() {
                 graph.limitations.push(format!(
-                    "{} : conditions non évaluées pour {} -> {name}",
+                    "{}: conditions not evaluated for {} -> {name}",
                     scope, component.name
                 ));
             }
@@ -416,12 +416,12 @@ fn project_components(
                 let content = serde_json::to_string(&edge)?;
                 ensure!(
                     local_edges.insert(content.clone()),
-                    "Relation dupliquée dans le projet"
+                    "Duplicate relationship in the project"
                 );
                 if edges_seen.insert(content) {
                     ensure!(
                         graph.dependencies.len() < MAX_EDGES,
-                        "Limite de relations dépassée"
+                        "Relationship limit exceeded"
                     );
                     graph.dependencies.push(edge);
                 }
@@ -442,7 +442,7 @@ fn project_roots(
     for requirement in &project.requirements {
         if requirement.kind.ends_with(":include") {
             graph.limitations.push(format!(
-                "{} : inclusion de groupe non développée : {}",
+                "{}: group inclusion not expanded: {}",
                 project.manifest, requirement.name
             ));
             continue;
@@ -454,7 +454,7 @@ fn project_roots(
                     .any(|field| requirement.source.get(*field).is_some()))
         {
             graph.limitations.push(format!(
-                "{} : source d'exigence non qualifiée pour {}",
+                "{}: unqualified requirement source for {}",
                 project.manifest, requirement.name
             ));
             continue;
@@ -502,7 +502,7 @@ fn project_roots(
         };
         if targets.len() == 1 {
             if let Some(to) = &keys[targets[0]] {
-                ensure!(graph.roots.len() < MAX_EDGES, "Limite de racines dépassée");
+                ensure!(graph.roots.len() < MAX_EDGES, "Root limit exceeded");
                 graph.roots.push(Root {
                     manifest: project.manifest.clone(),
                     native: None,
@@ -523,7 +523,7 @@ fn project_roots(
             }
         }
         graph.limitations.push(format!(
-            "{} : exigence racine non résolue sans ambiguïté : {name}",
+            "{}: root requirement not resolved unambiguously: {name}",
             project.manifest
         ));
     }
@@ -800,10 +800,7 @@ fn node_condition(component: &Component) -> Value {
     }
 }
 fn validate_metadata(project: &Project, component: &Component) -> Result<()> {
-    ensure!(
-        component.metadata.is_object(),
-        "Métadonnées de paquet invalides"
-    );
+    ensure!(component.metadata.is_object(), "Invalid package metadata");
     if project.ecosystem == "rust" {
         crate::deps::rust::git::validate_component(component)?;
     }
@@ -819,7 +816,7 @@ fn validate_metadata(project: &Project, component: &Component) -> Result<()> {
                     value
                         .as_object()
                         .is_some_and(|v| v.values().all(Value::is_string)),
-                    "Table de dépendances npm invalide"
+                    "Invalid npm dependency table"
                 );
             } else {
                 ensure!(
@@ -827,7 +824,7 @@ fn validate_metadata(project: &Project, component: &Component) -> Result<()> {
                         .get("name")
                         .and_then(Value::as_str)
                         .is_some_and(|n| !n.is_empty()))),
-                    "Liste de dépendances invalide"
+                    "Invalid dependency list"
                 );
             }
         }
@@ -844,7 +841,7 @@ fn validate_metadata(project: &Project, component: &Component) -> Result<()> {
                                 .iter()
                                 .all(|d| d.get("name").and_then(Value::as_str).is_some())))
                     ),
-                "Groupes de dépendances invalides"
+                "Invalid dependency groups"
             );
         }
     }

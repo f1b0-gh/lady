@@ -186,7 +186,7 @@ fn checks_reject_missing_or_malformed_configuration_before_execution() -> Result
     fs::remove_file(fixture.root.path().join("state/state.json"))?;
     let output = fixture.command().output()?;
     assert_eq!(output.status.code(), Some(2), "{output:?}");
-    assert!(String::from_utf8(output.stderr)?.contains("État absent"));
+    assert!(String::from_utf8(output.stderr)?.contains("State is missing"));
     assert!(fixture.no_execution());
     Ok(())
 }
@@ -411,9 +411,7 @@ fn pruning_validation_rejects_source_drift_before_and_after_execution() -> Resul
             output.stdout.is_empty(),
             "No success receipt for changed sources"
         );
-        assert!(
-            String::from_utf8_lossy(&output.stderr).contains("Sources de validation divergentes")
-        );
+        assert!(String::from_utf8_lossy(&output.stderr).contains("Validation sources differ"));
         if !after {
             assert!(fixture.no_execution());
         }

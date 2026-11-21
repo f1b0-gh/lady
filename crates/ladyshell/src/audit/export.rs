@@ -18,11 +18,11 @@ pub fn export(run: &VerifiedRun, destination: &Path) -> Result<Value> {
     let parent = files::open_directory(
         destination
             .parent()
-            .ok_or_else(|| invalid("Parent absent"))?,
+            .ok_or_else(|| invalid("Missing parent"))?,
     )?;
     let name = destination
         .file_name()
-        .ok_or_else(|| invalid("Destination absente"))?;
+        .ok_or_else(|| invalid("Missing destination"))?;
     let target = CString::new(name.as_bytes())?;
     let anchored = std::path::PathBuf::from(format!("/proc/self/fd/{}", parent.as_raw_fd()));
     let staging = tempfile::Builder::new()
@@ -37,7 +37,7 @@ pub fn export(run: &VerifiedRun, destination: &Path) -> Result<Value> {
         staging
             .path()
             .file_name()
-            .ok_or_else(|| invalid("Staging absent"))?
+            .ok_or_else(|| invalid("Missing staging directory"))?
             .as_bytes(),
     )?;
     // SAFETY: parent owns both directory references; names are valid NUL-terminated
@@ -64,7 +64,7 @@ pub fn export(run: &VerifiedRun, destination: &Path) -> Result<Value> {
 fn write_new(root: &Path, path: &str, bytes: &[u8]) -> Result<()> {
     crate::config::relative_path(path)?;
     let target = root.join(path);
-    let parent = target.parent().ok_or_else(|| invalid("Parent absent"))?;
+    let parent = target.parent().ok_or_else(|| invalid("Missing parent"))?;
     // The private staging tree contains only directories created here, never received links.
     fs::create_dir_all(parent)?;
     let mut file = OpenOptions::new()

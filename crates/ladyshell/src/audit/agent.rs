@@ -43,7 +43,7 @@ impl AgentResponse {
                 .iter()
                 .any(|s| s.is_empty() || s.len() > 8192)
         {
-            return Err(invalid("Réponse d’agent hors limites"));
+            return Err(invalid("Agent response exceeds limits"));
         }
         for p in &self.reviewed_paths {
             config::relative_path(p)?;
@@ -51,7 +51,7 @@ impl AgentResponse {
         for candidate in &self.candidates {
             validate_finding(&candidate.finding_json)?;
             if candidate.checks.len() > 4 {
-                return Err(invalid("Trop de reproductions proposées"));
+                return Err(invalid("Too many proposed reproductions"));
             }
             for check in &candidate.checks {
                 validate_check(check)?;
@@ -74,20 +74,20 @@ pub fn validate_check(check: &TargetCheck) -> Result<()> {
         || !(0..=255).contains(&check.expected_exit)
         || check.artifacts.len() > 16
     {
-        return Err(invalid("Commande cible proposée invalide"));
+        return Err(invalid("Invalid proposed target command"));
     }
     let mut seen = std::collections::BTreeSet::new();
     for p in &check.artifacts {
         config::relative_path(p)?;
         if !seen.insert(p) {
-            return Err(invalid("Artefact proposé dupliqué"));
+            return Err(invalid("Duplicate proposed artifact"));
         }
     }
     Ok(())
 }
 pub fn validate_finding(text: &str) -> Result<Value> {
     if text.len() > 1024 * 1024 {
-        return Err(invalid("Résultat proposé trop volumineux"));
+        return Err(invalid("Proposed finding too large"));
     }
     let finding = json::parse(text.as_bytes())?;
     crate::audit::validator::validate(
@@ -98,7 +98,7 @@ pub fn validate_finding(text: &str) -> Result<Value> {
 }
 pub fn parse_transcript(bytes: &[u8]) -> Result<AgentResponse> {
     if bytes.len() > 4 * 1024 * 1024 {
-        return Err(invalid("Sortie d’agent trop volumineuse"));
+        return Err(invalid("Agent output too large"));
     }
     let mut message = None;
     let mut complete = false;
@@ -107,17 +107,17 @@ pub fn parse_transcript(bytes: &[u8]) -> Result<AgentResponse> {
     for line in bytes.split(|b| *b == b'\n').filter(|s| !s.is_empty()) {
         let event = json::parse(line)?;
         if complete {
-            return Err(invalid("Événement après clôture de l’invocation"));
+            return Err(invalid("Event after invocation completed"));
         }
         match event["type"].as_str() {
             Some("turn.started") => started = true,
             Some("turn.completed") => {
                 if !startup_warnings.is_empty() && !started {
-                    return Err(invalid("Avertissement Codex sans début de tour"));
+                    return Err(invalid("Codex warning without a turn start"));
                 }
                 complete = true;
             }
-            Some("error" | "turn.failed") => return Err(invalid("Invocation Codex échouée")),
+            Some("error" | "turn.failed") => return Err(invalid("Codex invocation failed")),
             Some("item.completed") => {
                 let item = &event["item"];
                 match item["type"].as_str() {
@@ -132,13 +132,13 @@ pub fn parse_transcript(bytes: &[u8]) -> Result<AgentResponse> {
                             "Under-development features enabled: skip_host_skill_discovery. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in /audit/agent/.codex/config.toml.",
                             "Code Mode is unavailable because code-mode host is disabled. Code mode will fail closed; enable `features.code_mode_host` and install `codex-code-mode-host`.",
                         ].contains(&warning) || !startup_warnings.insert(warning.to_owned()) {
-                            return Err(invalid("Avertissement ou erreur Codex non reconnu"));
+                            return Err(invalid("Unrecognized Codex warning or error"));
                         }
                     }
                     _ => {
                         return Err(invalid(format!(
-                            "Outil d’exécution interdit dans l’agent d’audit : type {:?}",
-                            item["type"].as_str().unwrap_or("<absent ou non textuel>")
+                            "Execution tool forbidden in the audit agent: type {:?}",
+                            item["type"].as_str().unwrap_or("<missing or not text>")
                         )))
                     }
                 }
@@ -147,9 +147,9 @@ pub fn parse_transcript(bytes: &[u8]) -> Result<AgentResponse> {
         }
     }
     if !complete {
-        return Err(invalid("Invocation Codex sans clôture"));
+        return Err(invalid("Codex invocation did not complete"));
     }
-    let text = message.ok_or_else(|| invalid("Réponse Codex absente"))?;
+    let text = message.ok_or_else(|| invalid("Missing Codex response"))?;
     let response: AgentResponse = serde_json::from_value(json::parse(text.as_bytes())?)?;
     response.validate()?;
     Ok(response)
@@ -170,13 +170,13 @@ pub fn remote(
     validate_remote_limits(cpu_seconds, processes, file_bytes)?;
     let path = codex
         .to_str()
-        .ok_or_else(|| invalid("Chemin Codex non UTF-8"))?;
+        .ok_or_else(|| invalid("Codex path is not UTF-8"))?;
     crate::policy::native_policy(path)?;
     // SAFETY: geteuid has no preconditions.
     if unsafe { libc::geteuid() } != 10001
         || !Path::new("/audit/agent-response-schema.json").is_file()
     {
-        return Err(invalid("Helper agent réservé à l’image d’audit"));
+        return Err(invalid("Agent helper is restricted to the audit image"));
     }
     apply_remote_limits(cpu_seconds, processes, file_bytes)?;
     verify_agent_confinement(file_bytes)?;
@@ -191,9 +191,7 @@ pub fn remote(
     version.arg("--version");
     let version = crate::process::capture(version, std::time::Duration::from_secs(10), 1024)?;
     if String::from_utf8_lossy(&version).trim() != "codex-cli 0.165.0" {
-        return Err(invalid(
-            "Driver d’audit validé pour Codex 0.165.0 uniquement",
-        ));
+        return Err(invalid("Audit driver qualified for Codex 0.165.0 only"));
     }
     crate::auth::remote_prepare()?;
     let mut command = Command::new(codex);
@@ -270,7 +268,7 @@ fn validate_remote_limits(cpu_seconds: u64, processes: u32, file_bytes: u64) -> 
         || file_bytes == 0
         || file_bytes == libc::RLIM_INFINITY
     {
-        return Err(invalid("Limites d’agent positives et finies obligatoires"));
+        return Err(invalid("Positive finite agent limits are required"));
     }
     Ok(())
 }
@@ -299,23 +297,23 @@ fn validate_agent_scratch(
 ) -> Result<()> {
     ensure!(
         owner == 10001 && mode & 0o7777 == 0o700,
-        "Scratch agent privé UID10001 mode0700 obligatoire"
+        "Private agent scratch with UID10001 and mode0700 is required"
     );
     ensure!(
         stat.f_type == libc::TMPFS_MAGIC,
-        "Scratch agent tmpfs obligatoire"
+        "Agent scratch must use tmpfs"
     );
     ensure!(
         stat.f_bsize > 0 && stat.f_blocks > 0 && stat.f_files > 0 && stat.f_files < u64::MAX,
-        "Quotas tmpfs agent finis obligatoires"
+        "Finite agent tmpfs quotas required"
     );
     let bytes = stat
         .f_blocks
         .checked_mul(stat.f_bsize as u64)
-        .ok_or_else(|| invalid("Quota tmpfs agent débordant"))?;
+        .ok_or_else(|| invalid("Agent tmpfs quota overflow"))?;
     ensure!(
         bytes <= file_bytes,
-        "Quota disque agent supérieur à la limite demandée"
+        "Agent disk quota exceeds the requested limit"
     );
     Ok(())
 }
@@ -332,23 +330,23 @@ fn verify_agent_access(
     let witness = tempfile::NamedTempFile::new_in(pinned)?;
     ensure!(
         witness.as_file().metadata()?.len() == 0,
-        "Témoin scratch agent non vide"
+        "Agent scratch probe is not empty"
     );
     witness.close()?;
     require_permission_denied(
         tempfile::tempfile_in(temporary),
-        "Écriture hors scratch agent",
+        "Write outside agent scratch",
     )?;
-    require_permission_denied(std::fs::read_dir(source), "Lecture des sources par l’agent")
+    require_permission_denied(std::fs::read_dir(source), "Agent source read")
 }
 
 fn require_permission_denied<T>(attempt: std::io::Result<T>, operation: &str) -> Result<()> {
     match attempt {
         Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => Ok(()),
         Err(error) => Err(crate::error::Error::Io(error)
-            .context(format!("{operation} : refus PermissionDenied obligatoire"))),
+            .context(format!("{operation}: PermissionDenied refusal required"))),
         Ok(_) => Err(invalid(format!(
-            "{operation} autorisée ; confinement effectif insuffisant"
+            "{operation} allowed; effective confinement insufficient"
         ))),
     }
 }
@@ -526,7 +524,7 @@ mod tests {
         let scratch_path = root.join("scratch");
         let temporary = root.join("temporary");
         let source = root.join("source");
-        let case = std::env::var(CASE).map_err(|_| invalid("Cas de test absent"))?;
+        let case = std::env::var(CASE).map_err(|_| invalid("Missing test case"))?;
         let scratch = crate::files::open_directory(&scratch_path)?;
         let rights = (1 << 1) | (1 << 3) | (1 << 5) | (1 << 8);
         let mut rules = vec![(

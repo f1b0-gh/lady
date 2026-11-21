@@ -40,7 +40,7 @@ pub fn project_sources(root: &Path) -> Result<Sources> {
         let name = entry
             .file_name()
             .into_string()
-            .map_err(|_| invalid("Nom source non UTF-8".into()))?;
+            .map_err(|_| invalid("Non-UTF-8 source name".into()))?;
         relative_path(&name)?;
         let is_directory = entry.file_type()?.is_dir();
         let excluded = if is_directory {
@@ -83,7 +83,7 @@ pub fn scan_snapshot(root: &Path, snapshot: &Snapshot) -> Result<Report> {
         let bytes = files::read_limited(&root.join(name), 16 * 1024 * 1024)?;
         ensure!(
             files::hash(&bytes) == record.sha256,
-            "Source modifiée pendant scan : {name}"
+            "Source changed during scan: {name}"
         );
         report.inputs.insert(name.clone(), record.sha256.clone());
         if bytes.len() > MANIFEST_LIMIT {
@@ -91,7 +91,7 @@ pub fn scan_snapshot(root: &Path, snapshot: &Snapshot) -> Result<Report> {
                 &mut report.diagnostics,
                 "file_limit",
                 name,
-                "Manifest ou verrou supérieur à 8 Mio",
+                "Manifest or lockfile exceeds 8 MiB",
                 true,
             );
             continue;
@@ -104,7 +104,7 @@ pub fn scan_snapshot(root: &Path, snapshot: &Snapshot) -> Result<Report> {
                 &mut report.diagnostics,
                 "invalid_utf8",
                 name,
-                "Entrée non UTF-8",
+                "Non-UTF-8 input",
                 true,
             ),
         }
@@ -129,7 +129,7 @@ pub fn scan_snapshot(root: &Path, snapshot: &Snapshot) -> Result<Report> {
                     &mut report.diagnostics,
                     "unsupported_manifest",
                     name,
-                    "Projet Python historique : métadonnées statiques pyproject.toml requises",
+                    "Legacy Python project: static pyproject.toml metadata required",
                     true,
                 );
                 continue;
@@ -203,13 +203,13 @@ fn ancestors(name: &str, file: &str) -> Vec<String> {
     result
 }
 pub fn parse_toml(content: &str) -> Result<toml::Value> {
-    toml::from_str(content).map_err(|e| invalid(format!("TOML invalide : {e}")))
+    toml::from_str(content).map_err(|e| invalid(format!("Invalid TOML: {e}")))
 }
 fn purl(kind: &str, name: &str, version: &str) -> Result<String> {
     let (namespace, name) = if kind == "npm" && name.starts_with('@') {
         let (namespace, name) = name
             .split_once('/')
-            .ok_or_else(|| invalid("Nom npm scoped invalide".into()))?;
+            .ok_or_else(|| invalid("Invalid scoped npm name".into()))?;
         (Some(namespace), name)
     } else {
         (None, name)
@@ -229,7 +229,7 @@ fn missing_lock(project: &Project, diagnostics: &mut Vec<Diagnostic>) {
         "missing_lockfile",
         &project.manifest,
         format!(
-            "Dépendances déclarées sans verrou {} ; résolution explicite nécessaire",
+            "Dependencies declared without lockfile {}; explicit resolution required",
             project.manager
         ),
         false,

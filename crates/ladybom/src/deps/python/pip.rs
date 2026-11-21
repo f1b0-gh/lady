@@ -41,7 +41,7 @@ pub(super) fn try_parse(
         diagnostics,
         "pip_inventory_incomplete",
         name,
-        "Inventaire pip plat : provenance, sélection des artefacts et dépendances transitives non vérifiées ; les marqueurs ne sont pas évalués",
+        "Flat pip inventory: provenance, artifact selection and transitive dependencies are unverified; markers are not evaluated",
         true,
     );
     let mut seen = BTreeMap::<(String, String, Option<String>), usize>::new();
@@ -59,7 +59,7 @@ pub(super) fn try_parse(
             reject(
                 diagnostics,
                 "unsupported_requirement_continuation",
-                "Continuation pip ambiguë non interprétée",
+                "Ambiguous pip continuation not interpreted",
             );
             continue;
         }
@@ -67,7 +67,7 @@ pub(super) fn try_parse(
             reject(
                 diagnostics,
                 "unsupported_requirement_environment",
-                "Expansion d'environnement non autorisée dans le scan",
+                "Environment expansion is not allowed during scanning",
             );
             continue;
         }
@@ -78,7 +78,7 @@ pub(super) fn try_parse(
             reject(
                 diagnostics,
                 "unsupported_requirement_option",
-                "Directive pip non appliquée ; aucun fichier ni index n'est suivi",
+                "Pip directive not applied; no file or index is followed",
             );
             continue;
         }
@@ -124,44 +124,44 @@ pub(super) fn try_parse(
 }
 
 fn parse_pin(text: &str) -> std::result::Result<Pin, &'static str> {
-    let start = option_start(text).ok_or("Empreinte de distribution absente")?;
+    let start = option_start(text).ok_or("Missing distribution hash")?;
     let requirement =
-        requirement(text[..start].trim(), "runtime").map_err(|_| "Exigence PEP 508 invalide")?;
+        requirement(text[..start].trim(), "runtime").map_err(|_| "Invalid PEP 508 requirement")?;
     if !requirement.source.is_null() {
-        return Err("Source directe non qualifiée comme identité registry");
+        return Err("Direct source is not qualified as a registry identity");
     }
     let specifiers = requirement
         .constraint
         .parse::<pep440_rs::VersionSpecifiers>()
-        .map_err(|_| "Contrainte PEP 440 invalide")?;
+        .map_err(|_| "Invalid PEP 440 constraint")?;
     if specifiers.len() != 1 || *specifiers[0].operator() != pep440_rs::Operator::Equal {
-        return Err("Une égalité PEP 440 concrète sans joker est requise");
+        return Err("A concrete PEP 440 equality without wildcards is required");
     }
     let version = specifiers[0].version().to_string();
     let mut options = text[start..].split_whitespace();
     let mut hashes = Vec::new();
     while let Some(option) = options.next() {
         let value = if option == "--hash" {
-            options.next().ok_or("Valeur de hash absente")?
+            options.next().ok_or("Missing hash value")?
         } else {
             option
                 .strip_prefix("--hash=")
-                .ok_or("Option de ligne pip non prise en charge")?
+                .ok_or("Unsupported pip line option")?
         };
-        let (algorithm, digest) = value.split_once(':').ok_or("Hash sans algorithme")?;
+        let (algorithm, digest) = value.split_once(':').ok_or("Hash without an algorithm")?;
         let length = match algorithm {
             "sha256" => 64,
             "sha384" => 96,
             "sha512" => 128,
-            _ => return Err("Algorithme de hash non pris en charge"),
+            _ => return Err("Unsupported hash algorithm"),
         };
         if digest.len() != length || !digest.bytes().all(|b| b.is_ascii_hexdigit()) {
-            return Err("Empreinte de longueur ou syntaxe invalide");
+            return Err("Invalid hash length or syntax");
         }
         hashes.push(format!("{algorithm}:{}", digest.to_ascii_lowercase()));
     }
     if hashes.is_empty() {
-        return Err("Empreinte de distribution absente");
+        return Err("Missing distribution hash");
     }
     Ok(Pin {
         requirement,

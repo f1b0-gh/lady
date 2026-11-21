@@ -59,13 +59,13 @@ fn build(
         for value in [&assessment.report_digest, &assessment.snapshot_digest] {
             ensure!(
                 value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()),
-                "Empreinte VEX publique invalide"
+                "Invalid public VEX digest"
             );
         }
     }
     let uuid = sbom_serial
         .strip_prefix("urn:uuid:")
-        .ok_or_else(|| invalid("Identité SBOM UUID requise".into()))?;
+        .ok_or_else(|| invalid("SBOM UUID identity required".into()))?;
     ensure!(
         uuid.len() == 36
             && uuid
@@ -76,7 +76,7 @@ fn build(
                 } else {
                     byte.is_ascii_hexdigit()
                 }),
-        "Identité SBOM UUID invalide"
+        "Invalid SBOM UUID identity"
     );
     let coverage = if private {
         serde_json::to_value(&assessment.coverage)?
@@ -110,7 +110,7 @@ fn build(
                     .id
                     .bytes()
                     .all(|byte| byte.is_ascii_alphanumeric() || b"-._/".contains(&byte)),
-                "Identifiant de résultat non publiable sans réécriture"
+                "Result identifier cannot be published without rewriting"
             );
             ensure!(
                 finding
@@ -120,7 +120,7 @@ fn build(
                         && suffix
                             .bytes()
                             .all(|byte| byte.is_ascii_alphanumeric() || b"-._".contains(&byte))),
-                "Référence de composant publique non qualifiée"
+                "Unqualified public component reference"
             );
             for id in finding.advisory_ids.iter().chain(&finding.aliases) {
                 ensure!(
@@ -129,12 +129,12 @@ fn build(
                         && id
                             .bytes()
                             .all(|byte| byte.is_ascii_alphanumeric() || b"-._".contains(&byte)),
-                    "Identifiant d’avis non publiable sans réécriture"
+                    "Advisory identifier cannot be published without rewriting"
                 );
                 if profile == Profile::LocalComponents {
                     ensure!(
                         advisory_source(id, assessment, false).name.is_some(),
-                        "Autorité d’avis non qualifiée pour les références VEX locales publiques"
+                        "Unqualified advisory authority for public local VEX references"
                     );
                 }
             }
@@ -142,7 +142,7 @@ fn build(
         let qualification = &qualifications[&finding.id];
         ensure!(
             !finding.component_ref.contains(['#', ' ', '\r', '\n', '\t']),
-            "Référence de composant incompatible avec BOM-Link"
+            "Component reference incompatible with BOM-Link"
         );
         let mut vulnerability = Vulnerability::new(Some(finding.id.clone()));
         vulnerability.id = finding
@@ -314,12 +314,12 @@ fn finalize(mut bom: Bom) -> Result<Bom> {
     let mut payload = Vec::new();
     bom.clone()
         .output_as_json_v1_5(&mut payload)
-        .map_err(|error| invalid(format!("Sérialisation VEX impossible : {error}")))?;
+        .map_err(|error| invalid(format!("Cannot serialize VEX: {error}")))?;
     let serial = cyclonedx::serial_from_digest(&crate::files::hash(&payload))?;
     bom.serial_number =
-        Some(UrnUuid::new(serial).map_err(|_| invalid("Identité VEX invalide".into()))?);
+        Some(UrnUuid::new(serial).map_err(|_| invalid("Invalid VEX identity".into()))?);
     let validation = bom.validate_version(SpecVersion::V1_5);
-    ensure!(validation.passed(), "Export VEX invalide : {validation:?}");
+    ensure!(validation.passed(), "Invalid VEX export: {validation:?}");
     Ok(bom)
 }
 
@@ -333,7 +333,7 @@ pub fn write_json(
         .output_as_json_v1_5(&mut writer)
         .map_err(|error| match error {
             JsonWriteError::JsonElementWriteError { error } => Error::Json(error),
-            other => invalid(format!("Sérialisation VEX impossible : {other}")),
+            other => invalid(format!("Cannot serialize VEX: {other}")),
         })?;
     writeln!(writer)?;
     Ok(())
@@ -377,17 +377,17 @@ pub fn from_report_with_export_profile(
     report.validate()?;
     ensure!(
         digest(report)? == assessment.report_digest,
-        "Analyse liée à un autre rapport"
+        "Assessment bound to another report"
     );
     ensure!(
         cyclonedx::document_serial(report)? == assessment.sbom_serial,
-        "Analyse liée à un autre SBOM"
+        "Assessment bound to another SBOM"
     );
     let sbom = cyclonedx::from_report_with_profile(report, export_profile)?;
     let sbom_serial = sbom
         .serial_number
         .as_ref()
-        .ok_or_else(|| invalid("Identité SBOM absente".into()))?
+        .ok_or_else(|| invalid("Missing SBOM identity".into()))?
         .to_string();
     let mut native = BTreeMap::new();
     let mut purls: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
@@ -422,7 +422,7 @@ pub fn from_report_with_export_profile(
     for finding in &assessment.findings {
         let (project, component) = native
             .get(&finding.component_ref)
-            .ok_or_else(|| invalid("Résultat sans composant dans le rapport".into()))?;
+            .ok_or_else(|| invalid("Result has no component in the report".into()))?;
         ensure!(
             finding.purl == component.purl
                 && finding.name == component.name
@@ -430,14 +430,14 @@ pub fn from_report_with_export_profile(
                 && finding.context == component.context
                 && finding.manifest == project.manifest
                 && finding.lockfile == project.lockfile,
-            "Identité du résultat différente du composant du rapport"
+            "Result identity differs from the report component"
         );
         let identity = super::assess::public_identity(project, component);
         ensure!(
             identity
                 .as_ref()
                 .is_some_and(|(ecosystem, _)| *ecosystem == finding.ecosystem),
-            "Source ou identité publique ambiguë pour le résultat"
+            "Ambiguous public identity or source for the result"
         );
         if profile == Profile::LocalComponents {
             let key = (
@@ -447,7 +447,7 @@ pub fn from_report_with_export_profile(
             );
             ensure!(
                 packages.get(&key).is_some_and(|refs| refs.len() == 1),
-                "Identité de paquet ambiguë : plusieurs contextes ou sources"
+                "Ambiguous package identity: multiple contexts or sources"
             );
             ensure!(
                 component
@@ -455,11 +455,11 @@ pub fn from_report_with_export_profile(
                     .as_deref()
                     .and_then(|purl| purls.get(purl))
                     .is_some_and(|refs| refs.len() == 1),
-                "PURL ambigu : plusieurs contextes ou sources ; séparer les inventaires"
+                "Ambiguous PURL: multiple contexts or sources; separate the inventories"
             );
             ensure!(
                 !finding.advisory_ids.is_empty(),
-                "Résultat sans identifiant d’avis"
+                "Result has no advisory identifier"
             );
             let aliases: BTreeSet<_> = finding
                 .advisory_ids
@@ -469,7 +469,7 @@ pub fn from_report_with_export_profile(
             for alias in aliases {
                 ensure!(
                     identities.insert((&finding.component_ref, alias)),
-                    "Résultats ambigus pour le même composant et le même avis"
+                    "Ambiguous results for the same component and advisory"
                 );
             }
         }
@@ -569,7 +569,7 @@ pub fn write_json_with_export_profile(
         .output_as_json_v1_5(&mut writer)
         .map_err(|error| match error {
             JsonWriteError::JsonElementWriteError { error } => Error::Json(error),
-            other => invalid(format!("Sérialisation VEX impossible : {other}")),
+            other => invalid(format!("Cannot serialize VEX: {other}")),
         })?;
     writeln!(writer)?;
     Ok(())

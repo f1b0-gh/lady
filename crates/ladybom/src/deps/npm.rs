@@ -14,7 +14,7 @@ pub(super) fn parse(
 ) -> Result<Project> {
     let manifest = crate::json::parse(content.as_bytes())?;
     if !manifest.is_object() {
-        return Err(invalid("Objet package.json requis".into()));
+        return Err(invalid("package.json object required".into()));
     }
     let mut project = Project::new("npm", "npm", name);
     project.manifest_package = local::manifest_package(&manifest);
@@ -27,14 +27,14 @@ pub(super) fn parse(
         if let Some(deps) = manifest.get(field) {
             for (name, spec) in deps
                 .as_object()
-                .ok_or_else(|| invalid(format!("Objet npm requis : {field}")))?
+                .ok_or_else(|| invalid(format!("Npm object required: {field}")))?
             {
                 project.requirements.push(Requirement {
                     declared_name: None,
                     name: name.clone(),
                     constraint: spec
                         .as_str()
-                        .ok_or_else(|| invalid("Contrainte npm textuelle requise".into()))?
+                        .ok_or_else(|| invalid("Npm constraint must be a string".into()))?
                         .into(),
                     kind: kind.into(),
                     marker: None,
@@ -47,11 +47,11 @@ pub(super) fn parse(
     if let Some(engines) = manifest.get("engines") {
         let engines = engines
             .as_object()
-            .ok_or_else(|| invalid("Objet engines requis".into()))?;
+            .ok_or_else(|| invalid("engines object required".into()))?;
         for (tool, constraint) in engines {
             let constraint = constraint
                 .as_str()
-                .ok_or_else(|| invalid("Contrainte engines textuelle requise".into()))?;
+                .ok_or_else(|| invalid("engines constraint must be a string".into()))?;
             project.tool(tool, constraint, name);
         }
     }
@@ -64,13 +64,13 @@ pub(super) fn parse(
                     diagnostics,
                     "unsupported_manager",
                     name,
-                    format!("Gestionnaire {manager} déclaré ; préparation npm refusée"),
+                    format!("Declared package manager {manager}; npm preparation refused"),
                     true,
                 );
             }
         } else {
             return Err(invalid(
-                "packageManager doit identifier un gestionnaire et sa version".into(),
+                "packageManager must identify a package manager and its version".into(),
             ));
         }
     }
@@ -95,11 +95,11 @@ pub(super) fn parse(
     if let Some(content) = inputs.get(&lock_name) {
         let lock = crate::json::parse(content.as_bytes())?;
         if !matches!(lock["lockfileVersion"].as_u64(), Some(2 | 3)) {
-            return Err(invalid("package-lock.json version 2 ou 3 requise".into()));
+            return Err(invalid("package-lock.json version 2 or 3 required".into()));
         }
         let packages = lock["packages"]
             .as_object()
-            .ok_or_else(|| invalid("Objet packages absent du verrou npm".into()))?;
+            .ok_or_else(|| invalid("packages object missing from the npm lockfile".into()))?;
         for (path, package) in packages {
             if path.is_empty() {
                 continue;
@@ -158,7 +158,7 @@ pub(super) fn parse(
                     diagnostics,
                     "unsupported_lockfile",
                     &path,
-                    "Verrou d’un autre gestionnaire ; résolution npm non supposée",
+                    "Lockfile from another package manager; npm resolution is not assumed",
                     true,
                 );
             }
@@ -182,7 +182,7 @@ fn workspace_lock(name: &str, inputs: &Inputs) -> Result<Option<String>> {
         };
         let prefix = ancestor
             .strip_suffix("package.json")
-            .ok_or_else(|| invalid("Manifest npm invalide".into()))?;
+            .ok_or_else(|| invalid("Invalid npm manifest".into()))?;
         let declared = members.iter().filter_map(Value::as_str).any(|member| {
             crate::config::relative_path(member).is_ok()
                 && !member.chars().any(|c| "*?[]{}!\\():".contains(c))
@@ -200,7 +200,7 @@ fn workspace_lock(name: &str, inputs: &Inputs) -> Result<Option<String>> {
         if inputs.contains_key(&lock) {
             if inherited.is_some() {
                 return Err(invalid(format!(
-                    "Appartenance workspace npm ambiguë : {name}"
+                    "Ambiguous npm workspace membership: {name}"
                 )));
             }
             inherited = Some(lock);

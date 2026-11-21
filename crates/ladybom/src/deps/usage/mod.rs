@@ -54,7 +54,7 @@ pub fn analyze(root: &Path, graph: &graph::Graph, manifests: &[String]) -> Resul
     graph.validate()?;
     ensure!(
         !manifests.is_empty() && manifests.len() <= 64,
-        "Entre 1 et 64 manifests d’usage requis"
+        "Between 1 and 64 usage manifests required"
     );
     let mut sources = SourcesRead::collect(root, graph, manifests)?;
     for (path, hash) in &graph.inventory.inputs {
@@ -64,7 +64,7 @@ pub fn analyze(root: &Path, graph: &graph::Graph, manifests: &[String]) -> Resul
                 .snapshot
                 .get(path)
                 .is_some_and(|r| r.sha256 == *hash),
-            "Inventaire périmé ou source absente : {path}"
+            "Stale inventory or missing source: {path}"
         );
     }
     let mut selected = BTreeSet::new();
@@ -73,7 +73,7 @@ pub fn analyze(root: &Path, graph: &graph::Graph, manifests: &[String]) -> Resul
         crate::config::relative_path(manifest)?;
         ensure!(
             selected.insert(manifest),
-            "Manifest d’usage dupliqué : {manifest}"
+            "Duplicate usage manifest: {manifest}"
         );
         let projects: Vec<_> = graph
             .inventory
@@ -81,11 +81,14 @@ pub fn analyze(root: &Path, graph: &graph::Graph, manifests: &[String]) -> Resul
             .iter()
             .filter(|p| p.manifest == *manifest)
             .collect();
-        ensure!(projects.len() == 1, "Projet absent ou ambigu : {manifest}");
+        ensure!(
+            projects.len() == 1,
+            "Missing or ambiguous project: {manifest}"
+        );
         let project = projects[0];
         let text = sources
             .text(manifest)
-            .ok_or_else(|| invalid(format!("Manifest absent ou non UTF-8 : {manifest}")))?;
+            .ok_or_else(|| invalid(format!("Missing or non-UTF-8 manifest: {manifest}")))?;
         let document = match project.ecosystem.as_str() {
             "npm" => crate::json::parse(text.as_bytes())?,
             "rust" | "python" => serde_json::to_value(super::parse_toml(text)?)?,
@@ -95,14 +98,12 @@ pub fn analyze(root: &Path, graph: &graph::Graph, manifests: &[String]) -> Resul
         for (declaration, requirement) in declarations(project, &document, &sources)? {
             let mut limitations = coverage.limitations.clone();
             limitations.push(
-                "Analyse lexicale partielle ; absence de référence ≠ autorisation de suppression"
-                    .into(),
+                "Partial lexical analysis; absence of references does not authorize removal".into(),
             );
             let mut uncertain = !coverage.limitations.is_empty() || !graph.inventory.complete;
             if !graph.inventory.complete {
-                limitations.push(
-                    "Inventaire incomplet ; déclarations ou métadonnées non couvertes".into(),
-                );
+                limitations
+                    .push("Incomplete inventory; declarations or metadata not covered".into());
             }
             let mut evidence = Vec::new();
             let name = if project.ecosystem == "rust" {
@@ -138,7 +139,7 @@ pub fn analyze(root: &Path, graph: &graph::Graph, manifests: &[String]) -> Resul
                 if let Some(paths) = coverage.references.get(module) {
                     evidence.extend(paths.iter().map(|p| {
                         format!(
-                            "Référence lexicale {module} : {p} (sha256 {})",
+                            "Lexical reference {module}: {p} (sha256 {})",
                             sources.snapshot[p].sha256
                         )
                     }));
@@ -151,9 +152,8 @@ pub fn analyze(root: &Path, graph: &graph::Graph, manifests: &[String]) -> Resul
                 || requirement.kind.ends_with(":include")
             {
                 uncertain = true;
-                limitations.push(
-                    "Conditions, features, groupe ou dépendance de construction non évalués".into(),
-                );
+                limitations
+                    .push("Conditions, features, group or build dependency not evaluated".into());
             }
             match project.ecosystem.as_str() {
                 "rust" => {
@@ -161,8 +161,9 @@ pub fn analyze(root: &Path, graph: &graph::Graph, manifests: &[String]) -> Resul
                         || coverage.features.contains(&declaration.name)
                     {
                         uncertain = true;
-                        limitations
-                            .push("Activation Cargo par feature ou dépendance optionnelle".into());
+                        limitations.push(
+                            "Cargo activation through a feature or optional dependency".into(),
+                        );
                     }
                 }
                 "npm" => {
@@ -182,22 +183,25 @@ pub fn analyze(root: &Path, graph: &graph::Graph, manifests: &[String]) -> Resul
                         })
                     {
                         uncertain = true;
-                        limitations.push("Usage npm par outil, types, pair, plugin ou chargement natif non résolu".into());
+                        limitations.push("Unresolved npm usage through tools, types, peers, plugins or native loading".into());
                     }
                 }
                 "python" => {
                     if !mapping_valid || modules.is_empty() {
                         uncertain = true;
-                        limitations.push("Correspondance distribution/module Python non attestée ; seule une référence positive est retenue".into());
+                        limitations.push("Python distribution/module correspondence is not attested; only positive references are retained".into());
                     }
                     if declaration.kind != "runtime" {
                         uncertain = true;
-                        limitations.push("Dépendance Python de développement ou construction potentiellement utilisée hors imports".into());
+                        limitations.push(
+                            "Python development or build dependency may be used outside imports"
+                                .into(),
+                        );
                     }
                 }
                 _ => {
                     uncertain = true;
-                    limitations.push("Écosystème non pris en charge".into());
+                    limitations.push("Unsupported ecosystem".into());
                 }
             }
             let status = if !evidence.is_empty() {
@@ -208,12 +212,12 @@ pub fn analyze(root: &Path, graph: &graph::Graph, manifests: &[String]) -> Resul
                 UsageStatus::Candidate
             };
             if evidence.is_empty() {
-                evidence.push("Aucune référence lexicale dans les sources couvertes".into());
+                evidence.push("No lexical reference in the covered sources".into());
             }
             let (targets, root_ids) = roots(graph, project, &requirement)?;
             if root_ids.is_empty() {
                 limitations
-                    .push("Racine du graphe absente ou ambiguë ; simulation non qualifiée".into());
+                    .push("Missing or ambiguous graph root; simulation is not qualified".into());
             }
             findings.push(Finding {
                 declaration,
@@ -261,7 +265,7 @@ fn declarations(
                     let effective = if spec.get("workspace") == Some(&Value::Bool(true)) {
                         let inherited =
                             workspace_spec(project, alias, sources)?.ok_or_else(|| {
-                                invalid(format!("Dépendance workspace absente : {alias}"))
+                                invalid(format!("Missing workspace dependency: {alias}"))
                             })?;
                         let mut merged = match inherited {
                             Value::String(version) => serde_json::json!({"version": version}),
@@ -301,7 +305,7 @@ fn declarations(
             }
             ensure!(
                 !names.is_empty(),
-                "Déclaration Cargo non associée : {}",
+                "Unmatched Cargo declaration: {}",
                 requirement.name
             );
         }
@@ -415,7 +419,7 @@ fn coverage(project: &Project, document: &Value, sources: &mut SourcesRead) -> R
             for target in entries {
                 if let Some(path) = target.get("path") {
                     let Some(path) = path.as_str() else {
-                        result.uncertain("Chemin de cible Cargo non textuel");
+                        result.uncertain("Cargo target path is not a string");
                         continue;
                     };
                     let path = resolve(base, path)?;
@@ -450,7 +454,7 @@ fn coverage(project: &Project, document: &Value, sources: &mut SourcesRead) -> R
         if build.is_some_and(|v| v != &Value::Bool(false))
             || sources.data.contains_key(&resolve(base, "build.rs")?)
         {
-            result.uncertain("Script Cargo build.rs ou génération de code non exécuté");
+            result.uncertain("Cargo build.rs script or code generation not executed");
             if let Some(path) = build.and_then(Value::as_str) {
                 queue.insert(resolve(base, path)?);
             }
@@ -470,7 +474,9 @@ fn coverage(project: &Project, document: &Value, sources: &mut SourcesRead) -> R
             "typings",
         ] {
             if document.get(field).is_some() {
-                result.uncertain(format!("Configuration npm {field} non exécutée ni résolue"));
+                result.uncertain(format!(
+                    "Npm configuration {field} neither executed nor resolved"
+                ));
             }
         }
     }
@@ -502,12 +508,12 @@ fn coverage(project: &Project, document: &Value, sources: &mut SourcesRead) -> R
         };
         if unsupported {
             result.uncertain(format!(
-                "Entrée de configuration, native ou langage non couverte : {path}"
+                "Uncovered configuration, native or language input: {path}"
             ));
         }
     }
     if queue.is_empty() {
-        result.uncertain("Aucune source prise en charge dans le projet");
+        result.uncertain("No supported source in the project");
     }
     let mut visited = BTreeSet::new();
     while let Some(path) = queue.pop_first() {
@@ -518,13 +524,13 @@ fn coverage(project: &Project, document: &Value, sources: &mut SourcesRead) -> R
             sources.rust_target(&path)?;
         }
         let Some(text) = sources.text(&path) else {
-            result.uncertain(format!("Source absente, exclue ou non UTF-8 : {path}"));
+            result.uncertain(format!("Missing, excluded or non-UTF-8 source: {path}"));
             continue;
         };
         let (tokens, uncertain) = lex::tokens(text, &project.ecosystem);
         if uncertain {
             result.uncertain(format!(
-                "Syntaxe lexicale ou chaîne dynamique non résolue : {path}"
+                "Unresolved lexical syntax or dynamic string: {path}"
             ));
         }
         match project.ecosystem.as_str() {
@@ -576,13 +582,13 @@ fn rust_tokens(
                     .any(|p| sources.data.contains_key(p));
                 if !has_path && !exists {
                     coverage.uncertain(format!(
-                        "Module Rust absent ou chemin non résolu : {path} : {name}"
+                        "Missing Rust module or unresolved path: {path}: {name}"
                     ));
                 }
             }
         }
         if token.is("macro_rules") {
-            coverage.uncertain(format!("Expansion macro non évaluée : {path}"));
+            coverage.uncertain(format!("Macro expansion not evaluated: {path}"));
         }
         if token.is("path") && tokens.get(i + 1).is_some_and(|t| t.punct(b'=')) {
             if let Some(target) = tokens.get(i + 2).and_then(lex::Token::string) {
@@ -599,7 +605,7 @@ fn rust_tokens(
             {
                 queue.insert(resolve(parent(path), target)?);
             } else {
-                coverage.uncertain(format!("include! généré ou dynamique : {path}"));
+                coverage.uncertain(format!("Generated or dynamic include!: {path}"));
             }
         }
     }
@@ -628,7 +634,9 @@ fn npm_tokens(tokens: &[lex::Token], path: &str, coverage: &mut Coverage) {
             }
         }
         if token.is("eval") || token.is("createRequire") || token.is("process") {
-            coverage.uncertain(format!("Entrée npm dynamique ou environnementale : {path}"));
+            coverage.uncertain(format!(
+                "Dynamic or environment-dependent npm input: {path}"
+            ));
         }
     }
 }
@@ -659,7 +667,7 @@ fn python_tokens(tokens: &[lex::Token], path: &str, coverage: &mut Coverage) {
             || token.is("eval")
             || token.is("entry_points")
         {
-            coverage.uncertain(format!("Chargement Python dynamique ou plugin : {path}"));
+            coverage.uncertain(format!("Dynamic Python loading or plugin: {path}"));
         }
     }
 }

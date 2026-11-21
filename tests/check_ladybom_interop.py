@@ -16,7 +16,7 @@ def unique_pairs(pairs):
     result = {}
     for key, value in pairs:
         if key in result:
-            raise ValueError(f"Clé JSON dupliquée : {key}")
+            raise ValueError(f"Duplicate JSON key: {key}")
         result[key] = value
     return result
 
@@ -25,7 +25,7 @@ def read(path):
     with Path(path).open("rb") as stream:
         data = stream.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
-        raise ValueError("Document supérieur à 64 Mio")
+        raise ValueError("Document exceeds 64 MiB")
     return json.loads(data, object_pairs_hook=unique_pairs)
 
 
@@ -36,9 +36,9 @@ def validators():
     for entry in manifest["resources"]:
         path = FIXTURES / entry["file"]
         if path.parent != FIXTURES:
-            raise ValueError("Chemin de ressource invalide")
+            raise ValueError("Invalid resource path")
         if hashlib.sha256(path.read_bytes()).hexdigest() != entry["sha256"]:
-            raise ValueError(f"Empreinte divergente : {path.name}")
+            raise ValueError(f"Hash mismatch: {path.name}")
         if path.suffix != ".json":
             continue
         schema = read(path)
@@ -66,11 +66,11 @@ def validators():
     checker = jsonschema.FormatChecker()
     missing = formats - set(checker.checkers)
     if missing:
-        raise ValueError("Validation des formats indisponible : " + ", ".join(sorted(missing))
-                         + "; utiliser les dépendances épinglées de tests/requirements-interop.txt")
+        raise ValueError("Validation unavailable for formats: " + ", ".join(sorted(missing))
+                         + "; use the pinned dependencies in tests/requirements-interop.txt")
 
     def unavailable(uri):
-        raise ValueError(f"Résolution externe interdite : {uri}")
+        raise ValueError(f"External resolution forbidden: {uri}")
 
     from referencing import Registry, Resource
     from referencing.jsonschema import DRAFT7
@@ -95,7 +95,7 @@ def references(document):
         ref = component.get("bom-ref")
         if ref is not None:
             if ref in refs:
-                raise ValueError(f"Référence dupliquée : {ref}")
+                raise ValueError(f"Duplicate reference: {ref}")
             refs.add(ref)
         for child in component.get("components", []):
             visit(child)
@@ -106,11 +106,11 @@ def references(document):
         visit(component)
     for edge in document.get("dependencies", []):
         if edge["ref"] not in refs or any(ref not in refs for ref in edge.get("dependsOn", [])):
-            raise ValueError("Relation vers un composant absent")
+            raise ValueError("Relationship to a missing component")
     for finding in document.get("vulnerabilities", []):
         for target in finding.get("affects", []):
             if target["ref"] not in refs and not target["ref"].startswith("urn:cdx:"):
-                raise ValueError("VEX : référence locale absente")
+                raise ValueError("VEX: missing local reference")
 
 
 def compare(expected, actual):
@@ -136,7 +136,7 @@ def compare(expected, actual):
         for component in descendants(components):
             key = identity(component)
             if key in by_identity:
-                raise ValueError("Identité consommateur ambiguë ; séparer les inventaires")
+                raise ValueError("Ambiguous consumer identity; separate the inventories")
             by_identity[key] = component
             if "bom-ref" in component:
                 by_ref[component["bom-ref"]] = key
@@ -146,14 +146,14 @@ def compare(expected, actual):
     right, right_refs = index(actual)
     losses = []
     if identity(expected.get("metadata", {}).get("component", {})) != identity(actual.get("metadata", {}).get("component", {})):
-        losses.append("Racine applicative absente ou différente")
+        losses.append("Application root missing or different")
     if left.keys() != right.keys():
-        losses.append("Composants, racine ou versions différents")
+        losses.append("Components, root or versions differ")
     for identity in left.keys() & right.keys():
         for field in ["hashes", "licenses", "externalReferences", "properties"]:
             canonical = lambda value: sorted(json.dumps(item, sort_keys=True) for item in value)
             if canonical(left[identity].get(field, [])) != canonical(right[identity].get(field, [])):
-                losses.append(f"Métadonnées différentes : {identity!r} / {field}")
+                losses.append(f"Metadata differs: {identity!r} / {field}")
 
     def edges(document, refs):
         return {(refs[entry["ref"]], refs[target])
@@ -161,12 +161,12 @@ def compare(expected, actual):
                 for target in entry.get("dependsOn", [])}
 
     if edges(expected, left_refs) != edges(actual, right_refs):
-        losses.append("Relations différentes après import")
+        losses.append("Relationships differ after import")
     for field in ["compositions", "properties"]:
         if expected.get(field) != actual.get(field):
-            losses.append(f"Couverture ou diagnostics différents : {field}")
+            losses.append(f"Coverage or diagnostics differ: {field}")
     if expected.get("vulnerabilities") or actual.get("vulnerabilities"):
-        losses.append("Comparaison des décisions VEX non qualifiée par cet outil")
+        losses.append("VEX decision comparison is not qualified by this tool")
     return {"losses": losses, "equivalent_in_checked_scope": not losses,
             "server_qualification": "not_attested"}
 
@@ -174,32 +174,32 @@ def compare(expected, actual):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--schema", choices=["cyclonedx", "vxdf"], default="cyclonedx")
-    parser.add_argument("--compare", type=Path, help="SBOM relu depuis le serveur à comparer")
+    parser.add_argument("--compare", type=Path, help="SBOM read back from the server to compare")
     parser.add_argument("documents", nargs="*", type=Path)
     args = parser.parse_args()
     checks = validators()
     if args.compare and (args.schema != "cyclonedx" or len(args.documents) != 1):
-        parser.error("--compare exige un seul SBOM CycloneDX attendu")
+        parser.error("--compare requires a single expected CycloneDX SBOM")
     for path in args.documents + ([args.compare] if args.compare else []):
         value = read(path)
         checks[args.schema].validate(value)
         if args.schema == "cyclonedx":
             references(value)
         if args.schema == "cyclonedx":
-            print(f"Schéma valide et références locales vérifiées : {path}")
+            print(f"Schema valid and local references verified: {path}")
         else:
-            print(f"Schéma et formats VXDF valides ; références et preuves non qualifiées par ce contrôle : {path}")
+            print(f"VXDF schema and formats valid; references and evidence not qualified by this check: {path}")
         if args.schema == "cyclonedx" and any(
             target["ref"].startswith("urn:cdx:")
             for finding in value.get("vulnerabilities", [])
             for target in finding.get("affects", [])
         ):
-            print("BOM-Link externes non résolus par ce contrôle.")
+            print("External BOM-Links are not resolved by this check.")
     if args.compare:
         result = compare(read(args.documents[0]), read(args.compare))
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 2 if result["losses"] else 0
-    print("Empreintes des schémas vérifiées ; aucun serveur contacté.")
+    print("Schema hashes verified; no server contacted.")
     return 0
 
 
@@ -207,5 +207,5 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except (ValueError, OSError, KeyError, RecursionError, jsonschema.exceptions.ValidationError) as error:
-        print(f"Échec de validation : {error}", file=sys.stderr)
+        print(f"Validation failed: {error}", file=sys.stderr)
         sys.exit(2)

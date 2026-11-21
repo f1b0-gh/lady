@@ -29,21 +29,21 @@ def analysis_response(response, status, allow_absent=False):
     if status == 404 and allow_absent and response == "No analysis exists.":
         return {"analysis_absent": True, "http_status": 404}
     if status != 200 or not isinstance(response, dict):
-        raise ValueError("Analyse serveur absente ou invalide hors état initial explicitement vérifié")
+        raise ValueError("Server analysis missing or invalid outside the explicitly verified initial state")
     return response
 
 
 def public_bundle_artifact(root, descriptor):
     path = Path(descriptor["path"])
     if len(path.parts) != 2 or path.parts[0] != "public" or path.name in (".", ".."):
-        raise ValueError("Seuls les artefacts publics explicites peuvent être publiés")
+        raise ValueError("Only explicit public artifacts may be published")
     full = root / path
     if full.is_symlink() or full.parent.is_symlink():
-        raise ValueError("Lien symbolique d’artefact refusé")
+        raise ValueError("Artifact symlink rejected")
     with full.open("rb") as stream:
         data = stream.read(64 * 1024 * 1024 + 1)
     if len(data) > 64 * 1024 * 1024 or len(data) != descriptor["bytes"] or hashlib.sha256(data).hexdigest() != descriptor["sha256"]:
-        raise ValueError("Empreinte ou longueur de l’artefact divergente")
+        raise ValueError("Artifact hash or length mismatch")
     return json.loads(data, object_pairs_hook=unique_pairs)
 
 
@@ -53,10 +53,10 @@ def coverage_readback(source, actual):
     for component in source["components"]:
         properties = {p["name"]: p["value"] for p in component.get("properties", []) if p["name"].startswith("ladybom:coverage")}
         if not properties or "ladybom:coverage:sha256" not in properties:
-            raise ValueError("Recompiler Ladybom : les propriétés publiques de couverture sont absentes")
+            raise ValueError("Rebuild Ladybom: public coverage properties are missing")
         observed = {p["name"]: p["value"] for p in actual_by_id[component_identity(component)].get("properties", [])}
         if any(observed.get(key) != value for key, value in properties.items()):
-            raise ValueError("Perte des propriétés de couverture répliquées sur les composants")
+            raise ValueError("Coverage properties replicated on components were lost")
         coverage.append({"component": component_identity(component), "properties": properties})
     return coverage
 
@@ -64,7 +64,7 @@ def coverage_readback(source, actual):
 def external_vex(sbom, advisory, states, source="INTERNAL", aliases=()):
     components = [copy.deepcopy(c) for c in sbom["components"] if c.get("purl") in states]
     if len(components) != len(states):
-        raise ValueError("Composants de la fixture VEX absents ou ambigus")
+        raise ValueError("VEX fixture components missing or ambiguous")
     findings = []
     for component in components:
         finding = {
@@ -117,7 +117,7 @@ def qualify_extended(api, inputs, check):
     def components(project):
         rows = api.call("GET", f"/api/v1/component/project/{project['uuid']}?pageSize=1000")
         if not isinstance(rows, list) or len(rows) >= 1000:
-            raise ValueError("Pagination de composants non qualifiée")
+            raise ValueError("Component pagination not qualified")
         return rows
 
     def new_project(label, document):
@@ -146,14 +146,14 @@ def qualify_extended(api, inputs, check):
             "severity": "LOW", "aliases": list(aliases),
         }, allowed=(201,))
         if record.get("source") != "INTERNAL" or record.get("vulnId") != identifier:
-            raise ValueError("Avis synthétique créé sous une identité inattendue")
+            raise ValueError("Synthetic advisory created under an unexpected identity")
         return record
 
     def associate(project, vulnerability, purls):
         rows = components(project)
         targets = [row for row in rows if row.get("purl") in purls]
         if len(targets) != len(purls):
-            raise ValueError("Périmètre synthétique d’association ambigu")
+            raise ValueError("Ambiguous synthetic association scope")
         for component in targets:
             api.call("POST", f"/api/v1/vulnerability/{vulnerability['uuid']}/component/{component['uuid']}")
         return targets
@@ -168,7 +168,7 @@ def qualify_extended(api, inputs, check):
 
     version = api.call("GET", "/api/version")
     if version.get("version") != "5.2.1":
-        raise ValueError("Version serveur différente de 5.2.1")
+        raise ValueError("Server version differs from 5.2.1")
     result = {"qualification": "partial", "server_version": version, "inventories": {}, "projects": [],
               "limitations": ["Synthetic fixtures only; no real vulnerability or runtime activation established.",
                               "External consumer-behavior VEX fixtures are distinct from Ladybom exports.",
@@ -178,7 +178,7 @@ def qualify_extended(api, inputs, check):
     bundle = read(bundle_root / "manifest.json")
     save("partition-bundle-manifest.json", bundle)
     if len(bundle["partitions"]) != 2:
-        raise ValueError("Deux partitions de verrous attendues dans le dossier synthétique")
+        raise ValueError("Two lock partitions expected in the synthetic bundle")
     partition_results = []
     for index, partition in enumerate(bundle["partitions"]):
         source = public_bundle_artifact(bundle_root, partition["sbom"])
@@ -196,9 +196,9 @@ def qualify_extended(api, inputs, check):
         expected = sorted(component_identity(c) for c in source["components"])
         observed = sorted(component_identity(c) for c in actual["components"])
         if expected != observed or len(observed) != 3 or graph_projection(source)[0] != graph_projection(actual)[0]:
-            raise ValueError("Composants ou relations d’une partition perdus")
+            raise ValueError("Partition components or relationships lost")
         if actual["metadata"]["component"]["name"] != partition["project_name"] or actual["metadata"]["component"].get("version") != partition["project_version"]:
-            raise ValueError("Identité projet/version différente du manifeste du dossier")
+            raise ValueError("Project/version identity differs from the bundle manifest")
         partition_results.append({"partition_id": partition["partition_id"], "project": project["uuid"],
                                   "project_name": project["name"], "project_version": project["version"],
                                   "input_components": len(expected), "stored_components": len(observed),
@@ -219,11 +219,11 @@ def qualify_extended(api, inputs, check):
         expected_ids = sorted(component_identity(c) for c in source["components"])
         actual_ids = sorted(component_identity(c) for c in actual["components"])
         if expected_ids != actual_ids:
-            raise ValueError(f"Composants {ecosystem} différents après import")
+            raise ValueError(f"{ecosystem} components differ after import")
         expected_edges, expected_empty = graph_projection(source)
         actual_edges, actual_empty = graph_projection(actual)
         if expected_edges != actual_edges:
-            raise ValueError(f"Relations {ecosystem} différentes après correspondance racine/projet")
+            raise ValueError(f"{ecosystem} relationships differ after root/project mapping")
         coverage = coverage_readback(source, actual)
         result["inventories"][ecosystem] = {
             "project": project["uuid"], "components_preserved": True, "positive_relations_preserved": True,
@@ -243,15 +243,15 @@ def qualify_extended(api, inputs, check):
     scoped_vex = external_vex(source, vulnerability["vulnId"], {leaf1: "not_affected", leaf2: "exploitable"})
     observed = upload_vex("original-scope", original, scoped_vex)
     if state_for(observed, vulnerability, leaf1) != "not_affected" or state_for(observed, vulnerability, leaf2) != "exploitable":
-        raise ValueError("Portée de décision originale divergente")
+        raise ValueError("Original decision scope mismatch")
     other_before = save("downloaded-vex-other-before.cdx.json", read_vex(migrated))
     initial_findings = finding_states(other_before)
     for purl in [leaf1, leaf2]:
         if ("INTERNAL", vulnerability["vulnId"], purl) not in initial_findings:
-            raise ValueError("Finding initial absent : absence d’analyse non qualifiable")
+            raise ValueError("Initial finding missing: absence of analysis cannot be qualified")
     before = [analysis(migrated, c, vulnerability, allow_absent=True) for c in migrated_components]
     if any(row.get("analysisState") not in (None, "NOT_SET") or row.get("isSuppressed") is True for row in before):
-        raise ValueError("Décision propagée implicitement au second projet")
+        raise ValueError("Decision propagated implicitly to the second project")
     same_document = upload_vex("explicit-cross-project", migrated, copy.deepcopy(scoped_vex))
     transferred = state_for(same_document, vulnerability, leaf1) == "not_affected"
     result["project_scope"] = {
@@ -284,11 +284,11 @@ def qualify_extended(api, inputs, check):
     replaced = save("downloaded-version-replacement.cdx.json", read_bom(original))
     replaced_ids = {c.get("purl") for c in replaced["components"]}
     if leaf1 in replaced_ids or leaf3 not in replaced_ids:
-        raise ValueError("Remplacement de version non enregistré")
+        raise ValueError("Version replacement not recorded")
     api.upload("vex", original["uuid"], copy.deepcopy(scoped_vex))
     after_stale = save("downloaded-vex-after-stale-version.cdx.json", read_vex(original))
     if state_for(after_stale, vulnerability, leaf3) == "not_affected":
-        raise ValueError("Ancienne décision propagée à la nouvelle version")
+        raise ValueError("Old decision propagated to the new version")
     result["version_replacement"] = {
         "project": original["uuid"], "old_component_removed_from_current_sbom": True,
         "old_decision_not_transferred_to_new_version": True,
@@ -311,7 +311,7 @@ def qualify_extended(api, inputs, check):
             finding["analysis"]["detail"] = "Synthetic reviewed correction: fixture leaf version 3.0.0 is absent from the explicit affected versions [1.0.0, 2.0.0]. Historical association seeded only to exercise consumer RESOLVED. Not a Ladybom current-match decision."
     resolved_observed = upload_vex("resolved-corrected-version", fixed_project, resolved)
     if state_for(resolved_observed, vulnerability, leaf3) != "resolved" or state_for(resolved_observed, vulnerability, leaf2) != "exploitable":
-        raise ValueError("État resolved ou portée du composant non corrigé divergents")
+        raise ValueError("resolved state or uncorrected component scope mismatch")
     result["resolved"] = {"project": fixed_project["uuid"], "fixture_kind": "external reviewed synthetic correction",
                           "ladybom_corrected_assessment": "corrected-assessment.json", "states_preserved": True,
                           "analysis": [analysis(fixed_project, c, vulnerability) for c in fixed_components]}
@@ -344,7 +344,7 @@ def qualify_extended(api, inputs, check):
         observations.append({"variant": label, "claimed_source": namespace, "claimed_id": identifier,
                              "stored_state": state_for(observed, alias_vulnerability, leaf1), "analysis": trail})
     if observations[-1]["stored_state"] != "not_affected":
-        raise ValueError("La référence INTERNAL exacte ne retrouve pas son finding")
+        raise ValueError("Exact INTERNAL reference does not retrieve its finding")
     result["authorities_and_aliases"] = {"project": authorities["uuid"], "requested_aliases": alias_values,
                                         "persisted_advisory": stored, "observations": observations,
                                         "cross_authority_equivalence_not_inferred": True}

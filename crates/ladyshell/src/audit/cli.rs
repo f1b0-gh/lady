@@ -7,25 +7,25 @@ pub struct AuditArgs {
 }
 #[derive(Clone, Debug)]
 pub enum AuditCommand {
-    /// Préparer le périmètre et diagnostiquer les capacités manquantes.
+    /// Prepare the scope and diagnose missing capabilities.
     Plan {
         state: PathBuf,
         profile: Option<super::model::Profile>,
     },
-    /// Demander l’exécution ; refus si les garanties ne sont pas disponibles.
+    /// Request execution; refuse if required guarantees are unavailable.
     Run {
         state: PathBuf,
         profile: Option<super::model::Profile>,
     },
-    /// Vérifier hors ligne un run natif et ses preuves.
+    /// Verify a native run and its evidence offline.
     Verify { path: PathBuf },
-    /// Reprendre le nettoyage d’un run interrompu sans rejouer la cible.
+    /// Resume cleanup of an interrupted run without replaying the target.
     Recover { path: PathBuf },
-    /// Comparer deux runs sans transférer leurs confirmations.
+    /// Compare two runs without transferring their confirmations.
     Compare { old: PathBuf, new: PathBuf },
-    /// Publier un export vérifié dans un nouveau dossier.
+    /// Publish a verified export in a new directory.
     Export { path: PathBuf, destination: PathBuf },
-    /// Valider un document ; ne confirme pas une vulnérabilité.
+    /// Validate a document; does not confirm a vulnerability.
     Validate { mode: DocumentMode, path: PathBuf },
 }
 #[derive(Clone, Copy, Debug)]

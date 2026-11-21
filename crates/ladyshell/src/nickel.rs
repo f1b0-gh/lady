@@ -27,7 +27,7 @@ pub fn evaluate(entry: &Path, mission: &str, resources: &Path) -> Result<Evaluat
         schema_sha256: result
             .contract_sha256
             .ok_or_else(|| crate::error::Error::InvalidInput {
-                message: "Contrat Nickel absent".into(),
+                message: "Missing Nickel contract".into(),
             })?,
         flake_lock_sha256: result.flake_lock_sha256,
         evaluator: result.evaluator,

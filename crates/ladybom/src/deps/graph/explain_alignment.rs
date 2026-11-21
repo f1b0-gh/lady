@@ -32,7 +32,7 @@ pub fn analyze_alignment(graph: &Graph) -> Result<AlignmentAnalysis> {
     };
     ensure!(
         serde_json::to_vec(&report)?.len() <= MAX_BYTES,
-        "Rapport d'alignement supérieur à 128 Mio"
+        "Alignment report exceeds 128 MiB"
     );
     Ok(report)
 }
@@ -64,28 +64,28 @@ impl AlignmentExplanationOptions {
     fn validate(&self) -> Result<()> {
         ensure!(
             (1..=16).contains(&self.max_queries),
-            "Nombre de parcours requis entre 1 et 16"
+            "Traversal count must be between 1 and 16"
         );
         ensure!(
             (1..=4096).contains(&self.max_results),
-            "Nombre de résultats requis entre 1 et 4096"
+            "Result count must be between 1 and 4096"
         );
         ensure!(
             (1..=64).contains(&self.max_depth),
-            "Profondeur d'explication requise entre 1 et 64"
+            "Explanation depth must be between 1 and 64"
         );
         ensure!(
             !self.timeout.is_zero() && self.timeout <= Duration::from_secs(300),
-            "Budget de temps requis entre 1 ms et 300 s"
+            "Time budget must be between 1 ms and 300 s"
         );
         if let Some(identity) = &self.package {
-            ensure!(identity.len() <= 8192, "Identité de paquet trop longue");
+            ensure!(identity.len() <= 8192, "Package identity too long");
             let parsed = identity
                 .parse::<packageurl::PackageUrl>()
-                .map_err(|e| invalid(format!("PURL d'explication invalide : {e}")))?;
+                .map_err(|e| invalid(format!("Invalid explanation PURL: {e}")))?;
             ensure!(
                 parsed.version().is_none() && parsed.to_string() == *identity,
-                "PURL canonique sans version requise pour --package"
+                "Canonical unversioned PURL required for --package"
             );
         }
         Ok(())
@@ -145,14 +145,14 @@ impl Ladybug {
             found = true;
             let domain = domains
                 .get(group.domain.as_str())
-                .ok_or_else(|| invalid("Domaine d'alignement absent".into()))?;
+                .ok_or_else(|| invalid("Missing alignment domain".into()))?;
             for node in group.versions.iter().flat_map(|v| &v.nodes) {
                 selected.insert(node.clone(), *domain);
             }
         }
         ensure!(
             options.package.is_none() || found,
-            "Identité demandée absente de l'inventaire projeté"
+            "Requested identity missing from the projected inventory"
         );
         let selected_occurrences = selected.len();
         let started = Instant::now();
@@ -173,10 +173,7 @@ impl Ladybug {
                     ..Filter::default()
                 },
             };
-            ensure!(
-                !query.filter.graphs.is_empty(),
-                "Contextes du domaine absents"
-            );
+            ensure!(!query.filter.graphs.is_empty(), "Missing domain contexts");
             // Budget both the version probe and the query process. Each native
             // call also has independent memory, file-size and output limits.
             let result = self
@@ -206,7 +203,7 @@ impl Ladybug {
             output_bytes = output_bytes.saturating_add(serde_json::to_vec(&explanation)?.len());
             ensure!(
                 output_bytes <= MAX_BYTES,
-                "Explications d'alignement supérieures à 128 Mio"
+                "Alignment explanations exceed 128 MiB"
             );
             results.push(explanation);
         }
@@ -220,7 +217,7 @@ impl Ladybug {
         });
         ensure!(
             serde_json::to_vec(&analysis)?.len() <= MAX_BYTES,
-            "Rapport d'alignement supérieur à 128 Mio"
+            "Alignment report exceeds 128 MiB"
         );
         Ok(analysis)
     }

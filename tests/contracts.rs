@@ -85,7 +85,7 @@ fn rejects_unknown_fields_versions_cycles_paths_and_references(
             v["tools"]["zig"]["phase"] = replacement;
         } else {
             *v.pointer_mut(pointer)
-                .ok_or("Fixture invalide : valeur absente")? = replacement;
+                .ok_or("Invalid fixture: missing value")? = replacement;
         }
         assert!(resolve(v, "audit").is_err(), "{pointer}");
     }
@@ -124,7 +124,7 @@ fn rejects_excessive_mission_graph_before_recursion() -> Result<(), Box<dyn std:
     let mut value = config();
     let missions = value["missions"]
         .as_object_mut()
-        .ok_or("Fixture invalide : valeur absente")?;
+        .ok_or("Invalid fixture: missing value")?;
     for i in 0..1100 {
         missions.insert(format!("m{i}"),json!({"tools":[],"include":[],"checks":[],"depends_on":if i==0 {vec![]}else{vec![format!("m{}",i-1)]}}));
     }

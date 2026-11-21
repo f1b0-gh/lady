@@ -191,7 +191,7 @@ fn state_rebound_after_inventory_is_refused_before_provider_access() -> Result {
     let report: Value = serde_json::from_slice(&output.stdout)?;
     assert!(report["results"][1]["error"]
         .as_str()
-        .is_some_and(|e| e.contains("Association périmée")));
+        .is_some_and(|e| e.contains("Stale association")));
     Ok(())
 }
 

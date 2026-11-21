@@ -25,7 +25,7 @@ pub fn all_at(registry: &Path, args: &DestroyAll) -> Result<Value> {
         "deleted":0,"already_deleted":inventory["excluded_deleted"]});
     let entries = inventory["instances"]
         .as_array()
-        .ok_or_else(|| invalid("Inventaire invalide".into()))?;
+        .ok_or_else(|| invalid("Invalid inventory".into()))?;
     let mut candidates = Vec::new();
     let mut blocked = Vec::new();
     for entry in entries {
@@ -33,7 +33,7 @@ pub fn all_at(registry: &Path, args: &DestroyAll) -> Result<Value> {
             candidates.push(entry.clone());
         } else {
             blocked.push(json!({"instance":entry,"reason":"retained_identity_requires_explicit_recovery",
-                "message":"Ancienne identité sans preuve de propriété ni configuration d’export conservée : suppression automatique refusée"}));
+                "message":"Previous identity lacks ownership evidence or retained export configuration: automatic deletion refused"}));
         }
     }
     report["candidates"] = json!(candidates);

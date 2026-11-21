@@ -22,7 +22,7 @@ pub fn verified_report(
         // the canonical typed model, including packages, sources and diagnostics.
         ensure!(
             serde_json::to_value(&external)? == serde_json::to_value(&actual)?,
-            "Rapport Ladybom divergent : régénérer sur le périmètre source sélectionné"
+            "Ladybom report mismatch: regenerate for the selected source scope"
         );
         Some(files::hash(&serde_json::to_vec(&actual)?))
     } else {
@@ -31,7 +31,7 @@ pub fn verified_report(
     // Detect newly added manifests as well as edits/removals during admission.
     ensure!(
         sources::snapshot(root, selection, None)? == *snapshot,
-        "Sources modifiées pendant la vérification Ladybom"
+        "Sources changed during Ladybom verification"
     );
     Ok((actual, digest))
 }
@@ -43,7 +43,7 @@ pub fn verify_digest(root: &Path, selection: &Sources, expected: &str) -> Result
     let (actual, _) = verified_report(root, selection, &snapshot, None)?;
     ensure!(
         files::hash(&serde_json::to_vec(&actual)?) == expected,
-        "Sources différentes du rapport Ladybom verrouillé"
+        "Sources differ from the locked Ladybom report"
     );
     Ok(())
 }

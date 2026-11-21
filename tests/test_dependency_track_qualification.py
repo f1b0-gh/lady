@@ -49,7 +49,7 @@ class QualificationAssertions(unittest.TestCase):
         duplicate = copy.deepcopy(doc["components"][1])
         duplicate["bom-ref"] = "second-occurrence"
         doc["components"].append(duplicate)
-        with self.assertRaisesRegex(ValueError, "ambigu"):
+        with self.assertRaisesRegex(ValueError, "Ambiguous"):
             graph_projection(doc)
 
     def test_vex_state_keys_include_source_and_component_not_only_version(self):
@@ -70,7 +70,7 @@ class QualificationAssertions(unittest.TestCase):
         finding = {"id": "TEST", "source": {"name": "INTERNAL"},
                    "analysis": {"state": "not_affected"}, "affects": [{"ref": "public"}]}
         doc["vulnerabilities"] = [finding, copy.deepcopy(finding)]
-        with self.assertRaisesRegex(ValueError, "dupliqu"):
+        with self.assertRaisesRegex(ValueError, "Duplicate"):
             finding_states(doc)
 
     def test_bundle_upload_reads_only_digest_verified_public_artifacts(self):

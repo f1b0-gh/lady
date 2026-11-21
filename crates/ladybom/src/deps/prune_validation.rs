@@ -28,10 +28,7 @@ pub struct ValidationPlan {
 }
 impl ValidationPlan {
     pub fn validate(&self) -> Result<()> {
-        ensure!(
-            self.schema_version == 1,
-            "Version de plan de validation inconnue"
-        );
+        ensure!(self.schema_version == 1, "Unknown validation plan version");
         for digest in [
             &self.before_graph_sha256,
             &self.after_graph_sha256,
@@ -42,7 +39,7 @@ impl ValidationPlan {
                     && digest
                         .bytes()
                         .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
-                "Empreinte de validation invalide"
+                "Invalid validation digest"
             );
         }
         snapshot::validate(&self.expected)?;
@@ -50,9 +47,9 @@ impl ValidationPlan {
             !self.expected.is_empty()
                 && !self.removed_declarations.is_empty()
                 && self.removed_declarations.len() <= MAX_DECLARATIONS,
-            "Plan de retrait vide ou trop volumineux"
+            "Removal plan empty or too large"
         );
-        ensure!(self.exclusions.len() <= 1000, "Trop d'exclusions");
+        ensure!(self.exclusions.len() <= 1000, "Too many exclusions");
         for path in &self.exclusions {
             crate::config::relative_path(path)?;
         }
@@ -60,11 +57,11 @@ impl ValidationPlan {
         for r in &self.removed_declarations {
             ensure!(
                 seen.insert(&r.id) && r.id == files::hash(&serde_json::to_vec(&r.root)?),
-                "Identité de retrait invalide ou dupliquée"
+                "Invalid or duplicate removal identity"
             );
             ensure!(
                 self.expected.contains_key(&r.root.manifest),
-                "Manifest retiré absent de l'inventaire attendu"
+                "Removal manifest missing from the expected inventory"
             );
         }
         Ok(())
@@ -85,7 +82,7 @@ pub fn plan(
     for (path, hash) in &after.inventory.inputs {
         ensure!(
             expected.get(path).is_some_and(|e| &e.sha256 == hash),
-            "Sources divergentes du graphe après retrait : {path}"
+            "Sources differ from the graph after removal: {path}"
         );
     }
     let ids: BTreeSet<_> = request.remove_roots.iter().collect();
@@ -100,13 +97,13 @@ pub fn plan(
             .projects
             .iter()
             .find(|p| p.manifest == root.manifest)
-            .ok_or_else(|| invalid("Projet source absent".into()))?;
+            .ok_or_else(|| invalid("Missing source project".into()))?;
         let current = after
             .inventory
             .projects
             .iter()
             .find(|p| p.manifest == root.manifest && p.ecosystem == previous.ecosystem)
-            .ok_or_else(|| invalid("Le projet doit être conservé après retrait".into()))?;
+            .ok_or_else(|| invalid("The project must be retained after removal".into()))?;
         // Cargo/conditional roots retain the original requirement. Otherwise match the
         // exact declared name, including npm aliases, against the resolved component.
         let embedded = serde_json::from_value::<Requirement>(root.condition.clone()).ok();
@@ -114,7 +111,7 @@ pub fn plan(
             .components
             .iter()
             .find(|n| n.key == root.to)
-            .ok_or_else(|| invalid("Composant source absent".into()))?;
+            .ok_or_else(|| invalid("Missing source component".into()))?;
         let candidates: Vec<_> = previous
             .requirements
             .iter()
@@ -140,7 +137,7 @@ pub fn plan(
             .collect();
         ensure!(
             candidates.len() == 1,
-            "Déclaration source ambiguë : validation automatique refusée"
+            "Ambiguous source declaration: automatic validation refused"
         );
         let removed = candidates[0];
         ensure!(
@@ -151,13 +148,13 @@ pub fn plan(
                     == removed.declared_name.as_ref().unwrap_or(&removed.name)
                     && r.kind == removed.kind
                     && r.marker == removed.marker),
-            "Déclaration toujours présente : {} {}",
+            "Declaration still present: {} {}",
             root.manifest,
             removed.name
         );
         ensure!(
             after.inventory.inputs.contains_key(&root.manifest),
-            "Manifest après retrait non empreinté"
+            "Manifest after removal has not been hashed"
         );
     }
     let result = ValidationPlan {
@@ -177,7 +174,7 @@ pub fn verify_inventory(plan: &ValidationPlan, actual: &Inventory) -> Result<()>
     snapshot::validate(actual)?;
     ensure!(
         &plan.expected == actual,
-        "Sources de validation divergentes : aucune réussite attribuable à ce plan"
+        "Validation sources differ: no success can be attributed to this plan"
     );
     Ok(())
 }

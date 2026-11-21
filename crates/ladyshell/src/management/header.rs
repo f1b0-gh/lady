@@ -16,46 +16,40 @@ pub(super) fn validate(connection: &mut Connection, create: bool) -> Result<()> 
             std::ptr::from_mut(&mut file).cast(),
         )
     })?;
-    ensure!(!file.is_null(), "Descripteur SQLite absent");
+    ensure!(!file.is_null(), "Missing SQLite file handle");
     // SAFETY: SQLITE_FCNTL_FILE_POINTER succeeded; this pointer and its method
     // table remain owned by the borrowed connection. We never close/free them.
     let methods = unsafe { (*file).pMethods };
-    ensure!(
-        !methods.is_null(),
-        "Méthodes du descripteur SQLite absentes"
-    );
+    ensure!(!methods.is_null(), "Missing SQLite file handle methods");
     // SAFETY: valid method table for the live file, checked above.
     let (size_fn, read_fn) = unsafe { ((*methods).xFileSize, (*methods).xRead) };
-    let size_fn = size_fn.ok_or_else(|| invalid("Lecture taille SQLite indisponible".into()))?;
-    let read_fn = read_fn.ok_or_else(|| invalid("Lecture en-tête SQLite indisponible".into()))?;
+    let size_fn = size_fn.ok_or_else(|| invalid("SQLite size reading is unavailable".into()))?;
+    let read_fn = read_fn.ok_or_else(|| invalid("SQLite header reading is unavailable".into()))?;
     let mut size = 0;
     // SAFETY: live SQLite-owned file and valid writable i64 output.
     check(unsafe { size_fn(file, &mut size) })?;
     if size == 0 {
-        ensure!(
-            create,
-            "Catalogue vide ; exécuter manage refresh explicitement"
-        );
+        ensure!(create, "Empty catalog; explicitly run manage refresh");
         return Ok(());
     }
-    ensure!(size >= 100, "En-tête SQLite tronqué");
+    ensure!(size >= 100, "Truncated SQLite header");
     let mut header = [0u8; 100];
     // SAFETY: the output buffer has exactly the requested 100 bytes. xRead only
     // reads the main file; it neither reads SQL schema nor recovers journals.
     check(unsafe { read_fn(file, header.as_mut_ptr().cast(), 100, 0) })?;
     ensure!(
         &header[..16] == b"SQLite format 3\0",
-        "En-tête SQLite invalide"
+        "Invalid SQLite header"
     );
     ensure!(
         header[18] == 1 && header[19] == 1,
-        "Catalogue WAL refusé ; journal classique requis"
+        "WAL catalog refused; a rollback journal is required"
     );
     let app = i32::from_be_bytes([header[68], header[69], header[70], header[71]]);
     let version = i32::from_be_bytes([header[60], header[61], header[62], header[63]]);
     ensure!(
         app == super::store::APPLICATION_ID && version == 1,
-        "Catalogue étranger ou version incompatible ({version}) ; aucune récupération implicite"
+        "Foreign catalog or incompatible version ({version}); no implicit recovery"
     );
     Ok(())
 }

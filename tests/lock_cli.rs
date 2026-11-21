@@ -23,7 +23,7 @@ fn lock_cli_hashes_artifacts_without_running_project_checks(
         .arg(
             dir.path()
                 .parent()
-                .ok_or("Fixture invalide : valeur absente")?
+                .ok_or("Invalid fixture: missing value")?
                 .join("unused-state"),
         )
         .arg("--resources")
@@ -47,7 +47,7 @@ fn lock_cli_hashes_artifacts_without_running_project_checks(
     assert_eq!(
         receipt["artifacts_sha256"]["codex"]
             .as_str()
-            .ok_or("Fixture invalide : valeur absente")?
+            .ok_or("Invalid fixture: missing value")?
             .len(),
         64
     );
@@ -147,7 +147,7 @@ fn external_report_is_checked_before_lock_and_plan_and_bound_in_receipt(
         let rejected = run(operation)?;
         assert!(!rejected.status.success());
         assert!(
-            String::from_utf8_lossy(&rejected.stderr).contains("Rapport Ladybom divergent"),
+            String::from_utf8_lossy(&rejected.stderr).contains("Ladybom report mismatch"),
             "{}",
             String::from_utf8_lossy(&rejected.stderr)
         );

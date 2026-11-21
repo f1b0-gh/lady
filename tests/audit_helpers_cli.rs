@@ -73,7 +73,7 @@ fn worker_rejects_duplicate_keys_unknown_fields_trailing_json_and_oversize_input
         ),
         (br#"{} {}"#.to_vec(), "trailing characters"),
         (br#"{"disable_guards":true}"#.to_vec(), "unknown field"),
-        (vec![b' '; 16 * 1024 * 1024 + 1], "16 Mio"),
+        (vec![b' '; 16 * 1024 * 1024 + 1], "16 MiB"),
     ] {
         let output = worker(&input)?;
         assert_eq!(output.status.code(), Some(2));
@@ -123,7 +123,7 @@ fn agent_helper_refuses_the_host_before_executing_the_requested_binary() -> Test
         .output()?;
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("réservé à l’image d’audit"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("restricted to the audit image"));
     Ok(())
 }
 
@@ -146,9 +146,7 @@ fn agent_helper_validates_every_limit_before_environment_access() -> TestResult 
             .output()?;
         assert_eq!(output.status.code(), Some(2));
         assert!(output.stdout.is_empty());
-        assert!(
-            String::from_utf8_lossy(&output.stderr).contains("Limites d’agent positives et finies")
-        );
+        assert!(String::from_utf8_lossy(&output.stderr).contains("Positive finite agent limits"));
     }
     Ok(())
 }

@@ -20,13 +20,13 @@ pub fn sync(value: &Value, out: &mut impl Write) -> Result<()> {
         .unwrap_or(&[]);
     for change in changes {
         if let Some(path) = change.as_str() {
-            writeln!(out, "Exporté  {}", visible(path))?;
+            writeln!(out, "Exported {}", visible(path))?;
             continue;
         }
         let label = match change["action"].as_str() {
-            Some("add") => "Ajouté  ",
-            Some("delete") => "Supprimé",
-            _ => "Modifié ",
+            Some("add") => "Added   ",
+            Some("delete") => "Deleted ",
+            _ => "Modified",
         };
         writeln!(
             out,
@@ -38,52 +38,51 @@ pub fn sync(value: &Value, out: &mut impl Write) -> Result<()> {
         for path in deletions {
             writeln!(
                 out,
-                "Supprimé {} (dans la sandbox)",
+                "Deleted {} (in the sandbox)",
                 visible(path.as_str().unwrap_or("?"))
             )?;
         }
     }
     if let Some(conflicts) = value["conflicts"].as_array().filter(|v| !v.is_empty()) {
         for path in conflicts {
-            writeln!(out, "Conflit  {}", visible(path.as_str().unwrap_or("?")))?;
+            writeln!(out, "Conflict {}", visible(path.as_str().unwrap_or("?")))?;
         }
         writeln!(
             out,
-            "\nApplication bloquée : {} conflit(s). Aucun fichier hôte modifié.",
+            "\nApplication blocked: {} conflict(s). No host files changed.",
             conflicts.len()
         )?;
     } else if value["applied"] == true {
         if changes.is_empty() {
-            writeln!(out, "Projet déjà à jour.")?;
+            writeln!(out, "Project is already up to date.")?;
         } else {
             writeln!(
                 out,
-                "\n{} changement{} appliqué{}.",
+                "\n{} change{} applied.",
                 changes.len(),
-                if changes.len() == 1 { "" } else { "s" },
                 if changes.len() == 1 { "" } else { "s" }
             )?;
         }
     } else if value.get("conflicts").is_some() {
         writeln!(
             out,
-            "\n{} changement(s) prévu(s). Aucun fichier hôte modifié.",
+            "\n{} change(s) planned. No host files changed.",
             changes.len()
         )?;
     } else {
-        writeln!(out, "\nExport conservé. Aucun fichier hôte modifié.")?;
+        writeln!(out, "\nExport retained. No host files changed.")?;
     }
     if value["pending"] == true {
         writeln!(
             out,
-            "Application interrompue : relancer ladyshell sync pour la reprendre."
+            "Application interrupted: run ladyshell sync again to resume."
         )?;
     }
     if let Some(backup) = value["backup"].as_str() {
-        writeln!(out, "Sauvegarde conservée : {}", visible(backup))?;
+        writeln!(out, "Backup retained: {}", visible(backup))?;
     }
     if let Some(export) = value["export"].as_str() {
-        writeln!(out, "Export : {}", visible(export))?;
+        writeln!(out, "Export: {}", visible(export))?;
     }
     Ok(())
 }

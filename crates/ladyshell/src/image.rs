@@ -29,37 +29,37 @@ fn member(path: &Path, name: &str) -> Result<Vec<u8>> {
     let mut archive = tar::Archive::new(archive_reader(path)?.take(8 * 1024 * 1024 * 1024));
     let mut result = None;
     for (index, entry) in archive.entries()?.enumerate() {
-        ensure!(index < 100000, "Archive image : trop de membres");
+        ensure!(index < 100000, "Image archive has too many members");
         let mut entry = entry?;
         if entry.path()?.as_ref() == Path::new(name) {
-            ensure!(result.is_none(), "Membre image dupliqué");
+            ensure!(result.is_none(), "Duplicate image member");
             ensure!(
                 entry.header().entry_type().is_file() && entry.size() <= 16 * 1024 * 1024,
-                "Métadonnées image invalides"
+                "Invalid image metadata"
             );
             let mut bytes = Vec::new();
             entry.read_to_end(&mut bytes)?;
             result = Some(bytes);
         }
     }
-    result.ok_or_else(|| invalid(format!("Membre image absent : {name}")))
+    result.ok_or_else(|| invalid(format!("Missing image member: {name}")))
 }
 pub fn archive_image_id(path: &Path) -> Result<String> {
     let manifest: Value = serde_json::from_slice(&member(path, "manifest.json")?)?;
     let rows = manifest
         .as_array()
-        .ok_or_else(|| invalid("Manifest image invalide".into()))?;
-    ensure!(rows.len() == 1, "Une seule image requise");
+        .ok_or_else(|| invalid("Invalid image manifest".into()))?;
+    ensure!(rows.len() == 1, "Exactly one image is required");
     let row = rows
         .first()
-        .ok_or_else(|| invalid("Manifest image vide".into()))?;
+        .ok_or_else(|| invalid("Empty image manifest".into()))?;
     let name = text(row, "Config")?;
     Ok(format!("sha256:{}", files::hash(&member(path, name)?)))
 }
 fn run(args: &[&str], timeout: u64) -> Result<String> {
     let (name, rest) = args
         .split_first()
-        .ok_or_else(|| invalid("Commande vide".into()))?;
+        .ok_or_else(|| invalid("Empty command".into()))?;
     let mut command = Command::new(name);
     command.args(rest);
     Ok(String::from_utf8(capture(
@@ -77,7 +77,7 @@ pub fn load_archive(archive: &str, image_id: &str) -> Result<()> {
             &["docker", "image", "inspect", image_id, "--format", "{{.Id}}"],
             30
         )? == image_id,
-        "Identité image chargée divergente"
+        "Loaded image identity mismatch"
     );
     Ok(())
 }
@@ -96,7 +96,7 @@ pub fn build(desired: &Value, directory: &Path, migration: Option<&Value>) -> Re
     )?;
     ensure!(
         serde_json::to_value(&actual)? == desired["sources"],
-        "Sources modifiées depuis plan"
+        "Sources changed since plan"
     );
     if let Some(migration) = migration {
         let base: Snapshot = serde_json::from_value(migration["base"].clone())?;
@@ -114,7 +114,7 @@ pub fn build(desired: &Value, directory: &Path, migration: Option<&Value>) -> Re
             let data = files::read_limited(&origin.join(&name), 16 * 1024 * 1024)?;
             ensure!(
                 files::hash(&data) == record.sha256,
-                "Source de fusion modifiée : {name}"
+                "Merge source changed: {name}"
             );
             write_source(&merged, &name, &data, record.executable)?;
         }
@@ -127,11 +127,11 @@ pub fn build(desired: &Value, directory: &Path, migration: Option<&Value>) -> Re
         let target = out.join(name);
         let mut output = File::create(&target)?;
         let size = std::io::copy(&mut input, &mut output)?;
-        ensure!(size <= 1024 * 1024 * 1024, "Artefact trop volumineux");
+        ensure!(size <= 1024 * 1024 * 1024, "Artifact is too large");
         drop(output);
         ensure!(
             environment_lock::artifact_hash(&target)? == text(record, "sha256")?,
-            "Artefact modifié depuis plan : {name}"
+            "Artifact changed since plan: {name}"
         );
     }
     environment_lock::atomic_json(&out.join("config.json"), &config)?;
@@ -140,7 +140,7 @@ pub fn build(desired: &Value, directory: &Path, migration: Option<&Value>) -> Re
         let inventory = crate::deps::scan_snapshot(&source, &staged)?;
         ensure!(
             serde_json::to_value(&inventory.inputs)? == desired["dependency_inventory"]["inputs"],
-            "Manifests de dépendances modifiés depuis plan ; replanification explicite requise"
+            "Dependency manifests changed since plan; explicitly replan"
         );
         let preparation =
             crate::deps::prepare::plan(&source, &staged, dependencies, &config.tools)?;
@@ -187,7 +187,7 @@ pub fn build(desired: &Value, directory: &Path, migration: Option<&Value>) -> Re
     let archive = archive.trim();
     ensure!(
         archive.starts_with("/nix/store/") && !archive.contains('\n'),
-        "Sortie Nix inattendue"
+        "Unexpected Nix output"
     );
     let image_id = archive_image_id(Path::new(archive))?;
     load_archive(archive, &image_id)?;
@@ -204,7 +204,7 @@ pub fn build(desired: &Value, directory: &Path, migration: Option<&Value>) -> Re
         ],
         30,
     )?;
-    ensure!(uid == "10001", "Identité image incorrecte");
+    ensure!(uid == "10001", "Incorrect image identity");
     run(
         &[
             "docker",
@@ -250,7 +250,7 @@ pub fn build(desired: &Value, directory: &Path, migration: Option<&Value>) -> Re
         let version = run(&command, 30)?;
         ensure!(
             tool_version_matches(executable, &version, &spec.version),
-            "Version effective incorrecte : {tool}"
+            "Incorrect effective version: {tool}"
         );
         if tool == "rust" {
             let cargo = run(
@@ -270,7 +270,7 @@ pub fn build(desired: &Value, directory: &Path, migration: Option<&Value>) -> Re
             // equal rustc's (e.g. Rust 1.98.1 ships Cargo 1.98.0).
             ensure!(
                 cargo.split_whitespace().next() == Some("cargo"),
-                "Cargo indisponible dans la toolchain Rust"
+                "Cargo is unavailable in the Rust toolchain"
             );
         }
     }
@@ -335,7 +335,7 @@ pub fn write_source(root: &Path, name: &str, data: &[u8], executable: bool) -> R
     let target = root.join(name);
     let parent = target
         .parent()
-        .ok_or_else(|| invalid("Parent export absent".into()))?;
+        .ok_or_else(|| invalid("Missing export parent".into()))?;
     fs::create_dir_all(parent)?;
     files::open_directory(parent)?;
     let mut file = fs::OpenOptions::new()

@@ -17,7 +17,7 @@ impl InvocationBudget {
     pub fn new(limit: Budget) -> Result<Self> {
         if limit.invocations < 7 || limit.seconds == 0 {
             return Err(invalid(
-                "Audit distribué : sept invocations et une durée positive requises",
+                "Distributed audit requires seven invocations and a positive duration",
             ));
         }
         Ok(Self {
@@ -38,11 +38,11 @@ impl InvocationBudget {
     }
     pub fn claim(&mut self, role: Role) -> Result<String> {
         if self.time_remaining().is_zero() {
-            return Err(invalid("Durée d’audit épuisée"));
+            return Err(invalid("Audit time budget exhausted"));
         }
         let remaining = self.limit.invocations.saturating_sub(self.used());
         if remaining == 0 {
-            return Err(invalid("Budget d’invocations épuisé"));
+            return Err(invalid("Invocation budget exhausted"));
         }
         let index = match role {
             Role::Recon => 0,
@@ -65,7 +65,7 @@ impl InvocationBudget {
         };
         if u64::from(remaining - 1) < reserved {
             return Err(invalid(
-                "Budget réservé à la reconnaissance, à la critique et à la vérification",
+                "Budget reserved for reconnaissance, critique and verification",
             ));
         }
         self.counts = next;
@@ -73,7 +73,7 @@ impl InvocationBudget {
     }
     pub fn require_verifications(&mut self, total: u32) -> Result<()> {
         if total < self.verifications {
-            return Err(invalid("Réserve de vérification décroissante"));
+            return Err(invalid("Decreasing verification reserve"));
         }
         self.verifications = total;
         Ok(())

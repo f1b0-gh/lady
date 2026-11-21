@@ -58,7 +58,7 @@ pub fn build(current: &Value, run_dir: &Path, expected_sources: &Snapshot) -> Re
         .config
         .audit
         .as_ref()
-        .ok_or_else(|| invalid("Configuration audit absente"))?;
+        .ok_or_else(|| invalid("Missing audit configuration"))?;
     audit.validate()?;
     let resources = files::absolute(Path::new(text(desired, "resources")?))?;
     let project = files::absolute(Path::new(text(desired, "project")?))?;
@@ -66,14 +66,14 @@ pub fn build(current: &Value, run_dir: &Path, expected_sources: &Snapshot) -> Re
     files::open_directory(&run_dir)?;
     ensure!(
         !run_dir.starts_with(&project) && !run_dir.starts_with(&resources),
-        "Staging audit requis hors du projet et de la distribution"
+        "Audit staging must be outside the project and distribution"
     );
     let codex = Path::new(text(&desired["artifacts"]["codex"], "path")?);
     let codex_host = Path::new(text(&desired["artifacts"]["codex-code-mode-host"], "path")?);
     let locked: EnvironmentLock = serde_json::from_value(desired["environment_lock"].clone())?;
     let mut actual = environment_lock::create(evaluated.clone(), &resources, codex, codex_host)
         .map_err(|error| {
-            error.context("Entrées du verrou audit illisibles : lock puis apply explicites requis")
+            error.context("Cannot read audit lock inputs: run lock and apply explicitly")
         })?;
     if let Some(digest) = &locked.ladybom_sha256 {
         crate::deps::input::verify_digest(&project, &evaluated.config.sources, digest)?;
@@ -84,7 +84,7 @@ pub fn build(current: &Value, run_dir: &Path, expected_sources: &Snapshot) -> Re
         ensure!(
             locked.artifacts_sha256.get(name).map(String::as_str)
                 == Some(text(&desired["artifacts"][name], "sha256")?),
-            "Artefact divergent du verrou audit : {name}"
+            "Artifact differs from audit lock: {name}"
         );
     }
     let mut config = evaluated.config.clone();
@@ -92,7 +92,7 @@ pub fn build(current: &Value, run_dir: &Path, expected_sources: &Snapshot) -> Re
         if let Some(existing) = config.tools.get(name) {
             ensure!(
                 existing.version == tool.version && existing.phase == tool.phase,
-                "Conflit de toolchain projet/audit : {name}"
+                "Project/audit toolchain conflict: {name}"
             );
         } else {
             config.tools.insert(name.clone(), tool.clone());
@@ -101,7 +101,7 @@ pub fn build(current: &Value, run_dir: &Path, expected_sources: &Snapshot) -> Re
     for (name, tool) in &config.tools {
         ensure!(
             ["rust", "node", "zig"].contains(&name.as_str()) && tool.phase == "runtime",
-            "Toolchain audit non supportée : {name}"
+            "Unsupported audit toolchain: {name}"
         );
     }
     let staging = tempfile::Builder::new()
@@ -113,9 +113,9 @@ pub fn build(current: &Value, run_dir: &Path, expected_sources: &Snapshot) -> Re
     let actual_sources = sources::snapshot(&project, &config.sources, Some(&source))?;
     ensure!(
         &actual_sources == expected_sources,
-        "Sources modifiées depuis le plan d’audit"
+        "Sources changed since the audit plan"
     );
-    ensure!(!actual_sources.is_empty(), "Sources d’audit vides");
+    ensure!(!actual_sources.is_empty(), "Empty audit sources");
     let trusted = out.join("runtime");
     fs::create_dir(&trusted)?;
     let frozen = freeze_runtime(&resources, Some(&trusted))?;
@@ -132,7 +132,7 @@ pub fn build(current: &Value, run_dir: &Path, expected_sources: &Snapshot) -> Re
             && frozen
                 .iter()
                 .all(|(path, record)| pinned.get(path.as_str()) == Some(&record.sha256.as_str())),
-        "Sources runtime modifiées depuis le verrou audit"
+        "Runtime sources changed since the audit lock"
     );
     files::read_limited(
         &trusted.join("resources/audit/agent-response-schema.json"),
@@ -142,7 +142,7 @@ pub fn build(current: &Value, run_dir: &Path, expected_sources: &Snapshot) -> Re
         let data = files::read_limited(&resources.join("nix").join(name), 1024 * 1024)?;
         ensure!(
             locked.recipes_sha256.get(name) == Some(&files::hash(&data)),
-            "Recette modifiée depuis le verrou audit : {name}"
+            "Recipe changed since the audit lock: {name}"
         );
         image::write_source(&trusted, &format!("nix/{name}"), &data, false)?;
     }
@@ -155,12 +155,12 @@ pub fn build(current: &Value, run_dir: &Path, expected_sources: &Snapshot) -> Re
             .open(&target)?;
         ensure!(
             std::io::copy(&mut input, &mut output)? <= 1024 * 1024 * 1024,
-            "Artefact trop volumineux"
+            "Artifact too large"
         );
         output.sync_all()?;
         ensure!(
             locked.artifacts_sha256.get(name) == Some(&environment_lock::artifact_hash(&target)?),
-            "Artefact modifié depuis le verrou audit : {name}"
+            "Artifact changed since the audit lock: {name}"
         );
     }
     let mut staged_lock = environment_lock::create(
@@ -231,7 +231,7 @@ pub fn build(current: &Value, run_dir: &Path, expected_sources: &Snapshot) -> Re
             && metadata
                 .codex_binary
                 .ends_with("-ladyshell-codex/bin/codex"),
-        "Identité binaire Nix d’audit invalide"
+        "Invalid audit Nix binary identity"
     );
     let image_id = image::archive_image_id(Path::new(&metadata.archive))?;
     image::load_archive(&metadata.archive, &image_id)?;
@@ -246,7 +246,7 @@ pub fn build(current: &Value, run_dir: &Path, expected_sources: &Snapshot) -> Re
 fn same_lock(actual: &EnvironmentLock, expected: &EnvironmentLock) -> Result<()> {
     ensure!(
         serde_json::to_value(actual)? == serde_json::to_value(expected)?,
-        "Entrées divergentes du verrou audit : exécuter lock puis apply explicitement"
+        "Audit lock input mismatch: run lock and apply explicitly"
     );
     Ok(())
 }
@@ -264,22 +264,22 @@ fn store_path(value: &str, binary: bool) -> Result<()> {
             && path
                 .components()
                 .all(|part| matches!(part, Component::RootDir | Component::Normal(_))),
-        "Chemin de sortie Nix invalide"
+        "Invalid Nix output path"
     );
     let name = value
         .strip_prefix("/nix/store/")
         .and_then(|value| value.split('/').next())
-        .ok_or_else(|| invalid("Objet Nix absent"))?;
+        .ok_or_else(|| invalid("Missing Nix object"))?;
     let (hash, suffix) = name
         .split_once('-')
-        .ok_or_else(|| invalid("Identité objet Nix absente"))?;
+        .ok_or_else(|| invalid("Missing Nix object identity"))?;
     ensure!(
         hash.len() == 32
             && hash
                 .bytes()
                 .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
             && !suffix.is_empty(),
-        "Identité objet Nix invalide"
+        "Invalid Nix object identity"
     );
     Ok(())
 }
@@ -321,7 +321,7 @@ fn freeze_runtime(resources: &Path, destination: Option<&Path>) -> Result<Snapsh
     let common = sources::snapshot(&util, &spec, target.as_deref())?;
     ensure!(
         common.contains_key("Cargo.toml") && common.contains_key("src/lib.rs"),
-        "Distribution nickel-util incomplète"
+        "Incomplete nickel-util distribution"
     );
     result.extend(
         common

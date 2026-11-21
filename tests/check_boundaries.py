@@ -1,4 +1,4 @@
-"""Vérifier les graphes Cargo réels des domaines Nickel indépendants."""
+"""Verify actual Cargo graphs of independent Nickel domains."""
 
 import argparse
 import json
@@ -46,7 +46,7 @@ def main():
     lady = graph(Path(__file__).resolve().parents[1] / "Cargo.toml", no_default_features=True)
     common = lady("nickel-util")
     domains = {"ladybom", "ladybom-cli", "ladyshell", "ladyshell-cli", "ladyboot", "nickel-plane", "nickel-k8s", "nickel-tf", "audit-validator"}
-    assert not common & (domains | {"clap"}), f"Dépendances métier dans core : {common}"
+    assert not common & (domains | {"clap"}), f"Domain dependencies in core: {common}"
     analysis = lady("ladybom")
     assert "nickel-util" in analysis
     assert not analysis & {"clap", "ladyshell", "ladyshell-cli", "ladyboot", "audit-validator"}

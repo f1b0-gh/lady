@@ -58,21 +58,21 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
     if let Some(op) = operation.as_ref().filter(|op| op.phase != Phase::Complete) {
         ensure!(
             op.schema_version == 2 && op.desired_hash == desired_hash,
-            "Opération interrompue pour d’autres entrées : reprendre ses entrées originales"
+            "Operation interrupted with different inputs: resume using its original inputs"
         );
         if op.phase == Phase::Publishing && state == op.result {
             let result = op
                 .result
                 .clone()
-                .ok_or_else(|| invalid("Résultat de publication absent".into()))?;
+                .ok_or_else(|| invalid("Missing publication result".into()))?;
             let observed = driver
                 .sandbox(text(&result, "sandbox_name")?)?
-                .ok_or_else(|| invalid("Sandbox publiée absente".into()))?;
+                .ok_or_else(|| invalid("Published sandbox is missing".into()))?;
             ensure!(
                 observed["id"] == result["sandbox_id"]
                     && observed["policy_hash"] == result["policy_hash"]
                     && observed["phase"] == "Ready",
-                "Publication interrompue et ressource divergente"
+                "Publication interrupted and resource mismatch"
             );
             driver.validate(
                 text(&result, "sandbox_name")?,
@@ -86,23 +86,23 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         }
         ensure!(
             op.state_before == state,
-            "État modifié pendant opération interrompue"
+            "State changed during the interrupted operation"
         );
         if let Some(state) = &state {
             ensure!(
                 serde_json::to_value(driver.sandbox(text(state, "sandbox_name")?)?)?
                     == op.observed_before["sandbox"],
-                "Préconditions sandbox modifiées pendant reprise"
+                "Sandbox preconditions changed during recovery"
             );
         }
     } else {
         let saved = state::read(&directory.join("plan.json"))?
-            .ok_or_else(|| invalid("Exécuter plan avant apply".into()))?;
+            .ok_or_else(|| invalid("Run plan before apply".into()))?;
         let observed = driver.observe(state.as_ref())?;
         plan::verify(&saved, desired, state.as_ref(), &observed)?;
         if saved["actions"].as_array().is_some_and(|a| a.is_empty()) {
             driver.published(directory)?;
-            return state.ok_or_else(|| invalid("État absent pour plan vide".into()));
+            return state.ok_or_else(|| invalid("State is missing for an empty plan".into()));
         }
         let entropy = tempfile::Builder::new()
             .prefix("owner-")
@@ -116,7 +116,7 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
             "er-{}",
             owner
                 .get(..12)
-                .ok_or_else(|| invalid("Identité de création invalide".into()))?
+                .ok_or_else(|| invalid("Invalid creation identity".into()))?
         );
         let op = Operation {
             schema_version: 2,
@@ -133,9 +133,9 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         atomic_json(&path, &op)?;
         operation = Some(op);
     }
-    let mut op = operation.ok_or_else(|| invalid("Journal absent".into()))?;
+    let mut op = operation.ok_or_else(|| invalid("Missing journal".into()))?;
     if op.restore_only {
-        let state = state.ok_or_else(|| invalid("État de restauration absent".into()))?;
+        let state = state.ok_or_else(|| invalid("Missing restoration state".into()))?;
         driver.restore(&state)?;
         driver.published(directory)?;
         op.phase = Phase::Complete;
@@ -156,14 +156,14 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
             if let Some(captured) = captured {
                 let export = Path::new(text(&captured, "last_sync")?);
                 let receipt = state::read(&export.join("manifest.json"))?
-                    .ok_or_else(|| invalid("Reçu de récupération absent".into()))?;
+                    .ok_or_else(|| invalid("Missing recovery receipt".into()))?;
                 ensure!(
                     receipt["sandbox_id"] == state["sandbox_id"],
-                    "Identité du reçu divergente"
+                    "Receipt identity mismatch"
                 );
                 ensure!(
                     state["host_sources"].is_object(),
-                    "Sources de base absentes : migration requise"
+                    "Missing base sources: migration required"
                 );
                 migration = Some(
                     json!({"base":state["host_sources"],"remote":receipt["files"],"directory":export.join("project")}),
@@ -177,7 +177,7 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
     let build = op
         .build
         .clone()
-        .ok_or_else(|| invalid("Construction absente du journal".into()))?;
+        .ok_or_else(|| invalid("Build is missing from the journal".into()))?;
     if driver.sandbox(&op.sandbox_name)?.is_none() {
         driver.create(
             &op.sandbox_name,
@@ -191,19 +191,19 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         if let Some(observed) = driver.sandbox(&op.sandbox_name)? {
             ensure!(
                 observed["labels"]["ladyshell.owner"] == op.owner,
-                "Ressource homonyme détenue par une autre opération"
+                "Resource with the same name is owned by another operation"
             );
             if observed["phase"] == "Ready" {
                 break observed;
             }
             ensure!(
                 observed["phase"] != "Error",
-                "Sandbox en erreur : examiner OpenShell avant reprise"
+                "Sandbox is in an error state: inspect OpenShell before recovery"
             );
         }
         ensure!(
             start.elapsed() < std::time::Duration::from_secs(60),
-            "Sandbox non prête : apply peut reprendre"
+            "Sandbox is not ready: apply can resume"
         );
         std::thread::sleep(std::time::Duration::from_secs(1));
     };
@@ -225,8 +225,8 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
     let mut result = build;
     let fields = result
         .as_object_mut()
-        .ok_or_else(|| invalid("Construction non objet".into()))?;
-    fields.extend(json!({"schema_version":2,"context":desired["context"],"desired_hash":desired_hash,"desired_inputs":desired,"sandbox_name":op.sandbox_name,"sandbox_id":observed["id"],"policy_hash":observed["policy_hash"],"owner":op.owner,"owner_label":"ladyshell.owner","retained":retained,"sync":desired["evaluated"]["config"]["sync"],"snapshot_binary":"/usr/local/bin/ladyshell"}).as_object().ok_or_else(||invalid("Résultat non objet".into()))?.clone());
+        .ok_or_else(|| invalid("Build is not an object".into()))?;
+    fields.extend(json!({"schema_version":2,"context":desired["context"],"desired_hash":desired_hash,"desired_inputs":desired,"sandbox_name":op.sandbox_name,"sandbox_id":observed["id"],"policy_hash":observed["policy_hash"],"owner":op.owner,"owner_label":"ladyshell.owner","retained":retained,"sync":desired["evaluated"]["config"]["sync"],"snapshot_binary":"/usr/local/bin/ladyshell"}).as_object().ok_or_else(||invalid("Result is not an object".into()))?.clone());
     op.result = Some(result.clone());
     op.phase = Phase::Publishing;
     atomic_json(&path, &op)?;

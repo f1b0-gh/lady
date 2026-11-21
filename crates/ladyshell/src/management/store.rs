@@ -15,7 +15,7 @@ pub(super) const APPLICATION_ID: i32 = 0x4c44594d;
 pub(super) fn connect(path: &Path, writable: bool, create: bool) -> Result<Connection> {
     let parent = path
         .parent()
-        .ok_or_else(|| invalid("Dossier de catalogue absent".into()))?;
+        .ok_or_else(|| invalid("Missing catalog directory".into()))?;
     if create {
         state::create_directory(parent)?;
     }
@@ -24,7 +24,7 @@ pub(super) fn connect(path: &Path, writable: bool, create: bool) -> Result<Conne
     // SAFETY: geteuid has no preconditions.
     ensure!(
         meta.uid() == unsafe { libc::geteuid() } && meta.mode() & 0o077 == 0,
-        "Le catalogue exige un dossier privé (0700), appartenant à l’utilisateur"
+        "The catalog requires a private directory (0700) owned by the user"
     );
     if create {
         match OpenOptions::new()
@@ -49,7 +49,7 @@ pub(super) fn connect(path: &Path, writable: bool, create: bool) -> Result<Conne
                 private_file(&metadata)?;
                 ensure!(
                     suffix == "-journal",
-                    "Catalogue WAL refusé ; journal classique requis"
+                    "WAL catalog refused; a rollback journal is required"
                 );
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
@@ -72,11 +72,11 @@ pub(super) fn connect(path: &Path, writable: bool, create: bool) -> Result<Conne
             && current.ino() == pinned.ino()
             && parent_now.dev() == meta.dev()
             && parent_now.ino() == meta.ino(),
-        "Catalogue remplacé pendant l’ouverture"
+        "Catalog replaced while opening"
     );
     let mut moved = 0;
     connection.file_control(Some("main"), rusqlite::FileControl::HasMoved(&mut moved))?;
-    ensure!(moved == 0, "Fichier SQLite remplacé pendant l’ouverture");
+    ensure!(moved == 0, "SQLite file replaced while opening");
     super::header::validate(&mut connection, create)?;
     connection.busy_timeout(Duration::from_secs(5))?;
     connection.set_db_config(DbConfig::SQLITE_DBCONFIG_DEFENSIVE, true)?;
@@ -111,7 +111,7 @@ pub(super) fn connect(path: &Path, writable: bool, create: bool) -> Result<Conne
     } else {
         ensure!(
             app == APPLICATION_ID && version == 1,
-            "Catalogue étranger ou version incompatible ({version}) ; aucune migration implicite"
+            "Foreign catalog or incompatible version ({version}); no implicit migration"
         );
     }
     transaction.commit()?;
@@ -124,7 +124,7 @@ fn private_file(meta: &fs::Metadata) -> Result<()> {
             && meta.nlink() == 1
             && meta.uid() == unsafe { libc::geteuid() }
             && meta.mode() & 0o077 == 0,
-        "Catalogue/journal privé régulier sans lien requis (0600)"
+        "Catalog/journal must be a private regular file without links (0600)"
     );
     Ok(())
 }

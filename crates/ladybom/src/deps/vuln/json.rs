@@ -74,7 +74,7 @@ impl<'de> Visitor<'de> for UniqueKeys {
 pub fn parse_json(bytes: &[u8]) -> Result<Value> {
     if bytes.len() > MAX_INPUT_BYTES {
         return Err(Error::InvalidInput {
-            message: "Document JSON de vulnérabilités supérieur à 64 Mio".into(),
+            message: "Vulnerability JSON document exceeds 64 MiB".into(),
         });
     }
     let mut decoder = serde_json::Deserializer::from_slice(bytes);

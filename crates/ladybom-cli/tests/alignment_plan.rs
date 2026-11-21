@@ -48,7 +48,7 @@ fn json_and_markdown_are_offline_snapshot_only_and_keep_digest() -> TestResult {
         );
         if markdown {
             let text = String::from_utf8(output.stdout)?;
-            assert!(text.starts_with("# Plan"));
+            assert!(text.starts_with("# Duplicate reduction plan"));
             assert!(text.contains("pkg&#58;npm/shared"));
         } else {
             let value: Value = serde_json::from_slice(&output.stdout)?;
@@ -104,6 +104,6 @@ fn tampered_snapshot_is_rejected_without_a_plan() -> TestResult {
         .output()?;
     assert!(!output.status.success());
     assert!(output.stdout.is_empty());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("Empreinte divergente"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("Digest mismatch"));
     Ok(())
 }

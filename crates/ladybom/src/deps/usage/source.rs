@@ -46,7 +46,7 @@ impl SourcesRead {
             crate::config::relative_path(manifest)?;
             ensure!(
                 graph.inventory.inputs.contains_key(manifest),
-                "Manifest absent des empreintes de l’inventaire : {manifest}"
+                "Manifest missing from inventory digests: {manifest}"
             );
             if let Some(project) = graph
                 .inventory
@@ -57,7 +57,7 @@ impl SourcesRead {
                 if project.ecosystem == "rust" {
                     let text = result
                         .text(manifest)
-                        .ok_or_else(|| invalid(format!("Manifest non UTF-8 : {manifest}")))?;
+                        .ok_or_else(|| invalid(format!("Non-UTF-8 manifest: {manifest}")))?;
                     if super::super::parse_toml(text)?.get("package").is_none() {
                         continue;
                     }
@@ -93,7 +93,7 @@ impl SourcesRead {
     }
     fn record_entry(&mut self) -> Result<()> {
         self.entries += 1;
-        ensure!(self.entries <= 20_000, "Maximum 20000 entrées d’usage");
+        ensure!(self.entries <= 20_000, "Maximum 20000 usage entries");
         Ok(())
     }
     fn read(&mut self, file: File, name: &str) -> Result<()> {
@@ -101,19 +101,13 @@ impl SourcesRead {
             return Ok(());
         }
         let metadata = file.metadata()?;
-        ensure!(
-            metadata.is_file(),
-            "Fichier source régulier requis : {name}"
-        );
-        ensure!(
-            self.snapshot.len() < 20_000,
-            "Maximum 20000 fichiers d’usage"
-        );
+        ensure!(metadata.is_file(), "Regular source file required: {name}");
+        ensure!(self.snapshot.len() < 20_000, "Maximum 20000 usage files");
         let bytes = files::read_file(file, (64 * 1024 * 1024 - self.total).min(8 * 1024 * 1024))?;
         self.total += bytes.len();
         ensure!(
             self.total <= 64 * 1024 * 1024,
-            "Budget d’usage de 64 Mio dépassé"
+            "Usage budget of 64 MiB exceeded"
         );
         self.snapshot.insert(
             name.into(),
@@ -132,7 +126,7 @@ impl SourcesRead {
         if let Some(directory) = self.open(base)? {
             ensure!(
                 directory.metadata()?.is_dir(),
-                "Répertoire source requis : {base}"
+                "Source directory required: {base}"
             );
             if excluded_directory(base) {
                 return Ok(());
@@ -150,14 +144,14 @@ impl SourcesRead {
         boundaries: &BTreeSet<String>,
         depth: usize,
     ) -> Result<()> {
-        ensure!(depth <= 64, "Sources d’usage trop imbriquées");
+        ensure!(depth <= 64, "Usage sources nested too deeply");
         for entry in fs::read_dir(format!("/proc/self/fd/{}", directory.as_raw_fd()))? {
             let entry = entry?;
             self.record_entry()?;
             let child = entry.file_name();
             let child_name = child
                 .to_str()
-                .ok_or_else(|| invalid("Nom source non UTF-8".into()))?;
+                .ok_or_else(|| invalid("Non-UTF-8 source name".into()))?;
             let path = if base.is_empty() {
                 child_name.into()
             } else {
@@ -270,7 +264,7 @@ pub(super) fn resolve(base: &str, path: &str) -> Result<String> {
             && !path.starts_with('/')
             && !path.contains('\\')
             && !path.chars().any(char::is_control),
-        "Chemin source relatif requis : {path}"
+        "Relative source path required: {path}"
     );
     let mut parts: Vec<&str> = base
         .split('/')
@@ -280,7 +274,7 @@ pub(super) fn resolve(base: &str, path: &str) -> Result<String> {
         match part {
             "" | "." => (),
             ".." => {
-                ensure!(parts.pop().is_some(), "Chemin source hors racine : {path}");
+                ensure!(parts.pop().is_some(), "Source path outside root: {path}");
             }
             _ => parts.push(part),
         }

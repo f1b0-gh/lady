@@ -13,7 +13,7 @@ use std::{
 
 #[derive(Debug, Subcommand)]
 pub enum PruneCommand {
-    /// Relever les usages et candidates sans exécuter le projet ni les outils externes.
+    /// Record usage and removal candidates without executing the project or external tools.
     Analyze {
         #[arg(long)]
         project: PathBuf,
@@ -21,7 +21,7 @@ pub enum PruneCommand {
         snapshot: PathBuf,
         #[arg(long, required = true)]
         manifest: Vec<String>,
-        /// Rapport JSON cargo-machete déjà produit dans un environnement contrôlé.
+        /// Existing cargo-machete JSON report produced in a controlled environment.
         #[arg(long)]
         machete_report: Option<PathBuf>,
         #[arg(long)]
@@ -31,12 +31,12 @@ pub enum PruneCommand {
         #[arg(long)]
         output: Option<PathBuf>,
     },
-    /// Afficher les déclarations exactes et leurs identifiants de retrait.
+    /// Display exact declarations and their removal identifiers.
     Roots {
         #[arg(long)]
         snapshot: PathBuf,
     },
-    /// Construire une demande liée au snapshot ; ne modifie aucun manifest.
+    /// Build a request bound to the snapshot; does not modify any manifest.
     Request {
         #[arg(long)]
         snapshot: PathBuf,
@@ -55,7 +55,7 @@ pub enum PruneCommand {
         #[arg(long)]
         output: Option<PathBuf>,
     },
-    /// Comparer les parcours natifs avant/après retrait des déclarations sélectionnées.
+    /// Compare native traversals before and after removing selected declarations.
     Simulate {
         #[arg(long)]
         snapshot: PathBuf,
@@ -68,7 +68,7 @@ pub enum PruneCommand {
         #[arg(long)]
         output: Option<PathBuf>,
     },
-    /// Empreinter une copie explicitement éditée et vérifier la disparition des déclarations.
+    /// Hash an explicitly edited copy and verify that the declarations were removed.
     ValidationPlan {
         #[arg(long)]
         before: PathBuf,

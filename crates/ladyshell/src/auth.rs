@@ -31,7 +31,7 @@ fn is_reference(value: &str) -> bool {
     name == "CODEX_AUTH_ACCESS_TOKEN"
 }
 fn invalid() -> Error {
-    Error::Authentication { message: "Authentification invalide : vérifier le provider OpenShell et l’identifiant de routage Codex hôte".into() }
+    Error::Authentication { message: "Invalid authentication: verify the OpenShell provider and host Codex routing identifier".into() }
 }
 pub fn account_id(value: &str) -> Result<String> {
     let compact = value.strip_prefix("urn:uuid:").unwrap_or(value);

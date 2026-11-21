@@ -28,19 +28,19 @@ impl Report {
                 manifests
                     .insert(project.manifest.as_str(), project)
                     .is_none(),
-                "Manifest dupliqué dans le rapport"
+                "Duplicate manifest in the report"
             );
             if let Some(lockfile) = &project.lockfile {
                 let key = (&project.ecosystem, lockfile);
                 if let Some(owner) = owners.get(&key) {
                     ensure!(
                         project.components_from.as_ref() == Some(*owner),
-                        "Référence au propriétaire du verrou partagé requise"
+                        "Reference to the shared lockfile owner required"
                     );
                 } else {
                     ensure!(
                         project.components_from.is_none(),
-                        "Le premier projet doit posséder les composants du verrou"
+                        "The first project must own the lockfile components"
                     );
                     owners.insert(key, &project.manifest);
                 }
@@ -69,7 +69,7 @@ impl Report {
                 && stored.locked == project.locked
                 && stored.components_from == project.components_from
                 && stored.components == project.components,
-            "Identité de résolution du projet divergente du rapport"
+            "Project resolution identity differs from the report"
         );
         if let Some(lockfile) = &stored.lockfile {
             let first = self
@@ -79,14 +79,14 @@ impl Report {
                     candidate.ecosystem == stored.ecosystem
                         && candidate.lockfile.as_ref() == Some(lockfile)
                 })
-                .ok_or_else(|| invalid("Propriétaire du verrou absent".into()))?;
+                .ok_or_else(|| invalid("Missing lockfile owner".into()))?;
             ensure!(
                 if first.manifest == stored.manifest {
                     stored.components_from.is_none()
                 } else {
                     stored.components_from.as_ref() == Some(&first.manifest)
                 },
-                "Référence au propriétaire du verrou partagé requise"
+                "Reference to the shared lockfile owner required"
             );
         }
         let owner = stored
@@ -103,15 +103,15 @@ impl Report {
     fn validate_bounds(&self) -> Result<()> {
         ensure!(
             self.schema_version == 2,
-            "Version de rapport Ladybom non prise en charge : régénérer le rapport et les graphes"
+            "Unsupported Ladybom report version: regenerate the report and graphs"
         );
         ensure!(
             self.projects.len() <= 5000,
-            "Maximum 5000 projets dans le rapport Ladybom"
+            "Maximum 5000 projects in the Ladybom report"
         );
         ensure!(
             self.inputs.len() <= 5000,
-            "Maximum 5000 entrées dans le rapport Ladybom"
+            "Maximum 5000 entries in the Ladybom report"
         );
         Ok(())
     }
@@ -123,11 +123,11 @@ impl Report {
         }
         ensure!(
             project.locked == project.lockfile.is_some(),
-            "Verrou et état du projet divergents"
+            "Lockfile and project state differ"
         );
         ensure!(
             project.locked || project.components_from.is_none(),
-            "Référence de composants sans verrou"
+            "Component reference without a lockfile"
         );
         Ok(())
     }
@@ -139,10 +139,10 @@ impl Report {
             .filter(|project| project.manifest == manifest);
         let project = matching
             .next()
-            .ok_or_else(|| invalid("Projet absent du rapport".into()))?;
+            .ok_or_else(|| invalid("Project missing from the report".into()))?;
         ensure!(
             matching.next().is_none(),
-            "Manifest dupliqué dans le rapport"
+            "Duplicate manifest in the report"
         );
         Ok(project)
     }
@@ -157,24 +157,21 @@ impl Report {
         crate::config::relative_path(manifest)?;
         ensure!(
             project.components.is_empty(),
-            "Composants inline et référence mutuellement exclusifs"
+            "Inline components and a component reference are mutually exclusive"
         );
-        ensure!(
-            manifest != &project.manifest,
-            "Référence de composants cyclique"
-        );
+        ensure!(manifest != &project.manifest, "Cyclic component reference");
         let owner =
-            owner.ok_or_else(|| invalid("Propriétaire des composants absent du rapport".into()))?;
+            owner.ok_or_else(|| invalid("Component owner missing from the report".into()))?;
         ensure!(
             owner.components_from.is_none(),
-            "Chaîne de références de composants interdite"
+            "Chained component references are forbidden"
         );
         ensure!(
             owner.locked
                 && project.locked
                 && owner.lockfile == project.lockfile
                 && owner.ecosystem == project.ecosystem,
-            "Propriétaire des composants issu d’un autre verrou ou écosystème"
+            "Component owner belongs to another lockfile or ecosystem"
         );
         Ok(&owner.components)
     }
@@ -190,7 +187,7 @@ impl Report {
             if let Some(owner) = owners.get(&key).copied() {
                 ensure!(
                     self.projects[owner].components == project.components,
-                    "Composants divergents dans un verrou partagé"
+                    "Components differ within a shared lockfile"
                 );
                 let manifest = self.projects[owner].manifest.clone();
                 self.projects[index].components.clear();
