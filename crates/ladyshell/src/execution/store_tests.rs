@@ -107,6 +107,49 @@ fn duplicate_after_expiry_retains_original_and_conflicts_compare_all_intent() ->
     Ok(())
 }
 #[test]
+fn acceptance_samples_under_lock_at_exclusive_deadline_only_for_new_authorized_work() -> Result<()>
+{
+    let f = fixture()?;
+    let lock = files::open_directory(&f.path)?;
+    let called = std::cell::Cell::new(false);
+    let mut stale = f.a.clone();
+    stale.claim = 2;
+    assert!(f
+        .s
+        .accept_with_clock(&f.i, &stale, || {
+            called.set(true);
+            Ok(10)
+        })
+        .is_err());
+    assert!(!called.get());
+
+    let error =
+        f.s.accept_with_clock(&f.i, &f.a, || {
+            assert!(matches!(lock.try_lock(), Err(fs::TryLockError::WouldBlock)));
+            called.set(true);
+            Ok(f.a.admit_before)
+        })
+        .err()
+        .ok_or_else(|| invalid("Exclusive deadline admitted new work"))?;
+    assert!(called.get());
+    assert!(error.to_string().contains("admission expired"), "{error}");
+    assert!(f.s.lookup(&f.i)?.is_none());
+
+    let mut later = f.a.clone();
+    later.admit_before += 10;
+    let first = f.s.accept_with_clock(&f.i, &later, || Ok(21))?;
+    assert_eq!(first.record.accepted_at, 21);
+    let mut replacement = f.a.clone();
+    replacement.reference.clear();
+    replacement.claim = 0;
+    let duplicate = f.s.accept_with_clock(&f.i, &replacement, || {
+        Err(invalid("Duplicate tried to sample clock"))
+    })?;
+    assert!(!duplicate.is_new);
+    assert_eq!(duplicate.record, first.record);
+    Ok(())
+}
+#[test]
 fn concurrent_openers_reserve_once() -> Result<()> {
     let f = fixture()?;
     let barrier = Arc::new(Barrier::new(4));

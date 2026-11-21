@@ -76,6 +76,8 @@ pub enum Command {
     /// Manage the local SQLite catalog, labels, and history.
     #[command(after_help = "Examples:\n  ladyshell manage list\n  ladyshell help manage annotate")]
     Manage(crate::management_cli::ManagementArgs),
+    /// Install, submit and inspect retained OpenShell executions.
+    Execution(crate::execution_cli::ExecutionArgs),
     /// Inspect retained state and current sandbox status.
     #[command(after_help = "Examples:\n  ladyshell status --state /path/to/state")]
     Status(ExistingOptions),

@@ -121,6 +121,28 @@ fn artifact_local_help_explains_the_retired_command() -> Result<(), Box<dyn Erro
 }
 
 #[test]
+fn retained_execution_help_is_local_and_hides_worker() -> Result<(), Box<dyn Error>> {
+    let overview = help(&["help", "execution"])?;
+    for command in [
+        "install",
+        "submit",
+        "status",
+        "output",
+        "fence",
+        "recover",
+        "reconcile",
+    ] {
+        assert!(overview.contains(command), "{overview}");
+        assert_eq!(
+            help(&["help", "execution", command])?,
+            help(&["execution", command, "--help"])?
+        );
+    }
+    assert!(!overview.contains("worker"), "{overview}");
+    Ok(())
+}
+
+#[test]
 fn operational_examples_satisfy_the_actual_parser() -> Result<(), Box<dyn Error>> {
     for arguments in [
         vec![

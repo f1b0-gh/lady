@@ -153,13 +153,7 @@ fn install_with(
 
 /// Resubmission returns the original evidence without contacting the runtime.
 pub fn submit(store: &Store, invocation: &Invocation, admission: &Admission) -> Result<Acceptance> {
-    if let Some(record) = store.lookup(invocation)? {
-        return Ok(Acceptance {
-            record,
-            is_new: false,
-        });
-    }
-    store.accept(invocation, admission, now()?)
+    store.accept_with_clock(invocation, admission, now)
 }
 #[derive(Debug, Serialize)]
 pub struct Status {
