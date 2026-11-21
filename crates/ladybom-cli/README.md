@@ -1,19 +1,31 @@
 # ladybom CLI
 
-The inventory command for [Ladybom](../ladybom/README.md). The Cargo package is
-`ladybom-cli`; its binary is `ladybom`. From the repository root:
+Ladybom inventories Cargo, Python, npm and Go source metadata and exports
+CycloneDX SBOMs. It scans without running project code or package managers, and
+without network access, Nickel, OpenShell or a model provider. The Cargo package
+is `ladybom-cli` and installs the `ladybom` command.
+
+Install from a source checkout on Linux with stable Rust, a C compiler and Git.
+Cargo may download locked dependencies during the build.
 
 ```sh
-cargo build -p ladybom-cli --locked
-./target/debug/ladybom scan --project /absolute/project --json
-./target/debug/ladybom scan --project /absolute/project --cyclonedx
+git clone https://github.com/f1b0-gh/lady.git
+cd lady
+cargo install --locked --path crates/ladybom-cli
 ```
 
-Examples below assume the binary is on `PATH`; otherwise use
-`./target/debug/ladybom`. Use `ladybom --help` or, for example,
-`ladybom graph query --help` for command-specific syntax. Keep outputs
-outside scanned sources. Native JSON is the input to `ladyshell --ladybom`;
-CycloneDX is an exchange format and does not replace that report.
+With Cargo's installation directory on `PATH`, scan a project and keep any
+output files outside the scanned tree.
+
+```sh
+ladybom scan --project /absolute/project --json > /outside-project/report.json
+ladybom scan --project /absolute/project --cyclonedx > /outside-project/bom.cdx.json
+```
+
+The native report records coverage and unresolved inputs. Ladyshell accepts
+that format through `--ladybom` and independently verifies it against its source
+selection. CycloneDX 1.5 is the exchange format. Use `ladybom --help` or
+`ladybom graph query --help` for command-specific syntax.
 
 ## Build and install choices
 
@@ -24,9 +36,10 @@ From this checkout, install either configuration with Cargo.
 | Default (`graph`) | `cargo install --locked --path crates/ladybom-cli` | All commands below |
 | Minimal | `cargo install --locked --path crates/ladybom-cli --no-default-features` | `scan` (including CycloneDX), `artifact`, `interop`, `vuln`, `vxdf` |
 
-For a minimal repository build use `cargo build -p ladybom-cli --locked --no-default-features`.
-The default `graph` feature includes the [graph library](../ladybom-graph/README.md)
-and Parquet. Clap parsing and help reflect the selected commands.
+Use `cargo build -p ladybom-cli --locked` to build without installing. Add
+`--no-default-features` for the minimal build. The default `graph` feature includes the [graph library](https://github.com/f1b0-gh/lady/blob/main/crates/ladybom-graph/README.md)
+and Parquet. Native graph traversal and removal simulation require an explicit
+LadybugDB executable. Clap parsing and help reflect the selected commands.
 
 ## Commands and exit status
 
@@ -85,14 +98,14 @@ build list. Requirements are minimum versions, checksums are not locks, and
 vendored modules are observations. Local `use`/`replace` targets must already be
 in the selected snapshot. Go projects remain unlocked, resolution gaps remain
 explicit, and Go advisory matching is unsupported. See
-[dependency coverage](../../docs/dependencies.md) for format-specific limits.
+[dependency coverage](https://github.com/f1b0-gh/lady/blob/main/docs/dependencies.md) for format-specific limits.
 
 ## Inspect dependency differences
 
-![Ladybug Explorer displaying Ladybom's synthetic dependency graph, with two versions of demo-shared reached through different parents](../../docs/assets/ladybom-explorer.png)
+![Ladybug Explorer displaying Ladybom's synthetic dependency graph, with two versions of demo-shared reached through different parents](https://raw.githubusercontent.com/f1b0-gh/lady/main/docs/assets/ladybom-explorer.png)
 
 This is the real [Ladybug Explorer](https://github.com/LadybugDB/explorer),
-showing CSV exported by Ladybom from the [reproducible example](../../examples/explorer-demo/README.md).
+showing CSV exported by Ladybom from the [reproducible example](https://github.com/f1b0-gh/lady/blob/main/examples/explorer-demo/README.md).
 Its deliberately synthetic npm lockfile illustrates a small static audit:
 
 | Evidence | Finding |
@@ -115,7 +128,7 @@ sh examples/explorer-demo/prepare.sh /tmp/lady-demo-inputs
 Use new output directories. The example does not select a safe version or prove
 compatibility, minimum-version support, or an actual installation. Real changes
 need complete constraints, current advisory checks and consumer tests; the
-[graph guide](../../docs/dependency-graphs.md) explains the limits and validation path.
+[graph guide](https://github.com/f1b0-gh/lady/blob/main/docs/dependency-graphs.md) explains the limits and validation path.
 
 ## Version analysis
 
@@ -190,7 +203,7 @@ activation. Verify scope independently, retain the immutable reference and its
 digest, then compare new snapshots. Never regenerate baselines or exceptions to
 make a check pass. Explicitly advancing a reviewed baseline after a reduction
 prevents reintroductions; the tool does not remember reductions automatically.
-[Maintenance rules](../../docs/dependencies.md#dependency-maintenance) also require
+[Maintenance rules](https://github.com/f1b0-gh/lady/blob/main/docs/dependencies.md#dependency-maintenance) also require
 separate pin, advisory and consumer checks.
 
 ## Native and exchange operations
@@ -231,7 +244,7 @@ Explanation budgets are `--max-queries` (default 8, maximum 16), `--max-results`
 `--timeout-secs` (default 60, maximum 300, shared across traversals). These options
 do not affect engine-free alignment. Truncation is explicit and returns 2.
 Paths show potential dependants, not exploitability. See
-[graphs](../../docs/dependency-graphs.md) for engine setup and identity rules.
+[graphs](https://github.com/f1b0-gh/lady/blob/main/docs/dependency-graphs.md) for engine setup and identity rules.
 
 ### Removal analysis
 
@@ -260,7 +273,7 @@ ladybom prune simulate --snapshot /state/before --request /state/request.json \
 Candidates and `freed_in_model` are hypotheses. After explicitly editing an
 isolated copy and updating its locks, export its new snapshot and prepare a
 validation plan. Only Ladyshell executes its checks; the
-[removal workflow](../../docs/dependency-graphs.md#removal-analysis-and-validation)
+[removal workflow](https://github.com/f1b0-gh/lady/blob/main/docs/dependency-graphs.md#removal-analysis-and-validation)
 explains that handoff and the retained evidence.
 
 ### Local advisories and VEX
@@ -286,7 +299,7 @@ ladybom vuln check --report /state/report.json --snapshot /state/osv.json \
   --as-of 2026-11-21T12:00:00Z --policy /state/vuln-policy.json
 ```
 
-See [vulnerabilities](../../docs/vulnerabilities.md) for obtaining local inputs,
+See [vulnerabilities](https://github.com/f1b0-gh/lady/blob/main/docs/vulnerabilities.md) for obtaining local inputs,
 JSON schemas, expiring decisions and the distinction between findings and policy.
 
 ### Exchange bundles and VXDF
@@ -313,7 +326,7 @@ receipt), `--report FILE` (native inventory), `--snapshot FILE` (OSV),
 `--revision REV`, `--target-profile LABEL` and `--as-of RFC3339`. Optional
 `--snapshot-max-age-seconds` and `--evidence-max-age-seconds` each default to
 604800. Reviewer identity is an operator assertion, not a verified signature.
-See [interoperability](../../docs/ladybom-interop.md) for bundle examples, exact
+See [interoperability](https://github.com/f1b0-gh/lady/blob/main/docs/ladybom-interop.md) for bundle examples, exact
 correlation fields, review/export examples and consumer limitations.
 
 ### Artifact collection and export
@@ -330,7 +343,7 @@ paths without symlinks. It never executes a binary from the rootfs. Collection
 writes private `evidence.json` and `coverage.json`; export writes public
 `bom.cdx.json` and `coverage.json`. Both publish a final `manifest.json`, require
 a new directory, and return 2 for incomplete scope. See
-[artifact SBOMs](../../docs/artifact-sbom.md) for a complete command example,
+[artifact SBOMs](https://github.com/f1b0-gh/lady/blob/main/docs/artifact-sbom.md) for a complete command example,
 tool protocols and coverage limits.
 
 None of these reports authorizes installation, network access or project execution.

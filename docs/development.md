@@ -73,6 +73,34 @@ proof that a deployment works. Ignored tests for LadybugDB, images, OpenShell,
 Jujutsu and VMs have separate commands in the relevant guides. Build outputs,
 state, exports and credentials stay outside published sources.
 
+## Ladybom packages
+
+Qualify `ladybom`, `ladybom-graph` and `ladybom-cli` together with the stable Rust
+and Python 3.11 or newer toolchain, a C compiler and Git on Linux. Fetch inputs
+once before the offline check.
+
+```sh
+cargo fetch --locked
+python3 tests/check_ladybom_packages.py
+```
+
+The check verifies the core with Cargo's package verifier and stages all three
+Cargo archives. It checks archive assets and tests extracted sources outside the
+checkout. The pinned Cargo's verifier cannot look up the staged core package's
+checksum for its consumers, so isolated Cargo workspaces resolve the unpublished
+dependencies to extracted packages while retaining locked registry inputs. The
+check installs and scans with both CLI configurations and exercises Ladyshell's
+report admission against packaged core source. Native LadybugDB, live services
+and native artifact collectors have separate qualification paths.
+
+Review the package set, dependency findings, and core/graph/CLI version pins
+before release. With explicit approval, publish `ladybom` first, then
+`ladybom-graph`, then `ladybom-cli`, waiting for each dependency to become
+available before publishing its consumer. Verify a locked CLI installation
+against the registry after publication. Version and tag Ladybom releases
+independently of Ladyshell, Ladyboot and Ladyhost. The CLI guide's source
+installation works before a registry release.
+
 ## Known dependency findings
 
 The 2026-11-21 OSV query covers all 291 crates.io package versions in `Cargo.lock`,
@@ -105,9 +133,11 @@ this review.
 `main`, pull requests and manual dispatches. It uses Ubuntu 22.04 and the pinned
 `nix#ci` development shell, prepares both Nickel evaluators, then runs Cargo
 offline after explicit dependency acquisition. It also runs the Python suites
-above. Actions are pinned to full commits;
-repository permissions are read-only and checkout credentials are not retained.
-The job bounds build/test concurrency and keeps build output in Lady's `target/`.
+above. The independent Ladybom job uses the same pinned Rust toolchain and
+qualifies the archives without preparing Nickel or LadybugDB. Both jobs use
+commit-pinned actions, read-only repository permissions and checkout without
+retained credentials. They bound build and test concurrency and keep build
+output in Lady's `target/`.
 
 To enter the same tool environment locally:
 

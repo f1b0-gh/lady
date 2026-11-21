@@ -83,7 +83,7 @@ fn rejects_symlinks_and_oversized_input_without_creating_output() -> Result {
 fn correlation_recomputes_inputs_and_never_adopts_import_receipts() -> Result {
     let dir = tempfile::tempdir()?;
     let mut report: ladybom::Report =
-        serde_json::from_str(include_str!("../../ladybom/tests/fixtures/report-v2.json"))?;
+        serde_json::from_str(include_str!("fixtures/report-v2.json"))?;
     let mut project = report.projects.remove(1);
     project.components.retain(|c| c.purl.is_some());
     report.projects = vec![project];

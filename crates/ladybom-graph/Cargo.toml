@@ -2,8 +2,10 @@
 name = "ladybom-graph"
 version = "0.1.0"
 edition = "2021"
-license = "Apache-2.0"
 description = "Persist and analyze static dependency graphs from Ladybom inventories"
+repository = "https://github.com/f1b0-gh/lady"
+readme = "README.md"
+license = "Apache-2.0"
 
 [dependencies]
 ladybom.workspace = true

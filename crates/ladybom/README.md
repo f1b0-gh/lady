@@ -14,7 +14,7 @@ assert_eq!(report.schema_version, 2);
 # Ok::<(), ladybom::error::Error>(())
 ```
 
-The library has no Clap dependency. [ladybom-cli](../ladybom-cli/README.md)
+The library has no Clap dependency. [ladybom-cli](https://github.com/f1b0-gh/lady/blob/main/crates/ladybom-cli/README.md)
 provides the `ladybom` command. Ladyshell reuses the analyzer and independently verifies its inputs before any preparation.
 An inventory grants no permission to install, connect to a network or execute.
 
@@ -33,7 +33,7 @@ snapshot is bounded to 5,000 files and 256 MiB, with 8 MiB per manifest/lockfile
 selected symlinks are refused and protected paths remain excluded.
 
 Supported inventory details and preparation restrictions are documented in
-[dependencies](../../docs/dependencies.md). Go module/workspace directives, checksums and vendor inventories are read
+[dependencies](https://github.com/f1b0-gh/lady/blob/main/docs/dependencies.md). Go module/workspace directives, checksums and vendor inventories are read
 without running Go. Local `use`/`replace` references require matching manifests
 already in the selected snapshot. Requirements are minimum versions; checksums
 never become components or locks. Vendored modules are observations, with local
@@ -55,7 +55,7 @@ CycloneDX composition remains `unknown` or `incomplete`, even if parsing succeed
 Document identities depend on the actual exported content. `interop::bundle`
 partitions independent lockfiles into public artifacts and private native reports
 with deterministic identities and a hash manifest; decisions never transfer
-implicitly between reports. See [interoperability](../../docs/ladybom-interop.md).
+implicitly between reports. See [interoperability](https://github.com/f1b0-gh/lady/blob/main/docs/ladybom-interop.md).
 
 `vuln` evaluates native reports against separately supplied OSV snapshots,
 checks policy and exports CycloneDX VEX without Clap or execution.
@@ -64,15 +64,15 @@ exploitability. Private registries, Git sources and ambiguous identities remain
 unknown. Decisions and exceptions expire and bind exact report/snapshot digests.
 For external JSON, use `vuln::parse_json` before `serde_json::from_value` so that
 duplicate keys in nested OSV extensions are also refused.
-See [vulnerabilities](../../docs/vulnerabilities.md) for inputs and policy.
+See [vulnerabilities](https://github.com/f1b0-gh/lady/blob/main/docs/vulnerabilities.md) for inputs and policy.
 
 ## Graphs and removal analysis
 
-The separate [ladybom-graph](../ladybom-graph/README.md) library adds Parquet snapshots, version
+The separate [ladybom-graph](https://github.com/f1b0-gh/lady/blob/main/crates/ladybom-graph/README.md) library adds Parquet snapshots, version
 alignment, lexical usage analysis and removal simulations. Snapshot export,
 inspection and alignment are static. Native traversal and simulation require an
 explicit absolute path to trusted LadybugDB **0.17.1**, with bounded time,
-memory and output. See [graphs](../../docs/dependency-graphs.md).
+memory and output. See [graphs](https://github.com/f1b0-gh/lady/blob/main/docs/dependency-graphs.md).
 
 `ladybom_graph::analyze_alignment` groups versions by identity, source and lockfile
 and separately audits direct pins and coverage. `AlignmentAnalysis::policy_pass`
@@ -97,7 +97,7 @@ No version, exception or baseline is chosen or updated by this API.
 `ladybom_graph::check_alignment_policy` compares verified snapshots against an
 `AlignmentPolicy` with a versioned baseline digest and temporary exceptions.
 Inherited backlog is not approval. Pins and current advisories need separate
-checks; see the [CLI](../ladybom-cli/README.md#alignment-policy).
+checks; see the [CLI](https://github.com/f1b0-gh/lady/blob/main/crates/ladybom-cli/README.md#alignment-policy).
 
 `deps::prune_validation` exposes plan types and inventory verification without
 optional features. Construct a plan with `ladybom_graph::prune_validation::plan`. `NodeRef`, `Root` and
@@ -113,5 +113,5 @@ Nickel evaluator is required for a Ladybom scan.
 
 Fixtures in `tests/fixtures/` retain original Erwin names and digests to test
 compatibility. Native tests require explicit `LADYBOM_LADYBUG_BIN` selection.
-[Nix/Go artifact SBOMs](../../docs/artifact-sbom.md) use a separate explicit
+[Nix/Go artifact SBOMs](https://github.com/f1b0-gh/lady/blob/main/docs/artifact-sbom.md) use a separate explicit
 collector; offline export does not expand the static scanner's coverage.

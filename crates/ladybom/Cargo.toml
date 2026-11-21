@@ -3,6 +3,9 @@ license = "Apache-2.0"
 name = "ladybom"
 version = "0.1.0"
 edition = "2021"
+description = "Build static dependency inventories and CycloneDX SBOMs from source metadata"
+repository = "https://github.com/f1b0-gh/lady"
+readme = "README.md"
 
 [dependencies]
 sha2.workspace = true

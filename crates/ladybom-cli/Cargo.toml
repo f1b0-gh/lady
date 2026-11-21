@@ -3,6 +3,9 @@ license = "Apache-2.0"
 name = "ladybom-cli"
 version = "0.1.0"
 edition = "2021"
+description = "Inventory source dependencies, export SBOMs, and inspect dependency graphs"
+repository = "https://github.com/f1b0-gh/lady"
+readme = "README.md"
 
 [[bin]]
 name = "ladybom"
