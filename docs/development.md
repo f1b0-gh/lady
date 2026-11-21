@@ -53,6 +53,23 @@ Set `CARGO_BUILD_JOBS=2` when limiting build concurrency. Library checks preserv
 CLI independence; Ladyboot is checked with default features disabled by the
 boundary checker.
 
+Python helper tests use the existing hash-pinned interoperability requirements.
+Acquire them explicitly, then run the synthetic suites without live services:
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install --isolated --disable-pip-version-check \
+  --index-url https://pypi.org/simple --require-hashes --only-binary=:all: \
+  -r tests/requirements-interop.txt
+.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+python3 -m unittest discover -s examples/ladyhost/scenario -p 'test_*.py'
+(cd crates/ladyboot/tests && python3 -m unittest test_assembly test_vm_drivers)
+```
+
+The Ladyhost scenario suite skips its native Jujutsu case unless `JJPR_TEST_JJ`
+selects a prepared executable. Other Ladyboot test drivers require explicit
+native inputs; do not run them through unrestricted test discovery.
+
 The test suite uses synthetic fixtures, but some tests require native tools:
 Nix, Bubblewrap, `prlimit` and the pinned Nickel evaluator. Prepare the evaluator
 explicitly before running those tests:
@@ -100,7 +117,8 @@ is established by this publication; the review record retains the exact scope.
 [GitHub Actions](../.github/workflows/ci.yml) runs the checks above on pushes to
 `main`, pull requests and manual dispatches. It uses Ubuntu 22.04 and the pinned
 `nix#ci` development shell, prepares both Nickel evaluators, then runs Cargo
-offline after explicit dependency acquisition. Actions are pinned to full commits;
+offline after explicit dependency acquisition. It also runs the Python suites
+above. Actions are pinned to full commits;
 repository permissions are read-only and checkout credentials are not retained.
 The job bounds build/test concurrency and keeps build output in Lady's `target/`.
 
