@@ -245,7 +245,7 @@ def configuration(lane=None, include=None):
         include.append('stream_' + lane + '.py')
     return '''{ schema_version = 1, name = "jjpr-agents",
 sources = { include = ''' + json.dumps(include) + ''', exclude = [] },
-tools = { python = { version = "3.12.15" } },
+tools = { python = { version = "3.12.16" } },
 missions.dev = { tools = ["python"], include = [], depends_on = [], checks = [] },
 sandbox = { gateway = "openshell", workspace = "default", provider = "ladyshell-lo-native" } }
 '''
@@ -298,17 +298,19 @@ request=urllib.request.Request(settings['api'], headers={'Accept':'application/j
 try:
     response=urllib.request.build_opener(urllib.request.ProxyHandler({})).open(request,timeout=8)
 except urllib.error.HTTPError as e:
+    e.close()
     api_result={'outcome':'http-refusal' if e.code in (401,403,404) else 'unexpected-http-status','status':e.code}
 except (urllib.error.URLError,TimeoutError,OSError):
     api_result={'outcome':'network-unavailable'}
 else:
-    if not settings['public']:
-        raise AssertionError('Sandbox obtained private repository through direct API')
-    raw=response.read(1048577)
-    assert len(raw)<=1048576, 'Public repository response exceeds bound'
-    metadata=json.loads(raw)
-    assert metadata.get('full_name','').lower()==settings['repository'].lower() and metadata.get('private') is False, 'Public repository identity or visibility differs'
-    api_result={'outcome':'public-read-access','status':200}
+    with response:
+        if not settings['public']:
+            raise AssertionError('Sandbox obtained private repository through direct API')
+        raw=response.read(1048577)
+        assert len(raw)<=1048576, 'Public repository response exceeds bound'
+        metadata=json.loads(raw)
+        assert metadata.get('full_name','').lower()==settings['repository'].lower() and metadata.get('private') is False, 'Public repository identity or visibility differs'
+        api_result={'outcome':'public-read-access','status':200}
 env={k:v for k,v in os.environ.items() if not k.startswith(('GIT_','GH_','GITHUB_','FORGEJO_'))}
 env.update(GIT_TERMINAL_PROMPT='0',GIT_CONFIG_GLOBAL='/dev/null',GIT_CONFIG_NOSYSTEM='1',LC_ALL='C')
 try:

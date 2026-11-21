@@ -151,7 +151,7 @@ def prepare(args):
     inputs=root/'configuration';inputs.mkdir()
     # The current base contains the ranges work; new task files enter via run.
     include=sorted(commit_inventory(checkout,actual_base,env))
-    (inputs/'config.ncl').write_text('{ schema_version = 1, name = "jjpr-task-review", sources = { include = '+json.dumps(include)+', exclude = [] }, tools = { python = { version = "3.12.15" } }, missions.dev = { tools = ["python"], include = [], depends_on = [], checks = [] }, sandbox = { gateway = "openshell", workspace = "default", provider = "ladyshell-lo-native" } }\n')
+    (inputs/'config.ncl').write_text('{ schema_version = 1, name = "jjpr-task-review", sources = { include = '+json.dumps(include)+', exclude = [] }, tools = { python = { version = "3.12.16" } }, missions.dev = { tools = ["python"], include = [], depends_on = [], checks = [] }, sandbox = { gateway = "openshell", workspace = "default", provider = "ladyshell-lo-native" } }\n')
     common=['--config',inputs/'config.ncl','--lock',inputs/'environment.lock.json',
             '--resources',campaign/'resources','--codex',recorded['codex']['path'],
             '--codex-code-mode-host',recorded['codex_code_mode_host']['path'],'--mission','dev']

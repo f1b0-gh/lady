@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+import urllib.error
 import urllib.request
 import urllib.response
 
@@ -55,26 +56,50 @@ class InteropTests(unittest.TestCase):
 
     def test_bootstrap_does_not_send_password_to_environment_proxy(self):
         hosts = []
+        responses = []
 
         def transport(handler, request):
             hosts.append(request.host)
             response = urllib.response.addinfourl(io.BytesIO(b"synthetic-token"), {}, request.full_url, 200)
             response.msg = "OK"
+            responses.append(response)
+            self.addCleanup(response.close)
             return response
 
         self.bootstrap_with_transport(transport)
         self.assertEqual(hosts, ["127.0.0.1:18081", "127.0.0.1:18081"])
+        self.assertTrue(all(response.closed for response in responses))
 
     def test_bootstrap_refuses_redirect_before_credentials_leave_loopback(self):
+        responses = []
+
         def transport(handler, request):
             redirect = request.host.endswith("18081")
             headers = {"location": "http://elsewhere.example.invalid/login"} if redirect else {}
             response = urllib.response.addinfourl(io.BytesIO(b"synthetic-token"), headers, request.full_url, 302 if redirect else 200)
             response.msg = "Found" if redirect else "OK"
+            responses.append(response)
+            self.addCleanup(response.close)
             return response
 
         with self.assertRaises(ValueError):
             self.bootstrap_with_transport(transport, proxy=False)
+        self.assertEqual(len(responses), 1)
+        self.assertTrue(responses[0].closed)
+
+    def test_bootstrap_closes_http_refusal_response(self):
+        responses = []
+
+        def transport(handler, request):
+            response = urllib.error.HTTPError(request.full_url, 403, "Forbidden", {}, io.BytesIO(b"refused"))
+            responses.append(response)
+            self.addCleanup(response.close)
+            raise response
+
+        with self.assertRaisesRegex(SystemExit, "HTTP 403"):
+            self.bootstrap_with_transport(transport, proxy=False)
+        self.assertEqual(len(responses), 1)
+        self.assertTrue(responses[0].closed)
 
     def test_added_nested_component_is_a_loss(self):
         expected = bom()

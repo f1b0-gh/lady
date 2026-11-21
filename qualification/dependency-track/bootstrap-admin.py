@@ -26,6 +26,7 @@ with os.fdopen(fd, "w") as stream:
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
+        fp.close()
         raise ValueError("Local administrator initialization refuses redirects")
 
 # Credentials must never reach an environment proxy or a redirected endpoint.
@@ -46,5 +47,6 @@ try:
     with args.credentials.open("w") as stream:
         json.dump(credentials, stream)
 except urllib.error.HTTPError as error:
+    error.close()
     raise SystemExit(f"Initialization stopped at HTTP {error.code}; private recovery credentials retained") from None
 print("Private qualification credentials stored at", args.credentials)
