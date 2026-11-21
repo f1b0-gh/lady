@@ -58,6 +58,24 @@ pub fn execute(
     let backend = Backend::new(&current["context"])?;
     backend.verify_execution(&current)?;
     verify_provider(&backend, &current)?;
+    let mut command = sandbox_command(&backend, &current, arguments, timeout)?;
+    command
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+    let directory = lock.directory.clone();
+    drop(lock);
+    let code = crate::interactive::terminal_status(&mut command)?;
+    finish(&directory, &current, code, sync_back, prepared.as_ref())
+}
+
+/// Build the exact noninteractive OpenShell invocation for a verified state.
+pub(crate) fn sandbox_command<S: AsRef<std::ffi::OsStr>>(
+    backend: &Backend,
+    current: &Value,
+    arguments: &[S],
+    timeout: u32,
+) -> Result<std::process::Command> {
     let mut command = backend.command();
     command.args([
         "sandbox",
@@ -73,15 +91,9 @@ pub fn execute(
         command.args(["--env", variable]);
     }
     command
-        .args([state::text(&current, "sandbox_name")?, "--"])
-        .args(arguments)
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit());
-    let directory = lock.directory.clone();
-    drop(lock);
-    let code = crate::interactive::terminal_status(&mut command)?;
-    finish(&directory, &current, code, sync_back, prepared.as_ref())
+        .args([state::text(current, "sandbox_name")?, "--"])
+        .args(arguments);
+    Ok(command)
 }
 
 pub(crate) fn finish(

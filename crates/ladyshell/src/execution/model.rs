@@ -16,6 +16,9 @@ pub struct Binding {
 #[serde(deny_unknown_fields)]
 pub struct EnvironmentPin {
     pub state: PathBuf,
+    pub state_dev: u64,
+    pub state_ino: u64,
+    pub sandbox_name: String,
     pub sandbox_id: String,
     pub owner: String,
     pub policy_hash: String,
@@ -317,6 +320,11 @@ impl Catalog {
         );
         let e = &self.environment;
         normalized(&e.state)?;
+        ensure!(
+            e.state_ino != 0,
+            "Invalid retained state directory identity"
+        );
+        crate::config::identifier(&e.sandbox_name)?;
         for s in [
             &e.sandbox_id,
             &e.owner,

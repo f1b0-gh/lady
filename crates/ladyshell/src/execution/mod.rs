@@ -1,4 +1,8 @@
 //! Host-managed retained OpenShell invocation identities and receipts.
+mod capture;
+pub(crate) mod fence;
+mod runtime;
+pub use runtime::{install, reconcile, recover, status, submit, worker, Status};
 mod model;
 mod store;
 pub use model::*;

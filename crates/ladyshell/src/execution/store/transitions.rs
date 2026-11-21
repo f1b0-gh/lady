@@ -91,6 +91,25 @@ impl Store {
             self.finish(l, found, Phase::Refused, Some(reason.into()), None, now)
         })
     }
+    /// Consume an interrupted native dispatch while the original worker lease is
+    /// held. There is no client observation to store at this boundary.
+    pub(in crate::execution) fn uncertain_before_spawn(
+        &self,
+        lease: &WorkerLease,
+        expected: Phase,
+        reason: &str,
+        now: u64,
+    ) -> Result<Record> {
+        ensure!(
+            matches!(expected, Phase::Accepted | Phase::Dispatching),
+            "Cannot change a terminal retained receipt"
+        );
+        text(reason, 1024)?;
+        self.locked(true, |l| {
+            let found = self.owned(l, lease, expected)?;
+            self.finish(l, found, Phase::Uncertain, Some(reason.into()), None, now)
+        })
+    }
     /// Preserve loss of worker ownership as uncertainty. No external action is replayed.
     pub fn recover(&self, key: &Key, now: u64) -> Result<Record> {
         self.locked(true, |l| {
