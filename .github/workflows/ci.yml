@@ -69,3 +69,38 @@ jobs:
 
       - name: Verify that validation preserved locked inputs
         run: git diff --exit-code -- Cargo.lock ':(glob)**/flake.lock' tests/requirements-interop.txt
+
+  ladybom-packages:
+    name: Independent Ladybom packages
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    env:
+      CARGO_BUILD_JOBS: '2'
+      CARGO_INCREMENTAL: '0'
+      RUST_TEST_THREADS: '2'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@bb0495a1086c46893eee56f32fd192dfe4a15bb9 # v32.0.0
+        with:
+          enable_kvm: false
+          set_as_trusted_user: false
+          extra_nix_config: |
+            sandbox = true
+            max-jobs = 2
+            cores = 2
+
+      - name: Fetch locked inputs and qualify package archives
+        run: |
+          export CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target"
+          nix develop --no-update-lock-file --no-write-lock-file \
+            path:./nix#ci --command bash -euo pipefail <<'CHECKS'
+          cargo fetch --locked
+          python3 tests/check_ladybom_packages.py
+          CHECKS

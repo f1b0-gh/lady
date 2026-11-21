@@ -5,10 +5,7 @@ type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 fn offline_bundle_preserves_private_permissions_and_refuses_replacement() -> Result {
     let temp = tempfile::tempdir()?;
     let input = temp.path().join("input.json");
-    std::fs::write(
-        &input,
-        include_bytes!("../../ladybom/tests/fixtures/report-v2.json"),
-    )?;
+    std::fs::write(&input, include_bytes!("fixtures/report-v2.json"))?;
     let output = temp.path().join("bundle");
     let run = || {
         Command::new(env!("CARGO_BIN_EXE_ladybom"))
@@ -60,9 +57,7 @@ fn offline_bundle_preserves_private_permissions_and_refuses_replacement() -> Res
 #[test]
 fn ambiguous_input_fails_before_creating_output_and_symlinks_are_refused() -> Result {
     let temp = tempfile::tempdir()?;
-    let mut input: Value = serde_json::from_slice(include_bytes!(
-        "../../ladybom/tests/fixtures/report-v2.json"
-    ))?;
+    let mut input: Value = serde_json::from_slice(include_bytes!("fixtures/report-v2.json"))?;
     let mut duplicate = input["projects"][1]["components"][0].clone();
     duplicate["context"] = serde_json::json!("different-context");
     input["projects"][1]["components"]
@@ -90,10 +85,7 @@ fn ambiguous_input_fails_before_creating_output_and_symlinks_are_refused() -> Re
     };
     assert!(!run()?.status.success());
     assert!(!output.exists());
-    std::fs::write(
-        &input_path,
-        include_bytes!("../../ladybom/tests/fixtures/report-v2.json"),
-    )?;
+    std::fs::write(&input_path, include_bytes!("fixtures/report-v2.json"))?;
     std::os::unix::fs::symlink(temp.path(), &output)?;
     assert!(!run()?.status.success());
     assert!(!temp.path().join("manifest.json").exists());
@@ -108,10 +100,7 @@ fn output_ancestor_symlink_is_refused_before_writing() -> Result {
     let alias = temp.path().join("alias");
     std::os::unix::fs::symlink(&target, &alias)?;
     let input = temp.path().join("input.json");
-    std::fs::write(
-        &input,
-        include_bytes!("../../ladybom/tests/fixtures/report-v2.json"),
-    )?;
+    std::fs::write(&input, include_bytes!("fixtures/report-v2.json"))?;
     let result = Command::new(env!("CARGO_BIN_EXE_ladybom"))
         .args(["interop", "bundle", "--report"])
         .arg(&input)

@@ -1,10 +1,10 @@
 # ladybom-graph
 
 A Clap-free Rust library for persisting and analyzing static graphs built by
-[Ladybom](../ladybom/README.md). Import the graph model and projector from either
+[Ladybom](https://github.com/f1b0-gh/lady/blob/main/crates/ladybom/README.md). Import the graph model and projector from either
 library. Snapshot storage, alignment policy, LadybugDB queries, usage analysis
 and removal simulations live here. The default
-[ladybom CLI](../ladybom-cli/README.md) includes these operations.
+[ladybom CLI](https://github.com/f1b0-gh/lady/blob/main/crates/ladybom-cli/README.md) includes these operations.
 
 ```rust,no_run
 use ladybom::scan_project;
@@ -18,7 +18,7 @@ write_snapshot(&graph, Path::new("/state/new-snapshot"))?;
 
 Export and alignment run without a native engine. Traversal and simulation take
 an explicit trusted LadybugDB 0.17.1 executable. The
-[graph guide](../../docs/dependency-graphs.md) covers snapshot verification,
+[graph guide](https://github.com/f1b0-gh/lady/blob/main/docs/dependency-graphs.md) covers snapshot verification,
 the Explorer example, usage analysis and removal validation.
 
 ## Rust API migration

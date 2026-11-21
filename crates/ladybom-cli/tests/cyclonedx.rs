@@ -1,5 +1,5 @@
 use serde_json::{json, Value};
-use std::{path::Path, process::Command};
+use std::{fs, path::Path, process::Command};
 
 type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
@@ -23,10 +23,40 @@ fn property<'a>(bom: &'a Value, name: &str) -> Option<&'a str> {
 
 #[test]
 fn exports_all_ecosystems_without_external_tools_deterministically() -> Result {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../ladybom/tests/fixtures/project")
-        .canonicalize()?;
-    let output = scan(&root).output()?;
+    let root = tempfile::tempdir()?;
+    let files: &[(&str, &[u8])] = &[
+        (
+            "rust/Cargo.toml",
+            include_bytes!("fixtures/project/rust/Cargo.toml.fixture"),
+        ),
+        (
+            "rust/Cargo.lock",
+            include_bytes!("fixtures/project/rust/Cargo.lock.fixture"),
+        ),
+        (
+            "python/pyproject.toml",
+            include_bytes!("fixtures/project/python/pyproject.toml"),
+        ),
+        (
+            "python/uv.lock",
+            include_bytes!("fixtures/project/python/uv.lock"),
+        ),
+        (
+            "web/package.json",
+            include_bytes!("fixtures/project/web/package.json"),
+        ),
+        (
+            "web/package-lock.json",
+            include_bytes!("fixtures/project/web/package-lock.json"),
+        ),
+    ];
+    for directory in ["rust", "python", "web"] {
+        fs::create_dir(root.path().join(directory))?;
+    }
+    for (path, bytes) in files {
+        fs::write(root.path().join(path), bytes)?;
+    }
+    let output = scan(root.path()).output()?;
     assert!(
         output.status.success(),
         "{}",
@@ -48,7 +78,7 @@ fn exports_all_ecosystems_without_external_tools_deterministically() -> Result {
             "{purl}"
         );
     }
-    let report = ladybom::scan_project(&root)?;
+    let report = ladybom::scan_project(root.path())?;
     assert_eq!(
         components.len(),
         report
@@ -57,7 +87,7 @@ fn exports_all_ecosystems_without_external_tools_deterministically() -> Result {
             .map(|p| p.components.len())
             .sum::<usize>()
     );
-    let again = scan(&root).output()?;
+    let again = scan(root.path()).output()?;
     assert!(again.status.success());
     assert_eq!(output.stdout, again.stdout);
     Ok(())

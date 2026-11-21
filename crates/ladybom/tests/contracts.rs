@@ -1,5 +1,55 @@
 use ladybom::{deps, error::Result};
-use std::path::Path;
+use std::fs;
+
+fn fixture_project() -> Result<tempfile::TempDir> {
+    // Cargo excludes nested packages. Restore Cargo's input filenames in the scan tree.
+    let project = tempfile::tempdir()?;
+    let files: &[(&str, &[u8])] = &[
+        (
+            "rust/Cargo.toml",
+            include_bytes!("fixtures/project/rust/Cargo.toml.fixture"),
+        ),
+        (
+            "rust/Cargo.lock",
+            include_bytes!("fixtures/project/rust/Cargo.lock.fixture"),
+        ),
+        (
+            "rust/src/main.rs",
+            include_bytes!("fixtures/project/rust/src/main.rs"),
+        ),
+        (
+            "python/pyproject.toml",
+            include_bytes!("fixtures/project/python/pyproject.toml"),
+        ),
+        (
+            "python/uv.lock",
+            include_bytes!("fixtures/project/python/uv.lock"),
+        ),
+        (
+            "python/check.py",
+            include_bytes!("fixtures/project/python/check.py"),
+        ),
+        (
+            "web/package.json",
+            include_bytes!("fixtures/project/web/package.json"),
+        ),
+        (
+            "web/package-lock.json",
+            include_bytes!("fixtures/project/web/package-lock.json"),
+        ),
+        (
+            "web/check.ts",
+            include_bytes!("fixtures/project/web/check.ts"),
+        ),
+    ];
+    for directory in ["rust/src", "python", "web"] {
+        fs::create_dir_all(project.path().join(directory))?;
+    }
+    for (path, bytes) in files {
+        fs::write(project.path().join(path), bytes)?;
+    }
+    Ok(project)
+}
 
 #[test]
 fn validation_plan_verification_preserves_schema_one_without_graph() -> Result<()> {
@@ -28,8 +78,8 @@ fn validation_plan_verification_preserves_schema_one_without_graph() -> Result<(
 
 #[test]
 fn report_schema_two_preserves_the_compact_scanner_contract() -> Result<()> {
-    let project = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/project");
-    let report = deps::scan_project(&project)?;
+    let project = fixture_project()?;
+    let report = deps::scan_project(project.path())?;
     let expected: serde_json::Value =
         serde_json::from_str(include_str!("fixtures/report-v2.json"))?;
     assert_eq!(report.schema_version, 2);
@@ -50,8 +100,8 @@ fn older_report_v2_without_manifest_package_remains_readable() -> Result<()> {
 
 #[test]
 fn graph_schema_and_digest_bind_the_compact_inventory() -> Result<()> {
-    let project = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/project");
-    let graph = deps::graph::project(deps::scan_project(&project)?)?;
+    let project = fixture_project()?;
+    let graph = deps::graph::project(deps::scan_project(project.path())?)?;
     let expected: serde_json::Value = serde_json::from_str(include_str!("fixtures/graph-v2.json"))?;
     let historical: deps::graph::Graph = serde_json::from_value(expected.clone())?;
     historical.validate()?;
