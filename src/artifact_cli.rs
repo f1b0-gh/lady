@@ -1,7 +1,9 @@
-//! Temporary compatibility entry point for the independently installed bootc CLI.
+//! Local migration notice for the retired artifact forwarding command.
 use clap::Args;
 use ladyshell::error::{Error, Result};
-use std::{ffi::OsString, os::unix::process::CommandExt, process::Command};
+use std::{ffi::OsString, io::Write};
+
+const NOTICE: &str = "The ladyshell artifact forwarding command is retired. Run ladyboot directly; for help, run ladyboot --help.";
 
 #[derive(Debug, Args)]
 #[command(disable_help_flag = true)]
@@ -11,10 +13,11 @@ pub struct ArtifactArgs {
 }
 
 pub fn run(args: ArtifactArgs) -> Result<()> {
-    let program =
-        std::env::var_os("LADYSHELL_BOOTC_BIN").unwrap_or_else(|| OsString::from("ladyboot"));
-    let source = Command::new(&program).args(args.arguments).exec();
-    Err(Error::ProcessSpawn { program, source }.context(
-        "Installer ladyboot dans PATH ou définir LADYSHELL_BOOTC_BIN ; ladyshell artifact est un relais de compatibilité",
-    ))
+    if args.arguments.len() == 1 && (args.arguments[0] == "--help" || args.arguments[0] == "-h") {
+        writeln!(std::io::stdout().lock(), "{NOTICE}")?;
+        return Ok(());
+    }
+    Err(Error::InvalidInput {
+        message: NOTICE.into(),
+    })
 }

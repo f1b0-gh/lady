@@ -113,10 +113,10 @@ fn unknown_help_topics_are_errors_without_creating_state() -> Result<(), Box<dyn
 }
 
 #[test]
-fn artifact_local_help_explains_the_external_help_boundary() -> Result<(), Box<dyn Error>> {
+fn artifact_local_help_explains_the_retired_command() -> Result<(), Box<dyn Error>> {
     let text = help(&["help", "artifact"])?;
-    assert!(text.contains("LADYSHELL_BOOTC_BIN"), "{text}");
-    assert!(text.contains("starts that executable"), "{text}");
+    assert!(text.contains("retired"), "{text}");
+    assert!(text.contains("ladyboot directly"), "{text}");
     Ok(())
 }
 

@@ -1,110 +1,86 @@
 use std::{
+    ffi::OsString,
     fs,
     os::unix::{ffi::OsStringExt, fs::PermissionsExt},
     process::Command,
 };
 
-fn tool(directory: &std::path::Path, body: &str) -> std::io::Result<std::path::PathBuf> {
-    let path = directory.join("bootc tool");
-    fs::write(&path, format!("#!/usr/bin/python3\n{body}\n"))?;
+fn marker_tool(directory: &std::path::Path) -> std::io::Result<std::path::PathBuf> {
+    let path = directory.join("ladyboot");
+    fs::write(
+        &path,
+        "#!/bin/sh\nprintf executed > \"$ARTIFACT_MARKER\"\nexit 37\n",
+    )?;
     fs::set_permissions(&path, fs::Permissions::from_mode(0o700))?;
     Ok(path)
 }
 
 #[test]
-fn compatibility_forwards_arguments_bytes_output_and_exit_status(
+fn retired_artifact_invocations_never_execute_path_or_override_tools(
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let temp = tempfile::tempdir()?;
-    let child = tool(temp.path(), "import os,sys,json\nprint(json.dumps([os.fsencode(a).hex() for a in sys.argv[1:]]))\nprint('child diagnostic',file=sys.stderr)\nsys.exit(37)")?;
-    let arguments = vec![
-        "inspect".into(),
-        "--receipt".into(),
-        std::ffi::OsString::from_vec(b"a path with spaces-\xff.json".to_vec()),
-        "--unknown-option".into(),
+    let cases: Vec<(Vec<OsString>, i32)> = vec![
+        (vec!["artifact".into()], 2),
+        (vec!["artifact".into(), "check".into()], 2),
+        (vec!["artifact".into(), "--help".into()], 0),
+        (vec!["artifact".into(), "-h".into()], 0),
+        (vec!["help".into(), "artifact".into()], 0),
+        (vec!["artifact".into(), "--".into(), "--help".into()], 2),
+        (
+            vec![
+                "artifact".into(),
+                "inspect".into(),
+                "--receipt".into(),
+                OsString::from_vec(b"hostile path-\xff.json".to_vec()),
+            ],
+            2,
+        ),
     ];
-    let output = Command::new(env!("CARGO_BIN_EXE_ladyshell"))
-        .arg("artifact")
-        .args(&arguments)
-        .env("LADYSHELL_BOOTC_BIN", child)
-        .output()?;
-    assert_eq!(output.status.code(), Some(37));
-    let expected: Vec<String> = arguments
-        .into_iter()
-        .map(|a| a.into_vec().iter().map(|b| format!("{b:02x}")).collect())
-        .collect();
-    assert_eq!(
-        serde_json::from_slice::<Vec<String>>(&output.stdout)?,
-        expected
-    );
-    assert_eq!(output.stderr, b"child diagnostic\n");
-    Ok(())
-}
-
-#[test]
-fn compatibility_forwards_help_and_reports_a_missing_installation(
-) -> Result<(), Box<dyn std::error::Error>> {
-    let temp = tempfile::tempdir()?;
-    let child = tool(
-        temp.path(),
-        "import sys\nassert sys.argv[1:] == ['--help']\nprint('independent bootc help')",
-    )?;
-    let output = Command::new(env!("CARGO_BIN_EXE_ladyshell"))
-        .args(["artifact", "--help"])
-        .env("LADYSHELL_BOOTC_BIN", child)
-        .output()?;
-    assert!(output.status.success());
-    assert_eq!(output.stdout, b"independent bootc help\n");
-    let missing = Command::new(env!("CARGO_BIN_EXE_ladyshell"))
-        .args(["artifact", "check"])
-        .env("LADYSHELL_BOOTC_BIN", temp.path().join("missing"))
-        .output()?;
-    assert_eq!(missing.status.code(), Some(1));
-    assert!(String::from_utf8(missing.stderr)?.contains("LADYSHELL_BOOTC_BIN"));
-    assert!(missing.stdout.is_empty());
-    Ok(())
-}
-
-#[test]
-fn compatibility_preserves_option_terminator() -> Result<(), Box<dyn std::error::Error>> {
-    let temp = tempfile::tempdir()?;
-    let child = tool(
-        temp.path(),
-        "import json,sys\nprint(json.dumps(sys.argv[1:]))",
-    )?;
-    for arguments in [
-        vec!["--"],
-        vec!["--", "--help"],
-        vec!["--", "check", "--config", "a path"],
-    ] {
-        let output = Command::new(env!("CARGO_BIN_EXE_ladyshell"))
-            .arg("artifact")
-            .args(&arguments)
-            .env("LADYSHELL_BOOTC_BIN", &child)
-            .output()?;
-        assert!(output.status.success());
-        assert_eq!(
-            serde_json::from_slice::<Vec<String>>(&output.stdout)?,
-            arguments
-        );
+    for override_tool in [false, true] {
+        for (arguments, code) in &cases {
+            let temp = tempfile::tempdir()?;
+            let child = marker_tool(temp.path())?;
+            let marker = temp.path().join("executed");
+            let mut command = Command::new(env!("CARGO_BIN_EXE_ladyshell"));
+            command
+                .args(arguments)
+                .env_clear()
+                .env("PATH", temp.path())
+                .env("HOME", temp.path())
+                .env("ARTIFACT_MARKER", &marker)
+                .current_dir(temp.path());
+            if override_tool {
+                command.env("LADYSHELL_BOOTC_BIN", child);
+            }
+            let output = command.output()?;
+            assert!(!marker.exists(), "External tool ran for {arguments:?}");
+            assert_eq!(output.status.code(), Some(*code), "{output:?}");
+            let text = String::from_utf8(if *code == 0 {
+                assert!(output.stderr.is_empty());
+                output.stdout
+            } else {
+                assert!(output.stdout.is_empty());
+                output.stderr
+            })?;
+            assert!(text.contains("ladyboot"), "{text}");
+            assert!(text.contains("directly"), "{text}");
+            assert_eq!(fs::read_dir(temp.path())?.count(), 1);
+        }
     }
     Ok(())
 }
 
 #[test]
-fn compatibility_finds_the_independent_ladyboot_installation(
+fn retired_artifact_does_not_require_an_installed_ladyboot(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let temp = tempfile::tempdir()?;
-    let child = tool(
-        temp.path(),
-        "import sys\nassert sys.argv[1:] == ['--help']\nprint('ladyboot installed')",
-    )?;
-    fs::rename(child, temp.path().join("ladyboot"))?;
     let output = Command::new(env!("CARGO_BIN_EXE_ladyshell"))
         .args(["artifact", "--help"])
-        .env_remove("LADYSHELL_BOOTC_BIN")
+        .env_clear()
         .env("PATH", temp.path())
+        .env("LADYSHELL_BOOTC_BIN", temp.path().join("missing"))
         .output()?;
     assert!(output.status.success(), "{output:?}");
-    assert_eq!(output.stdout, b"ladyboot installed\n");
+    assert!(String::from_utf8(output.stdout)?.contains("ladyboot"));
+    assert_eq!(fs::read_dir(temp.path())?.count(), 0);
     Ok(())
 }

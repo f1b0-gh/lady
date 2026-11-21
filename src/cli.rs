@@ -7,7 +7,7 @@ use std::path::PathBuf;
     name = "ladyshell",
     version,
     about = "Manage declarative native OpenShell environments",
-    after_help = "Help:\n  ladyshell help <COMMAND> [SUBCOMMAND]\n  ladyshell <COMMAND> [SUBCOMMAND] --help\n\nExamples:\n  ladyshell list\n  ladyshell help apply\n  ladyshell cs checkpoint --help\n  ladyshell run --state /path/to/state -- cargo test\n\nHelp does not load configuration, credentials, or sandbox state.\nThe artifact compatibility command forwards its arguments to the separately installed ladyboot; use ladyshell help artifact for local help."
+    after_help = "Help:\n  ladyshell help <COMMAND> [SUBCOMMAND]\n  ladyshell <COMMAND> [SUBCOMMAND] --help\n\nExamples:\n  ladyshell list\n  ladyshell help apply\n  ladyshell cs checkpoint --help\n  ladyshell run --state /path/to/state -- cargo test\n\nHelp does not load configuration, credentials, or sandbox state."
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -20,9 +20,9 @@ pub enum Command {
         after_help = "Examples:\n  ladyshell deps prune validate --state /path/to/state --plan /path/to/plan.json"
     )]
     Deps(crate::deps_cli::DepsArgs),
-    /// Forward arguments to the separately installed ladyboot CLI.
+    /// Explain the retired artifact command; use ladyboot directly.
     #[command(
-        long_about = "Forward arguments unchanged to the separately installed ladyboot CLI.\nRequires ladyboot in PATH or an explicit LADYSHELL_BOOTC_BIN executable.\nUse ladyshell help artifact for local help without executing ladyboot.\nUse ladyshell artifact --help for ladyboot help (starts that executable).",
+        long_about = "The ladyshell artifact forwarding command is retired.\nRun ladyboot directly; for help, run ladyboot --help.",
         after_help = "Examples:\n  ladyshell help artifact\n  ladyshell artifact --help"
     )]
     Artifact(crate::artifact_cli::ArtifactArgs),
@@ -357,14 +357,14 @@ impl TryFrom<DestroyOptions> for Destroy {
     fn try_from(args: DestroyOptions) -> Result<Self> {
         if args.all || args.dry_run {
             return Err(ladyshell::error::Error::InvalidInput {
-                message: "Utiliser l’API de suppression groupée".into(),
+                message: "Use the bulk deletion API".into(),
             });
         }
         Ok(Self {
             state: args
                 .state
                 .ok_or_else(|| ladyshell::error::Error::InvalidInput {
-                    message: "État explicite requis".into(),
+                    message: "Explicit state required".into(),
                 })?,
             discard_work: args.discard_work,
         })
