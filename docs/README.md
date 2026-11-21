@@ -1,6 +1,7 @@
 # Documentation
 
 Start with the [project overview](../README.md) and [build guide](development.md).
+Each tool guide explains its commands, options, defaults and examples.
 
 | Task | Guide |
 | --- | --- |

@@ -80,10 +80,40 @@ cargo run -p ladyboot --locked -- inspect --receipt "$ARTIFACTS/image.receipt.js
 
 `check`, `render`, `lock`, `plan`, `explain` and `diff` do not build an OS image.
 Nix explanation forbids import-from-derivation; Nickel evaluation is bounded and
-network-isolated. `build --target` accepts `bootc-image`, `rootfs`, `kernel`,
-`initrd`, `boot-test-rootfs` and `checks`. `test` realizes artifact checks.
-Existing locks/receipts require explicit `--replace`; stale inputs fail.
-None of these operations installs an OS.
+network-isolated. Existing locks/receipts require explicit `--replace`; stale
+inputs fail. None of these operations installs an OS.
+
+### Command options
+
+All commands except `inspect` require `--config PATH` (the Nickel profile) and
+`--resources DIR` (the trusted recipe directory, normally `crates/ladyboot`).
+`plan`, `build` and `test` also require `--lock FILE` from `lock`; they re-evaluate
+the inputs and reject a mismatch. Commands print JSON to stdout, including when
+they also write an output file. Use `ladyboot COMMAND --help` for command syntax
+or `ladyboot --version` for the binary version.
+
+| Command | Additional options and behavior |
+| --- | --- |
+| `check` | Validate the profile and report evaluated inputs; no output file required. |
+| `render` | Print evaluated profile JSON; optional `--output FILE` also saves it. `--replace` requires `--output` and permits replacing that file. |
+| `explain` | Resolve the selected packages and needs. Optional `--rootfs PATH` adds verified observations from an already realized rootfs. |
+| `diff` | Required `--other PATH` selects the second Nickel profile, evaluated with the same resources. |
+| `lock` | Required `--output FILE` saves the input lock; `--replace` permits replacing an existing lock. |
+| `plan` | Optional `--target VALUE` selects the artifact to describe; defaults to `bootc-image`. |
+| `build` | Required `--receipt FILE` records the built artifact. Optional `--target VALUE` defaults to `bootc-image`; `--replace` permits replacing the receipt. |
+| `test` | Required `--receipt FILE` records built artifact checks; equivalent to `build --target checks`. `--replace` permits replacing the receipt. |
+| `inspect` | Required `--receipt FILE` selects an existing receipt to verify against the local Nix store; no profile or recipe options. |
+
+For `plan` and `build`, targets are `bootc-image` (OS archive), `rootfs`
+(assembled filesystem), `kernel`, `initrd`, `boot-test-rootfs` (test overlay),
+and `checks` (artifact checks). For example, after the lock step above:
+
+```sh
+cargo run -p ladyboot --locked -- build \
+  --config "$RECIPES/profiles/virtio.ncl" --resources "$RECIPES" \
+  --lock "$ARTIFACTS/profile.lock.json" --target rootfs \
+  --receipt "$ARTIFACTS/rootfs.receipt.json"
+```
 
 Explanation separates requested needs, planned native versions/store identities,
 services/network/persistence, and observed files. `explain --rootfs PATH` verifies
