@@ -29,7 +29,10 @@ fn go_only_scan_fails_deterministically_without_executing_a_tool() -> TestResult
         &sources,
         r#"{"include":["go.mod","go.sum","go.work","go.work.sum"],"exclude":[]}"#,
     )?;
-    fs::write(root.path().join("go.mod"), "module example.org/demo\n")?;
+    fs::write(
+        root.path().join("go.mod"),
+        "module example.org/demo\nrequire example.org/x v1.0.0\n",
+    )?;
     fs::write(
         root.path().join("go.sum"),
         "example.org/x v1.0.0 h1:synthetic\n",
@@ -46,12 +49,14 @@ fn go_only_scan_fails_deterministically_without_executing_a_tool() -> TestResult
     let report: Value = serde_json::from_slice(&first.stdout)?;
     assert_eq!(report["complete"], false);
     assert_eq!(report["inputs"].as_object().ok_or("inputs")?.len(), 4);
-    assert!(report["projects"].as_array().ok_or("projects")?.is_empty());
-    let diagnostics = report["diagnostics"].as_array().ok_or("diagnostics")?;
-    assert_eq!(diagnostics.len(), 4);
-    assert!(diagnostics
+    assert!(report["projects"]
+        .as_array()
+        .ok_or("projects")?
         .iter()
-        .all(|d| d["code"] == "unsupported_go_input" && d["blocking"] == true));
+        .any(|p| p["manifest"] == "go.mod"));
+    let diagnostics = report["diagnostics"].as_array().ok_or("diagnostics")?;
+    assert!(!diagnostics.is_empty());
+    assert!(diagnostics.iter().all(|d| d["blocking"] == true));
     let second = scan(root.path(), &sources)?;
     assert_eq!(second.status.code(), Some(2));
     assert_eq!(first.stdout, second.stdout);
@@ -72,7 +77,10 @@ fn mixed_project_export_alignment_and_plan_retain_go_coverage_gap() -> TestResul
     )?;
     let baseline = graph::project(ladybom::scan_project(root.path())?)?;
     assert!(graph::plan_alignment(&baseline)?.analysis_complete);
-    fs::write(root.path().join("go.mod"), "module example.org/demo\n")?;
+    fs::write(
+        root.path().join("go.mod"),
+        "module example.org/demo\nrequire example.org/x v1.0.0\n",
+    )?;
     let snapshot = output.path().join("graph");
     let exported = command()
         .args(["graph", "export", "--project"])
@@ -98,7 +106,7 @@ fn mixed_project_export_alignment_and_plan_retain_go_coverage_gap() -> TestResul
     assert!(!restored.inventory.complete);
     assert_eq!(
         restored.inventory.diagnostics[0].code,
-        "unsupported_go_input"
+        "go_resolution_unknown"
     );
     for operation in ["alignment", "alignment-plan"] {
         let mut cmd = command();

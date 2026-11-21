@@ -1,7 +1,7 @@
 # Ladybom
 
 A Rust library for dependency inventories and static analysis. Ladybom reads
-Cargo, Python and npm manifests and lockfiles, retaining source fingerprints,
+Cargo, Python, npm and Go source metadata, retaining source fingerprints,
 package identities, constraints and coverage gaps. Scanning runs no package
 manager, project code, Nickel or OpenShell and performs no network access.
 
@@ -34,10 +34,12 @@ snapshot is bounded to 5,000 files and 256 MiB, with 8 MiB per manifest/lockfile
 selected symlinks are refused and protected paths remain excluded.
 
 Supported inventory details and preparation restrictions are documented in
-[dependencies](../../docs/dependencies.md). Selected Go manifests and checksum
-files are fingerprinted but cause blocking `unsupported_go_input` diagnostics.
-The scan does not follow Go `use`/`replace` directives or infer a resolved graph
-from checksums. Explicit artifact collection is a separate operation.
+[dependencies](../../docs/dependencies.md). Go module/workspace directives, checksums and vendor inventories are read
+without running Go. Local `use`/`replace` references require matching manifests
+already in the selected snapshot. Requirements are minimum versions; checksums
+never become components or locks. Vendored modules are observations, with local
+replacements kept distinct. Go projects remain unlocked and unresolved build
+selection is explicit. Artifact collection remains a separate operation.
 
 ## SBOM and advisory APIs
 
