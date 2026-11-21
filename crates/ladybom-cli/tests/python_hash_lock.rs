@@ -1,4 +1,5 @@
-use ladybom::deps::graph;
+#[cfg(feature = "graph")]
+use ladybom_graph as graph;
 use serde_json::Value;
 use std::{fs, path::Path, process::Command};
 
@@ -51,6 +52,7 @@ fn hashed_pins_are_visible_in_deterministic_incomplete_reports() -> TestResult {
     Ok(())
 }
 
+#[cfg(feature = "graph")]
 #[test]
 fn graph_and_alignment_plan_retain_flat_inventory_limits() -> TestResult {
     let root = tempfile::tempdir()?;

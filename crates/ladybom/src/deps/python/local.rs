@@ -1,7 +1,6 @@
 //! Static local identities from selected manifests, never from registry guesses.
 use crate::deps::{invalid, Component, ManifestPackage, Project, Report};
 use crate::error::Result;
-#[cfg(feature = "graph")]
 use serde_json::json;
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -50,7 +49,6 @@ impl Identity {
         Ok(purl.to_string())
     }
 
-    #[cfg(feature = "graph")]
     pub fn source(&self) -> Value {
         json!({"local": self.source})
     }
@@ -178,7 +176,6 @@ impl LocalPackages {
             .then_some(identity)
     }
 
-    #[cfg(feature = "graph")]
     pub fn evidence_source(
         &self,
         lock: &str,

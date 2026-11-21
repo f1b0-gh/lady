@@ -3,11 +3,8 @@
 use super::{
     alignment, graph_digest, Alignment, AlignmentCoverage, Graph, VersionGroup, MAX_BYTES,
 };
-use crate::{
-    deps::invalid,
-    error::{ensure, Result},
-    files,
-};
+use crate::{ensure, invalid};
+use ladybom::{error::Result, files};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};

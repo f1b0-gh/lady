@@ -1,9 +1,6 @@
 //! Counterfactual declaration removal. Packages shared by retained roots stay reachable.
 use super::*;
 
-pub fn graph_digest(graph: &Graph) -> Result<String> {
-    Ok(files::hash(&serde_json::to_vec(graph)?))
-}
 pub fn root_catalog(graph: &Graph) -> Result<Vec<IdentifiedRoot>> {
     graph.validate()?;
     // Identical declarations are not individually distinguishable in this graph version.
@@ -65,7 +62,7 @@ impl RemovalRequest {
             "Missing filter context"
         );
         for manifest in &self.retained_manifests {
-            crate::config::relative_path(manifest)?;
+            ladybom::sources::relative_path(manifest)?;
             ensure!(
                 graph
                     .inventory

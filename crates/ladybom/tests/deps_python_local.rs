@@ -1,5 +1,3 @@
-#![cfg(feature = "graph")]
-
 use ladybom::deps::{self, graph, vuln};
 use ladybom::sources;
 use serde_json::json;
@@ -52,16 +50,6 @@ fn local_root_modes_keep_identity_edges_and_alignment_evidence() -> TestResult {
             .dependencies
             .iter()
             .any(|edge| { edge.from == local.key && edge.to.purl == "pkg:pypi/idna@3.10" }));
-        let alignment = graph::alignment(&graph)?;
-        assert_eq!(alignment.coverage.unidentified_components, 0);
-        assert_eq!(alignment.coverage.unprojected_components, 0);
-        assert_eq!(alignment.coverage.unmapped_nodes, 0);
-        let group = alignment
-            .groups
-            .iter()
-            .find(|g| g.identity == "pkg:generic/python-local/local-project")
-            .ok_or("local alignment evidence absent")?;
-        assert_eq!(group.source, json!({"local": "."}));
     }
     Ok(())
 }
@@ -95,15 +83,6 @@ fn internal_sibling_paths_keep_native_local_dependency_edges() -> TestResult {
             edge.from.purl == "pkg:generic/python-local/consumer@1.0.0"
                 && edge.to.purl == "pkg:generic/python-local/local-lib@1.0.0"
         }));
-        let alignment = graph::alignment(&graph)?;
-        assert_eq!(alignment.coverage.unidentified_components, 0);
-        assert_eq!(alignment.coverage.unmapped_nodes, 0);
-        let local = alignment
-            .groups
-            .iter()
-            .find(|g| g.identity == "pkg:generic/python-local/local-lib")
-            .ok_or("local library absent")?;
-        assert_eq!(local.source, json!({"local": "library"}));
         // The target has no own lock and source declarations are still unresolved.
         assert!(!graph.complete());
     }
@@ -174,10 +153,6 @@ fn missing_or_conflicting_manifest_evidence_cannot_qualify_a_local_root() -> Tes
             1,
             "unqualified root projected: {case}"
         );
-        let coverage = graph::alignment(&graph)?.coverage;
-        assert_eq!(coverage.unidentified_components, 1, "{case}");
-        assert_eq!(coverage.unprojected_components, 1, "{case}");
-        assert!(!coverage.versions_complete, "{case}");
     }
     Ok(())
 }
@@ -199,10 +174,6 @@ fn dynamic_or_malformed_identity_declarations_stay_unknown() -> TestResult {
         )?;
         let graph = graph::project(deps::scan_project(root.path())?)?;
         assert_eq!(graph.components.len(), 1, "invalid proof accepted: {extra}");
-        assert_eq!(
-            graph::alignment(&graph)?.coverage.unidentified_components,
-            1
-        );
     }
     Ok(())
 }
@@ -236,10 +207,6 @@ fn unselected_and_escaping_local_paths_stay_unknown() -> TestResult {
             1,
             "unqualified path accepted: {path}"
         );
-        assert_eq!(
-            graph::alignment(&graph)?.coverage.unidentified_components,
-            1
-        );
     }
     Ok(())
 }
@@ -258,9 +225,6 @@ fn duplicate_local_evidence_is_not_selected_arbitrarily() -> TestResult {
     report.projects[0].components.push(duplicate);
     let graph = graph::project(report)?;
     assert_eq!(graph.components.len(), 1);
-    let coverage = graph::alignment(&graph)?.coverage;
-    assert_eq!(coverage.unidentified_components, 2);
-    assert_eq!(coverage.unprojected_components, 2);
     Ok(())
 }
 
@@ -269,11 +233,6 @@ fn local_identities_do_not_claim_public_pypi_advisory_coverage() -> TestResult {
     let root = tempfile::tempdir()?;
     root_fixture(root.path(), "editable")?;
     let report = deps::scan_project(root.path())?;
-    let graph = graph::project(report.clone())?;
-    assert_eq!(
-        graph::alignment(&graph)?.coverage.unidentified_components,
-        0
-    );
     let snapshot = vuln::Snapshot {
         schema_version: 1,
         source: "https://osv.dev/test-fixture".into(),
@@ -321,22 +280,6 @@ fn identical_names_keep_directory_and_registry_sources_distinct() -> TestResult 
         .collect();
     assert_eq!(local.len(), 2);
     assert_ne!(local[0].key.graph, local[1].key.graph);
-    let alignment = graph::alignment(&graph)?;
-    assert_eq!(alignment.coverage.unmapped_nodes, 0);
-    let groups: Vec<_> = alignment
-        .groups
-        .iter()
-        .filter(|g| g.identity == "pkg:generic/python-local/shared")
-        .collect();
-    assert_eq!(groups.len(), 2);
-    assert!(groups.iter().any(|g| g.source == json!({"local":"a"})));
-    assert!(groups.iter().any(|g| g.source == json!({"local":"b"})));
-    assert!(alignment
-        .groups
-        .iter()
-        .any(|g| g.identity == "pkg:pypi/shared"));
-    let plan = graph::plan_alignment(&graph)?;
-    assert!(!plan.remediation_approved);
     Ok(())
 }
 
@@ -375,10 +318,6 @@ fn contradictory_local_reports_cannot_claim_public_graph_identities() -> TestRes
         let graph = graph::project(report)?;
         assert_eq!(graph.components.len(), 1, "{case}");
         assert_eq!(graph.components[0].key.purl, "pkg:pypi/idna@3.10", "{case}");
-        let alignment = graph::alignment(&graph)?;
-        assert_eq!(alignment.coverage.unidentified_components, 1, "{case}");
-        assert_eq!(alignment.coverage.unprojected_components, 1, "{case}");
-        assert!(!alignment.coverage.versions_complete, "{case}");
     }
     Ok(())
 }
@@ -420,19 +359,6 @@ fn native_markers_and_local_context_survive_snapshot_round_trip() -> TestResult 
     assert_eq!(graph.components.len(), 2);
     assert_eq!(graph.dependencies.len(), 2);
     assert!(graph.dependencies.iter().all(|e| !e.condition.is_null()));
-    assert!(!graph::alignment(&graph)?.coverage.activation_known);
-    let output = tempfile::tempdir()?;
-    let path = output.path().join("snapshot");
-    graph::write_snapshot(&graph, &path)?;
-    let restored = graph::read_snapshot(&path)?;
-    assert_eq!(
-        serde_json::to_value(&graph)?,
-        serde_json::to_value(&restored)?
-    );
-    assert_eq!(graph::alignment(&restored)?.coverage.unmapped_nodes, 0);
-    let manifest = path.join("manifest.json");
-    fs::write(&manifest, "{}\n")?;
-    assert!(graph::read_snapshot(&path).is_err());
     Ok(())
 }
 
@@ -466,10 +392,6 @@ fn excluded_local_manifest_is_not_read_to_fill_identity() -> TestResult {
         "pkg:generic/python-local/consumer@1.0.0"
     );
     assert!(graph.dependencies.is_empty());
-    assert_eq!(
-        graph::alignment(&graph)?.coverage.unidentified_components,
-        1
-    );
     assert!(!graph.complete());
     Ok(())
 }

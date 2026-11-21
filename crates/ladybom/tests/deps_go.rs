@@ -121,11 +121,6 @@ fn vendor_observations_have_purls_but_never_lock_or_complete_the_graph() -> Test
         .ok_or("components")?
         .iter()
         .any(|c| c["purl"] == "pkg:golang/example.org/lib@v1.2.3"));
-    #[cfg(feature = "graph")]
-    {
-        let graph = deps::graph::project(report)?;
-        assert!(!deps::graph::plan_alignment(&graph)?.analysis_complete);
-    }
     Ok(())
 }
 #[test]

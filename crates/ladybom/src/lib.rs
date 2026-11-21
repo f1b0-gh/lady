@@ -1,11 +1,8 @@
 //! Static dependency analysis, independent of OpenShell and Nickel execution.
-//! The optional `graph` feature adds graph persistence, usage and removal analysis.
 pub mod artifact;
 pub mod deps;
 pub mod inventory;
 pub use deps::*;
-#[cfg(feature = "graph")]
-use nickel_util::process;
 pub use nickel_util::{files, json, sources};
 
 mod config {

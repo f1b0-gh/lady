@@ -1,4 +1,5 @@
-use ladybom::{deps::graph, error::Result, files};
+use ladybom::{error::Result, files};
+use ladybom_graph as graph;
 use std::path::PathBuf;
 
 #[derive(Debug, clap::Args)]

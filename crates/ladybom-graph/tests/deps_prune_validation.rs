@@ -1,7 +1,5 @@
-use ladybom::{
-    deps::{self, graph, prune_validation},
-    inventory as snapshot,
-};
+use ladybom::{deps, inventory as snapshot};
+use ladybom_graph::{self as graph, prune_validation};
 use serde_json::json;
 use std::fs;
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;

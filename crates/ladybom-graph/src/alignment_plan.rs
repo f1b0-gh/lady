@@ -63,8 +63,7 @@ pub fn plan_alignment(graph: &Graph) -> Result<AlignmentPlan> {
     let analysis = analyze_alignment(graph)?;
     let analysis_complete = analysis.complete();
     let alignment = analysis.alignment;
-    let locals = crate::deps::npm::local::LocalPackages::new(&graph.inventory);
-    let python_locals = crate::deps::python::local::LocalPackages::new(&graph.inventory);
+    let locals = ladybom::LocalIdentities::new(&graph.inventory);
     let mut actions = Vec::new();
     if !analysis_complete {
         actions.push(action(
@@ -149,16 +148,12 @@ pub fn plan_alignment(graph: &Graph) -> Result<AlignmentPlan> {
                 .find(|domain| domain.id == variant.domain)
                 .and_then(|domain| domain.lockfile.as_deref())
                 .and_then(|lock| {
-                    locals
-                        .evidence_source(lock, &evidence.context, &variant.name, &evidence.version)
-                        .or_else(|| {
-                            python_locals.evidence_source(
-                                lock,
-                                &evidence.context,
-                                &variant.name,
-                                &evidence.version,
-                            )
-                        })
+                    locals.evidence_source(
+                        lock,
+                        &evidence.context,
+                        &variant.name,
+                        &evidence.version,
+                    )
                 })
                 .unwrap_or_else(|| {
                     alignment::normalized_source(

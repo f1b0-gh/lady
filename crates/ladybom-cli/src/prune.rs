@@ -1,9 +1,6 @@
 use clap::Subcommand;
-use ladybom::{
-    deps::{graph, prune_validation, usage},
-    error::Result,
-    files,
-};
+use ladybom::{error::Result, files};
+use ladybom_graph::{self as graph, prune_validation, usage};
 use serde_json::Value;
 use std::{
     io::Write,

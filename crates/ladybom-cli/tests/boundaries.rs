@@ -35,3 +35,29 @@ fn runtime_validation_is_not_an_analysis_command() -> Result {
     assert!(String::from_utf8_lossy(&output.stderr).contains("unrecognized subcommand"));
     Ok(())
 }
+
+#[test]
+fn graph_and_prune_are_available_only_in_full_builds() -> Result {
+    let output = Command::new(env!("CARGO_BIN_EXE_ladybom"))
+        .arg("--help")
+        .output()?;
+    assert!(output.status.success());
+    let help = String::from_utf8(output.stdout)?;
+    for name in ["graph", "prune"] {
+        assert_eq!(
+            help.lines()
+                .any(|l| l.split_whitespace().next() == Some(name)),
+            cfg!(feature = "graph")
+        );
+        let output = Command::new(env!("CARGO_BIN_EXE_ladybom"))
+            .args([name, "--help"])
+            .output()?;
+        assert_eq!(output.status.success(), cfg!(feature = "graph"));
+    }
+    for name in ["scan", "artifact", "interop", "vuln", "vxdf"] {
+        assert!(help
+            .lines()
+            .any(|l| l.split_whitespace().next() == Some(name)));
+    }
+    Ok(())
+}

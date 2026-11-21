@@ -48,7 +48,6 @@ fn older_report_v2_without_manifest_package_remains_readable() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "graph")]
 #[test]
 fn graph_schema_and_digest_bind_the_compact_inventory() -> Result<()> {
     let project = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/project");

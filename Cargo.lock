@@ -1079,16 +1079,13 @@ dependencies = [
 name = "ladybom"
 version = "0.1.0"
 dependencies = [
- "bytes",
  "cargo-lock",
  "cyclonedx-bom",
  "globset",
  "jsonschema",
- "libc",
  "nickel-util",
  "node-semver",
  "packageurl",
- "parquet",
  "pep440_rs",
  "pep508_rs",
  "semver",
@@ -1106,8 +1103,28 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "ladybom",
+ "ladybom-graph",
  "serde_json",
  "tempfile",
+]
+
+[[package]]
+name = "ladybom-graph"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "ladybom",
+ "libc",
+ "nickel-util",
+ "node-semver",
+ "packageurl",
+ "parquet",
+ "pep440_rs",
+ "semver",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "time",
 ]
 
 [[package]]
@@ -1163,6 +1180,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "ladybom",
+ "ladybom-graph",
  "ladyshell",
  "libc",
  "serde_json",

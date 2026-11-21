@@ -1,9 +1,5 @@
-#![cfg(feature = "graph")]
-
-use ladybom::deps::{
-    self,
-    graph::{self, AlignmentExplanationOptions, Ladybug},
-};
+use ladybom::deps;
+use ladybom_graph::{self as graph, AlignmentExplanationOptions, Ladybug};
 use serde_json::json;
 use std::{fs, time::Duration};
 

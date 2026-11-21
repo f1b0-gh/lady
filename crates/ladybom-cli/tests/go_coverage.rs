@@ -1,4 +1,5 @@
-use ladybom::deps::graph;
+#[cfg(feature = "graph")]
+use ladybom_graph as graph;
 use serde_json::Value;
 use std::{fs, path::Path, process::Command};
 
@@ -63,6 +64,7 @@ fn go_only_scan_fails_deterministically_without_executing_a_tool() -> TestResult
     Ok(())
 }
 
+#[cfg(feature = "graph")]
 #[test]
 fn mixed_project_export_alignment_and_plan_retain_go_coverage_gap() -> TestResult {
     let root = tempfile::tempdir()?;

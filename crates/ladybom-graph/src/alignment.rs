@@ -3,11 +3,8 @@ mod pins;
 pub use pins::{PinFinding, PinStatus};
 
 use super::{Graph, NodeRef, MAX_BYTES, MAX_COMPONENTS, MAX_EDGES};
-use crate::{
-    deps::{invalid, Component, Project},
-    error::{ensure, Result},
-    files,
-};
+use crate::{ensure, invalid};
+use ladybom::{error::Result, files, Component, Project};
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
@@ -123,8 +120,7 @@ pub fn alignment(graph: &Graph) -> Result<Alignment> {
     );
     ensure!(requirement_count <= MAX_EDGES, "Declaration limit exceeded");
 
-    let locals = crate::deps::npm::local::LocalPackages::new(&graph.inventory);
-    let python_locals = crate::deps::python::local::LocalPackages::new(&graph.inventory);
+    let locals = ladybom::LocalIdentities::new(&graph.inventory);
     let mut domains = BTreeMap::<String, ResolutionDomain>::new();
     let mut manifest_domains = BTreeMap::<String, Option<String>>::new();
     let mut project_domains = BTreeMap::new();
@@ -176,19 +172,8 @@ pub fn alignment(graph: &Graph) -> Result<Alignment> {
             .get(project.manifest.as_str())
             .ok_or_else(|| invalid("Missing project domain".into()))?;
         for component in &project.components {
-            let purl = if project.ecosystem == "npm" && crate::deps::npm::local::is_local(component)
-            {
-                locals
-                    .qualified(project, component)
-                    .map(|identity| identity.purl())
-                    .transpose()?
-            } else if project.ecosystem == "python"
-                && crate::deps::python::local::is_local(project, component)
-            {
-                python_locals
-                    .qualified(project, component)
-                    .map(|identity| identity.purl())
-                    .transpose()?
+            let purl = if ladybom::LocalIdentities::is_local(project, component) {
+                locals.qualified_purl(project, component)?
             } else {
                 projected_purl(project, component)?
             };
@@ -209,13 +194,7 @@ pub fn alignment(graph: &Graph) -> Result<Alignment> {
                 component,
                 identity,
                 source: locals
-                    .qualified(project, component)
-                    .map(|identity| identity.source())
-                    .or_else(|| {
-                        python_locals
-                            .qualified(project, component)
-                            .map(|identity| identity.source())
-                    })
+                    .qualified_source(project, component)
                     .unwrap_or_else(|| {
                         normalized_source(
                             &project.ecosystem,

@@ -1,9 +1,7 @@
-use ladybom::{
-    deps::{
-        self, graph,
-        usage::{self, UsageStatus},
-    },
-    files,
+use ladybom::{deps, files};
+use ladybom_graph::{
+    self as graph,
+    usage::{self, UsageStatus},
 };
 use serde_json::json;
 use std::{fs, path::Path};

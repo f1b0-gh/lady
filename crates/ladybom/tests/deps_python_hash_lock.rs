@@ -163,7 +163,6 @@ fn markers_and_duplicate_records_preserve_distinct_hash_lists() -> TestResult {
         .is_some_and(|m| m.len() == 1));
     assert!(components.iter().any(|c| c.version == "3.11"));
     assert!(!report.complete);
-    #[cfg(feature = "graph")]
     {
         let graph = deps::graph::project(report)?;
         assert_eq!(graph.components.len(), 3);

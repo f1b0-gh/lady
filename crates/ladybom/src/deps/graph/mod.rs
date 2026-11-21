@@ -1,35 +1,7 @@
-//! Context-qualified dependency snapshots and bounded native LadybugDB queries.
-#[cfg(feature = "graph")]
-mod alignment;
-#[cfg(feature = "graph")]
-mod alignment_plan;
-#[cfg(feature = "graph")]
-mod alignment_policy;
-#[cfg(feature = "graph")]
-pub use alignment_plan::*;
-#[cfg(feature = "graph")]
-pub use alignment_policy::*;
-#[cfg(feature = "graph")]
-mod explain_alignment;
-#[cfg(feature = "graph")]
-mod ladybug;
+//! Context-qualified dependency graph model and static projection.
 mod project;
-#[cfg(feature = "graph")]
-mod prune;
-#[cfg(feature = "graph")]
-pub use alignment::*;
-#[cfg(feature = "graph")]
-pub use explain_alignment::*;
-#[cfg(feature = "graph")]
-pub use ladybug::*;
-#[cfg(feature = "graph")]
-pub use prune::*;
-#[cfg(feature = "graph")]
-mod snapshot;
 pub use project::project;
 pub(crate) use project::project_with_origins;
-#[cfg(feature = "graph")]
-pub use snapshot::{read_snapshot, write_snapshot};
 
 pub use super::declarations::{IdentifiedRoot, NodeRef, Root};
 use super::{invalid, Component, Report};
@@ -99,7 +71,8 @@ pub struct Graph {
     pub limitations: Vec<String>,
 }
 impl Graph {
-    pub(super) fn canonicalize(&mut self) -> Result<()> {
+    /// Sort components and edges into the deterministic order used by snapshot version 1.
+    pub fn canonicalize(&mut self) -> Result<()> {
         self.components.sort_by(|a, b| a.key.cmp(&b.key));
         let mut edges = self
             .dependencies
@@ -228,4 +201,9 @@ pub fn diff(before: &Graph, after: &Graph) -> Result<Diff> {
             .collect(),
         complete: before.complete() && after.complete(),
     })
+}
+
+/// SHA-256 of the graph in its current serialized order.
+pub fn graph_digest(graph: &Graph) -> Result<String> {
+    Ok(files::hash(&serde_json::to_vec(graph)?))
 }

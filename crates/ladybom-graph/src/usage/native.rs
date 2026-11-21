@@ -3,10 +3,8 @@
 //! Report paths must be relative to the analyzed project root (optional leading ./).
 //! Absolute paths are rejected: this API cannot attest a host path or remap tool working directories.
 use super::{invalid, UsageReport};
-use crate::{
-    error::{ensure, Result},
-    files,
-};
+use crate::ensure;
+use ladybom::{error::Result, files};
 use serde_json::Value;
 
 struct Hint {
@@ -32,7 +30,7 @@ fn array(value: &Value) -> Result<&Vec<Value>> {
 fn path(value: &Value) -> Result<String> {
     let raw = string(value)?;
     let path = raw.strip_prefix("./").unwrap_or(raw);
-    crate::config::relative_path(path)?;
+    ladybom::sources::relative_path(path)?;
     Ok(path.into())
 }
 /// Attach bounded, explicitly supplied evidence without promoting uncertainty or

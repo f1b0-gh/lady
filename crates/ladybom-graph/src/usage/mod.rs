@@ -1,6 +1,6 @@
 //! Conservative source evidence; a candidate is never removal authorization.
-use super::graph;
-use crate::{error::Result, sources::Snapshot};
+use crate as graph;
+use ladybom::{error::Result, sources::Snapshot};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -41,8 +41,10 @@ pub struct UsageReport {
 mod lex;
 mod native;
 mod source;
-use super::{invalid, Project, Requirement};
-use crate::{error::ensure, files};
+use crate::ensure;
+use crate::invalid;
+use ladybom::files;
+use ladybom::{Project, Requirement};
 pub use native::enrich;
 use serde_json::Value;
 use source::{parent, resolve, SourcesRead};
@@ -58,7 +60,7 @@ pub fn analyze(root: &Path, graph: &graph::Graph, manifests: &[String]) -> Resul
     );
     let mut sources = SourcesRead::collect(root, graph, manifests)?;
     for (path, hash) in &graph.inventory.inputs {
-        crate::config::relative_path(path)?;
+        ladybom::sources::relative_path(path)?;
         ensure!(
             sources
                 .snapshot
@@ -70,7 +72,7 @@ pub fn analyze(root: &Path, graph: &graph::Graph, manifests: &[String]) -> Resul
     let mut selected = BTreeSet::new();
     let mut findings = Vec::new();
     for manifest in manifests {
-        crate::config::relative_path(manifest)?;
+        ladybom::sources::relative_path(manifest)?;
         ensure!(
             selected.insert(manifest),
             "Duplicate usage manifest: {manifest}"
@@ -90,8 +92,8 @@ pub fn analyze(root: &Path, graph: &graph::Graph, manifests: &[String]) -> Resul
             .text(manifest)
             .ok_or_else(|| invalid(format!("Missing or non-UTF-8 manifest: {manifest}")))?;
         let document = match project.ecosystem.as_str() {
-            "npm" => crate::json::parse(text.as_bytes())?,
-            "rust" | "python" => serde_json::to_value(super::parse_toml(text)?)?,
+            "npm" => ladybom::json::parse(text.as_bytes())?,
+            "rust" | "python" => serde_json::to_value(ladybom::parse_toml(text)?)?,
             _ => Value::Null,
         };
         let coverage = coverage(project, &document, &mut sources)?;
@@ -324,9 +326,9 @@ fn declarations(
     Ok(result)
 }
 fn workspace_spec(project: &Project, alias: &str, sources: &SourcesRead) -> Result<Option<Value>> {
-    for candidate in super::ancestors(&project.manifest, "Cargo.toml") {
+    for candidate in ladybom::ancestors(&project.manifest, "Cargo.toml") {
         if let Some(text) = sources.text(&candidate) {
-            let value = serde_json::to_value(super::parse_toml(text)?)?;
+            let value = serde_json::to_value(ladybom::parse_toml(text)?)?;
             if let Some(spec) = value
                 .get("workspace")
                 .and_then(|v| v.get("dependencies"))
@@ -499,7 +501,7 @@ fn coverage(project: &Project, document: &Value, sources: &mut SourcesRead) -> R
                         "babel",
                     ]
                     .iter()
-                    .any(|s| super::basename(path).contains(s))
+                    .any(|s| ladybom::basename(path).contains(s))
             }
             "python" => [".ipynb", ".pyx", ".so", ".pyd"]
                 .iter()
@@ -567,7 +569,7 @@ fn rust_tokens(
         if token.is("mod") && tokens.get(i + 2).is_some_and(|t| t.punct(b';')) {
             if let Some(name) = tokens.get(i + 1).and_then(lex::Token::word) {
                 let has_path = tokens[..i].iter().rev().take(12).any(|t| t.is("path"));
-                let stem = super::basename(path).strip_suffix(".rs").unwrap_or("");
+                let stem = ladybom::basename(path).strip_suffix(".rs").unwrap_or("");
                 let candidates = [
                     format!("{name}.rs"),
                     format!("{name}/mod.rs"),

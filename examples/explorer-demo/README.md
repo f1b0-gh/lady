@@ -13,7 +13,7 @@ From the Lady repository root, choose a new output directory outside the fixture
 ```sh
 export CARGO_TARGET_DIR="$PWD/target"
 cargo build --locked -p ladybom-cli
-cargo build --locked -p ladybom --features graph --example deps_explorer
+cargo build --locked -p ladybom-graph --example deps_explorer
 demo_out="$(mktemp -d /tmp/ladybom-explorer.XXXXXX)"
 sh examples/explorer-demo/prepare.sh "$demo_out/inputs"
 ./target/debug/examples/deps_explorer "$demo_out/inputs/before" "$demo_out/before"
