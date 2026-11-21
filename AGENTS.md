@@ -37,9 +37,8 @@
   an approved exception. Never refresh references or exceptions to pass a check.
   Exceptions need an owner, scope, evidence, maintenance cost and expiry. Do not
   fork or add adapters merely to reduce duplication; measure the net benefit.
-- `nickel-util =0.1.0` is an unchanged bundle pinned by
-  `sources/nickeling.json`. Keep its source, license and hashes together; run
-  `python3 scripts/check_sources.py`. Do not restore implicit sibling dependencies.
+- `nickel-util =0.1.0` comes from crates.io and is checksummed in `Cargo.lock`.
+  Do not restore implicit sibling dependencies.
 - Preserve maintained code, unique changes, fixtures, locks and irreplaceable
   inputs. State migration must be explicit and reversible. Experiment-output
   cleanup needs retained code, a reproduction recipe and a PDF report outside

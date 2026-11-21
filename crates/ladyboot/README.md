@@ -7,8 +7,8 @@ Ladyboot does not deploy instances or manage OpenShell sandboxes.
 
 It is a library and optional CLI in the Lady workspace. Use
 `default-features = false` to consume it without Clap. The shared
-`nickel-util =0.1.0` source is bundled under `vendor/nickel-util`; no sibling
-checkout is required. See [development](../../docs/development.md).
+`nickel-util =0.1.0` dependency comes from crates.io. No sibling checkout is
+required. See [development](../../docs/development.md).
 
 ## Profiles and needs
 
@@ -49,7 +49,6 @@ service code or a permitted destination does not prove a service is active.
 First follow the root build prerequisites, then from the Lady root:
 
 ```sh
-python3 scripts/check_sources.py
 cargo build -p ladyboot --locked
 cargo run -p ladyboot --locked -- explain \
   --config "$PWD/crates/ladyboot/profiles/base.ncl" \

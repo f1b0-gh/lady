@@ -1,5 +1,4 @@
 [workspace]
-exclude = ["vendor/nickel-util"]
 members = ["crates/ladyshell", "crates/ladybom", "crates/ladybom-cli", "crates/ladyboot", "crates/ladyhost"]
 resolver = "2"
 
@@ -41,7 +40,7 @@ unimplemented = "deny"
 unsafe_op_in_unsafe_fn = "deny"
 
 [workspace.dependencies]
-nickel-util = { version = "=0.1.0", path = "vendor/nickel-util" }
+nickel-util = "=0.1.0"
 sha2 = "0.10"
 # Ladyhost reuses the qualified registry pins; other members retain their
 # existing feature selections and resolve compatible versions through Cargo.lock.

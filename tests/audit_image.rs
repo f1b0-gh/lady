@@ -2,6 +2,16 @@ use ladyshell::{environment_lock, files, nickel::Evaluated};
 use serde_json::{json, Value};
 use std::{error::Error, fs, path::Path, process::Command};
 
+const REGISTRY_LOCK: &str = "\
+version = 3
+
+[[package]]
+name = \"nickel-util\"
+version = \"0.1.0\"
+source = \"registry+https://github.com/rust-lang/crates.io-index\"
+checksum = \"0000000000000000000000000000000000000000000000000000000000000000\"
+";
+
 fn evaluated() -> Result<Evaluated, Box<dyn Error>> {
     Ok(serde_json::from_value(json!({
         "config": {
@@ -32,14 +42,13 @@ fn resources(root: &Path) -> Result<(), Box<dyn Error>> {
             "Cargo.toml",
             "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\n",
         ),
-        ("Cargo.lock", "version = 3\n"),
+        ("Cargo.lock", REGISTRY_LOCK),
         ("LICENSE", "Synthetic project license\n"),
-        (
-            "vendor/nickel-util/Cargo.toml",
-            "[package]\nname=\"nickel-util\"\nversion=\"0.1.0\"\n",
-        ),
-        ("vendor/nickel-util/src/lib.rs", "// synthetic helper\n"),
         ("src/main.rs", "fn main() {}\n"),
+        (
+            "crates/helper/Cargo.toml",
+            "[package]\nname = \"helper\"\nversion = \"0.1.0\"\n",
+        ),
         ("crates/helper/src/lib.rs", "pub fn helper() {}\n"),
         (
             "resources/audit/security-audit/SKILL.md",
@@ -83,6 +92,10 @@ fn audit_lock_binds_target_runtime_sources_and_audit_recipes() -> Result<(), Box
         ("runtime-source/Cargo.lock", "Cargo.lock"),
         ("runtime-source/LICENSE", "LICENSE"),
         ("runtime-source/src/main.rs", "src/main.rs"),
+        (
+            "runtime-source/crates/helper/Cargo.toml",
+            "crates/helper/Cargo.toml",
+        ),
         (
             "runtime-source/crates/helper/src/lib.rs",
             "crates/helper/src/lib.rs",
@@ -310,6 +323,8 @@ fn rejection_probe() -> Result<(), Box<dyn Error>> {
 #[test]
 fn image_rejects_changed_runtime_recipe_or_codex_before_builder() -> Result<(), Box<dyn Error>> {
     for name in [
+        "distribution/Cargo.toml",
+        "distribution/crates/helper/Cargo.toml",
         "distribution/src/main.rs",
         "distribution/nix/audit-image.nix",
         "distribution/nix/openssl.nix",
@@ -419,6 +434,10 @@ fn builder_receives_frozen_complete_sources_union_tools_and_target_runtime(
     assert_eq!(
         fs::read(capture.join("runtime/src/main.rs"))?,
         b"fn main() {}\n"
+    );
+    assert_eq!(
+        fs::read_to_string(capture.join("runtime/Cargo.lock"))?,
+        REGISTRY_LOCK
     );
     assert!(capture.join("runtime/nix/runtime.nix").is_file());
     assert_eq!(
@@ -550,45 +569,36 @@ in { inherit (built) config;
 }
 
 #[test]
-fn audit_lock_binds_bundled_nickel_util_and_refuses_missing_distribution(
-) -> Result<(), Box<dyn Error>> {
-    let temp = tempfile::tempdir()?;
-    let distribution = temp.path().join("lady");
-    resources(&distribution)?;
-    let util = distribution.join("vendor/nickel-util");
-    fs::create_dir_all(util.join("src"))?;
-    fs::write(
-        util.join("Cargo.toml"),
-        "[package]\nname='nickel-util'\nversion='0.1.0'\n",
-    )?;
-    fs::write(util.join("src/lib.rs"), "// synthetic helper\n")?;
-    let artifact = temp.path().join("codex");
-    fs::write(&artifact, b"\x7fELFfixture")?;
-    let before = environment_lock::create(evaluated()?, &distribution, &artifact, &artifact)?;
-    assert_eq!(
-        before
-            .recipes_sha256
-            .get("runtime-source/vendor/nickel-util/src/lib.rs"),
-        Some(&files::hash(b"// synthetic helper\n"))
-    );
-    fs::write(util.join("src/lib.rs"), "// changed helper\n")?;
-    let after = environment_lock::create(evaluated()?, &distribution, &artifact, &artifact)?;
-    assert_ne!(before.recipes_sha256, after.recipes_sha256);
-    fs::remove_file(util.join("Cargo.toml"))?;
-    assert!(environment_lock::create(evaluated()?, &distribution, &artifact, &artifact).is_err());
+fn image_rejects_registry_checksum_or_source_drift_before_builder() -> Result<(), Box<dyn Error>> {
+    for (original, changed) in [
+        ("crates.io-index", "other-index"),
+        (
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            "1000000000000000000000000000000000000000000000000000000000000000",
+        ),
+    ] {
+        let dir = tempfile::tempdir()?;
+        let (current, expected) = current(dir.path())?;
+        let lock_path = dir.path().join("distribution/Cargo.lock");
+        let modified = REGISTRY_LOCK.replace(original, changed);
+        fs::write(&lock_path, &modified)?;
+        rejected(dir.path(), &current, &expected, "lock")?;
+        assert_eq!(fs::read_to_string(lock_path)?, modified);
+    }
     Ok(())
 }
 
 #[test]
-fn audit_lock_refuses_sibling_helper_when_bundle_is_missing() -> Result<(), Box<dyn Error>> {
+fn audit_lock_refuses_sibling_copy_of_missing_workspace_lock() -> Result<(), Box<dyn Error>> {
     let temp = tempfile::tempdir()?;
     let distribution = temp.path().join("lady");
     resources(&distribution)?;
-    let sibling = temp.path().join("nickeling/crates/nickel-util");
-    fs::create_dir_all(sibling.parent().ok_or("sibling parent")?)?;
-    fs::rename(distribution.join("vendor/nickel-util"), sibling)?;
+    let sibling = temp.path().join("nickeling");
+    resources(&sibling)?;
     let artifact = temp.path().join("codex");
     fs::write(&artifact, b"\x7fELFfixture")?;
+    environment_lock::create(evaluated()?, &distribution, &artifact, &artifact)?;
+    fs::remove_file(distribution.join("Cargo.lock"))?;
     assert!(environment_lock::create(evaluated()?, &distribution, &artifact, &artifact).is_err());
     Ok(())
 }

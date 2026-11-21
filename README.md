@@ -75,10 +75,9 @@ cargo build --workspace --locked
 This builds the tools as separate executables. For a first sandbox, follow the
 [Ladyshell starting path](docs/usage.md#first-run).
 
-The repository includes an unchanged, commit-pinned `nickel-util` source bundle
-from [Nickeling](https://github.com/f1b0-gh/nickeling). No sibling checkout is
-required. See the [build guide](docs/development.md) for source verification,
-test prerequisites, required checks and known dependency findings.
+Cargo uses the published `nickel-util =0.1.0` release pinned in `Cargo.lock`.
+No sibling checkout is required. See the [build guide](docs/development.md)
+for test prerequisites, required checks and known dependency findings.
 
 See the component guides for usage and validation details.
 
@@ -86,6 +85,5 @@ See the component guides for usage and validation details.
 
 ## License
 
-[Apache-2.0](LICENSE). Bundled third-party code retains its notices, including
-[Nickeling](vendor/nickel-util/LICENSE) and the
-[MIT audit validator](crates/ladyshell/src/audit/validator/LICENSE-MIT).
+[Apache-2.0](LICENSE). The bundled audit validator retains its
+[MIT notice](crates/ladyshell/src/audit/validator/LICENSE-MIT).

@@ -56,9 +56,10 @@ execute it on the host or install its tools. Renew the lock and apply explicitly
 after changes. The plan narrows the already allowed source scope, fingerprints
 inputs and reports budgets/obstacles; it does not attest runtime enforcement.
 
-The trusted resource tree includes manifests, Rust sources, audit method/schema,
-Nix recipes and bundled `vendor/nickel-util`. Verify it using
-`python3 scripts/check_sources.py`. The runtime package can be built separately:
+The trusted resource tree includes the workspace manifests, `Cargo.lock`, Rust
+sources, license, audit method and schema, and Nix recipes. Nix uses the lockfile
+to vendor checksummed registry crates. Build the runtime package separately
+with `nix-build`.
 
 ```sh
 nix-build --extra-experimental-features 'nix-command flakes' \

@@ -6,10 +6,9 @@ updates:
       interval: weekly
     allow:
       - dependency-type: all
-    # Fixtures are synthetic; the Nickeling bundle is updated from upstream.
+    # Fixtures are synthetic.
     exclude-paths:
       - "**/fixtures/**"
-      - "vendor/**"
 
   - package-ecosystem: github-actions
     directory: /

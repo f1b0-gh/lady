@@ -305,28 +305,7 @@ pub fn runtime_sources(resources: &Path) -> Result<Snapshot> {
     freeze_runtime(resources, None)
 }
 
-/// Hash and copy the bundled source before Nix sees it. Missing distribution
-/// inputs must not fall back to an unrelated local checkout.
+/// Bind the Lady workspace and its Cargo lock before Nix builds the runtime.
 fn freeze_runtime(resources: &Path, destination: Option<&Path>) -> Result<Snapshot> {
-    let mut result = sources::snapshot(resources, &runtime_spec(), destination)?;
-    let util = resources.join("vendor/nickel-util");
-    let spec = Sources {
-        include: vec!["Cargo.toml".into(), "src".into()],
-        exclude: vec![],
-    };
-    let target = destination.map(|root| root.join("vendor/nickel-util"));
-    if let Some(path) = &target {
-        fs::create_dir_all(path)?;
-    }
-    let common = sources::snapshot(&util, &spec, target.as_deref())?;
-    ensure!(
-        common.contains_key("Cargo.toml") && common.contains_key("src/lib.rs"),
-        "Incomplete nickel-util distribution"
-    );
-    result.extend(
-        common
-            .into_iter()
-            .map(|(path, record)| (format!("vendor/nickel-util/{path}"), record)),
-    );
-    Ok(result)
+    sources::snapshot(resources, &runtime_spec(), destination)
 }

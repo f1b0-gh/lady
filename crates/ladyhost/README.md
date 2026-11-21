@@ -18,7 +18,6 @@ Ladyhost is for workflows requiring an App, checks and integration after review.
 From the Lady repository root:
 
 ```sh
-python3 scripts/check_sources.py
 cargo build -p ladyhost --locked --release --bins
 mkdir -p "$HOME/.local/bin"
 install -m 755 target/release/ladyhost target/release/ladyhost-jjpr "$HOME/.local/bin/"

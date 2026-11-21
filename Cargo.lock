@@ -1298,6 +1298,8 @@ dependencies = [
 [[package]]
 name = "nickel-util"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f880fba0cbb8abd32f34d90e8463869ce1029d32c234b749ec98a5a574f66f79"
 dependencies = [
  "libc",
  "serde",

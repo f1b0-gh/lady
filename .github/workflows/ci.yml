@@ -45,14 +45,13 @@ jobs:
           nix build --no-update-lock-file --no-write-lock-file --no-link \
             path:./nix#nickel path:./crates/ladyboot#nickel
 
-      - name: Verify sources and run checks
+      - name: Fetch dependencies and run checks
         run: |
           export CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target"
           nix develop --no-update-lock-file --no-write-lock-file \
             path:./nix#ci --command bash -euo pipefail <<'CHECKS'
           rustc --version
           cargo --version
-          python3 scripts/check_sources.py
           cargo fetch --locked
           python3 -m venv .venv
           .venv/bin/python -m pip install --isolated --disable-pip-version-check \
@@ -66,8 +65,7 @@ jobs:
           python3 -m unittest discover -s examples/ladyhost/scenario -p 'test_*.py'
           (cd crates/ladyboot/tests && python3 -m unittest test_assembly test_vm_drivers)
           python3 tests/check_boundaries.py --bootc crates/ladyboot
-          python3 scripts/check_sources.py
           CHECKS
 
       - name: Verify that validation preserved locked inputs
-        run: git diff --exit-code -- Cargo.lock ':(glob)**/flake.lock' tests/requirements-interop.txt sources/nickeling.json vendor/nickel-util
+        run: git diff --exit-code -- Cargo.lock ':(glob)**/flake.lock' tests/requirements-interop.txt

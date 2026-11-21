@@ -6,7 +6,7 @@
 , source ? ../.
 }:
 let
-  ladySource = pkgs.lib.cleanSourceWith {
+  src = pkgs.lib.cleanSourceWith {
     src = source;
     filter = path: type:
       let
@@ -16,28 +16,13 @@ let
         builtins.elem top [ "Cargo.toml" "Cargo.lock" "LICENSE" "src" "crates" "resources" ] &&
         !(builtins.elem "target" (pkgs.lib.splitString "/" rel));
   };
-  utilRoot = source + "/vendor/nickel-util";
-  utilSource = pkgs.lib.cleanSourceWith {
-    src = utilRoot;
-    filter = path: type:
-      let rel = pkgs.lib.removePrefix (toString utilRoot + "/") (toString path);
-          top = builtins.head (pkgs.lib.splitString "/" rel);
-      in type != "symlink" && builtins.elem top [ "Cargo.toml" "src" ];
-  };
-  src = pkgs.runCommand "lady-runtime-source" {} ''
-    mkdir -p $out/vendor
-    cp -r ${ladySource}/. $out/
-    cp -r ${utilSource} $out/vendor/nickel-util
-    chmod -R u+w $out
-  '';
 in pkgs.rustPlatform.buildRustPackage {
   pname = "ladyshell";
   version = "0.1.0";
   inherit src;
-  # The audit caller supplies a private staging path. Anchor the vendor lock to
-  # the filtered store snapshot so its symlink remains usable inside Nix builds
-  # and after the staging directory has been removed.
-  cargoLock.lockFile = "${ladySource}/Cargo.lock";
+  # Use the filtered store snapshot so the registry vendor lock remains usable
+  # after the audit caller's private staging directory has been removed.
+  cargoLock.lockFile = "${src}/Cargo.lock";
   cargoBuildFlags = [ "--package" "ladyshell-cli" "--bins" ];
   # The host integration suite needs Nix/OpenShell. Run separately, not in the
   # package builder; this derivation asserts the resulting binaries themselves.
