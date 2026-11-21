@@ -17,7 +17,7 @@ owners.
 
 | Tool | Use it to | Guide |
 | --- | --- | --- |
-| **Ladybom** | Inventory Cargo, Python and npm projects; export SBOMs; inspect dependency graphs and supplied security advisories | [CLI](crates/ladybom-cli/README.md) · [Rust API](crates/ladybom/README.md) |
+| **Ladybom** | Inventory Cargo, Python, npm and Go source metadata; export SBOMs; inspect dependency graphs and supplied security advisories | [CLI](crates/ladybom-cli/README.md) · [Rust API](crates/ladybom/README.md) |
 | **Ladyshell** | Prepare authorized OpenShell environments, run tasks and retain their state and exports | [Usage](docs/usage.md) |
 | **Ladyboot** | Describe system needs in Nickel and build bootc OS images with Nix | [Profiles and images](crates/ladyboot/README.md) |
 | **Ladyhost** | Keep GitHub credentials and signing keys on the host; publish and integrate reviewed Jujutsu commits | [Host workflow](crates/ladyhost/README.md) |
@@ -44,8 +44,39 @@ For a CycloneDX SBOM, write outside the scanned project:
 
 Read the report's coverage and diagnostics. Unsupported inputs and unresolved
 identities remain gaps; a successful scan is not a security clearance.
-Go checksum files alone are not analyzed. Nix/Go artifacts use a separate,
+Go scans read `go.mod`, `go.work`, checksum and vendor metadata without running
+Go. These source inventories remain unlocked: checksums do not establish the
+selected build list, and resolution or advisory coverage gaps stay explicit.
+Nix/Go artifacts use a separate,
 [explicit collection workflow](docs/artifact-sbom.md).
+
+## Inspect dependency differences
+
+![Ladybug Explorer displaying Ladybom's synthetic dependency graph, with two versions of demo-shared reached through different parents](docs/assets/ladybom-explorer.png)
+
+This is the real [Ladybug Explorer](https://github.com/LadybugDB/explorer),
+showing CSV exported by Ladybom from the [reproducible example](examples/explorer-demo/README.md).
+Its deliberately synthetic npm lockfile illustrates a small static audit:
+
+| Evidence | Finding |
+| --- | --- |
+| Declared minimums | Node `>=20`; `demo-api` requests `^1.0.0`, while its locked version is `1.3.0`. A range's lower bound is not the installed version. |
+| Version divergence | `demo-api@1.3.0` reaches `demo-shared@1.2.3`; `demo-web@2.1.0` reaches `demo-shared@1.4.2`. |
+| Common declared lower bound | The parents' `^1.2.0` and `^1.4.0` ranges overlap from stable version `1.4.0` up to, but excluding, `2.0.0`. This is a constraint calculation, not a tested safe minimum. |
+| Before/after difference | The comparison fixture has three package nodes instead of four: it removes the nested `1.2.3` copy and redirects the API's edge to `1.4.2`. |
+
+```sh
+sh examples/explorer-demo/prepare.sh /tmp/lady-demo-inputs
+./target/debug/ladybom graph export --project /tmp/lady-demo-inputs/before --output /tmp/lady-demo-before
+./target/debug/ladybom graph export --project /tmp/lady-demo-inputs/after --output /tmp/lady-demo-after
+./target/debug/ladybom graph alignment-plan --snapshot /tmp/lady-demo-before --markdown
+./target/debug/ladybom graph diff --before /tmp/lady-demo-before --after /tmp/lady-demo-after
+```
+
+Use new output directories. The example does not select a safe version or prove
+compatibility, minimum-version support, or an actual installation. Real changes
+need complete constraints, current advisory checks and consumer tests; the
+[graph guide](docs/dependency-graphs.md) explains the limits and validation path.
 
 ## How it works
 
@@ -75,10 +106,7 @@ from [Nickeling](https://github.com/f1b0-gh/nickeling). No sibling checkout is
 required. See the [build guide](docs/development.md) for source verification,
 test prerequisites, required checks and known dependency findings.
 
-Lady is under development. Fixture tests do not qualify a real OpenShell
-deployment, GitHub policy or bootc installation/update/rollback lifecycle.
-The component guides describe what is implemented and what still needs native
-qualification. The Rust libraries remain independent of their CLI front ends.
+See the component guides for usage and validation details.
 
 [Documentation](docs/README.md) · [Contributor rules](AGENTS.md)
 
