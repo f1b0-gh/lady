@@ -1,6 +1,6 @@
 //! A retained receiver has one short directory flock. Workers additionally
 //! hold an independent flock on their invocation directory across dispatch.
-mod fs;
+pub(super) mod fs;
 mod ledger;
 mod reservations;
 mod transitions;

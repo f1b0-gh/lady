@@ -22,6 +22,7 @@ pub struct StateLock {
     pub directory: PathBuf,
 }
 pub struct SessionLock {
+    directory_file: File,
     _file: File,
 }
 impl Drop for StateLock {
@@ -76,10 +77,6 @@ pub fn create_directory(path: &Path) -> Result<()> {
         "State directory must be owned by the current user, without group/other write access"
     );
     Ok(())
-}
-fn lock_file(directory: &Path, name: &str, exclusive: bool) -> Result<File> {
-    let parent = files::open_directory(directory)?;
-    lock_file_at(&parent, directory, name, exclusive)
 }
 fn lock_file_at(parent: &File, directory: &Path, name: &str, exclusive: bool) -> Result<File> {
     let path = PathBuf::from(format!("/proc/self/fd/{}", parent.as_raw_fd())).join(name);
@@ -153,9 +150,29 @@ impl StateLock {
 }
 impl SessionLock {
     pub fn acquire(directory: &Path, exclusive: bool) -> Result<Self> {
+        let dir = files::open_directory(directory)?;
+        let lease = Self::lock_directory(dir, directory, exclusive)?;
+        crate::execution::fence::available(lease.directory_file())?;
+        Ok(lease)
+    }
+    fn lock_directory(dir: File, path: &Path, exclusive: bool) -> Result<Self> {
         Ok(Self {
-            _file: lock_file(directory, ".sessions", exclusive)?,
+            _file: lock_file_at(&dir, path, ".sessions", exclusive)?,
+            directory_file: dir,
         })
+    }
+    pub(crate) fn directory_file(&self) -> &File {
+        &self.directory_file
+    }
+    /// Only a matching original receipt may cross an installed execution fence.
+    pub(crate) fn for_reconciliation(
+        lock: &StateLock,
+        fence: &crate::execution::fence::Fence,
+    ) -> Result<(Self, bool)> {
+        lock.verify_directory()?;
+        let lease = Self::lock_directory(lock.directory_file.try_clone()?, &lock.directory, true)?;
+        let present = fence.matches_or_absent(lease.directory_file())?;
+        Ok((lease, present))
     }
 }
 fn not_found(error: &Error) -> bool {

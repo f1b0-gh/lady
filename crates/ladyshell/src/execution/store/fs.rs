@@ -16,10 +16,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub(super) fn anchored(f: &File) -> PathBuf {
+pub(in crate::execution) fn anchored(f: &File) -> PathBuf {
     PathBuf::from(format!("/proc/self/fd/{}", f.as_raw_fd()))
 }
-pub(super) fn same(a: &File, b: &File) -> Result<()> {
+pub(in crate::execution) fn same(a: &File, b: &File) -> Result<()> {
     let a = a.metadata()?;
     let b = b.metadata()?;
     ensure!(
@@ -28,7 +28,7 @@ pub(super) fn same(a: &File, b: &File) -> Result<()> {
     );
     Ok(())
 }
-pub(super) fn trusted(dir: &File, private: bool) -> Result<()> {
+pub(in crate::execution) fn trusted(dir: &File, private: bool) -> Result<()> {
     let m = dir.metadata()?;
     // SAFETY: geteuid has no preconditions.
     ensure!(
@@ -86,10 +86,10 @@ fn private_file(f: &File) -> Result<()> {
     );
     Ok(())
 }
-pub(super) fn bytes(dir: &File, name: &str, limit: usize) -> Result<Vec<u8>> {
+pub(in crate::execution) fn bytes(dir: &File, name: &str, limit: usize) -> Result<Vec<u8>> {
     files::read_file(regular(dir, name)?, limit)
 }
-pub(super) fn exists(dir: &File, name: &str) -> Result<bool> {
+pub(in crate::execution) fn exists(dir: &File, name: &str) -> Result<bool> {
     match fs::symlink_metadata(anchored(dir).join(name)) {
         Ok(_) => Ok(true),
         Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
@@ -132,12 +132,18 @@ pub(super) fn stage(dir: &File, name: &str, limit: usize) -> Result<Option<File>
     Ok(Some(pin))
 }
 
-pub(super) enum Publication {
+pub(in crate::execution) enum Publication {
     Immutable,
+    StateFence { limit: usize },
     ReplaceLedger,
     Recover,
 }
-pub(super) fn publish(dir: &File, name: &str, bytes: &[u8], kind: Publication) -> Result<()> {
+pub(in crate::execution) fn publish(
+    dir: &File,
+    name: &str,
+    bytes: &[u8],
+    kind: Publication,
+) -> Result<()> {
     let parent = anchored(dir);
     let path = parent.join(name);
     let slot = match kind {
@@ -146,6 +152,7 @@ pub(super) fn publish(dir: &File, name: &str, bytes: &[u8], kind: Publication) -
     };
     let reusable = match kind {
         Publication::Immutable => None,
+        Publication::StateFence { limit } => Some(limit),
         Publication::ReplaceLedger => {
             regular(dir, name)?;
             Some(super::ledger::INDEX_LIMIT)
@@ -174,9 +181,9 @@ pub(super) fn publish(dir: &File, name: &str, bytes: &[u8], kind: Publication) -
                 named.dev() == pinned.dev() && named.ino() == pinned.ino(),
                 "Staging file replaced"
             );
-            // Under the receiver flock, the installed ledger is authoritative.
-            // Only an uncommitted ledger or an administrative recovery draft
-            // uses a reusable slot. A worker receipt is never discarded here.
+            // Only an uncommitted ledger, recovery draft or unpublished
+            // environment fence uses a reusable slot. Their owning lock is
+            // held. A worker receipt is never discarded here.
             fs::remove_file(parent.join(&slot))?;
         }
     }

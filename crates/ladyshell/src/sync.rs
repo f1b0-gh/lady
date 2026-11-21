@@ -16,6 +16,8 @@ use std::{
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
+pub(crate) const IMAGE_SNAPSHOT_BINARY: &str = "/usr/local/bin/ladyshell";
+
 pub trait Transport {
     fn inventory(&mut self) -> Result<Vec<u8>>;
     fn file(&mut self, path: &str) -> Result<Vec<u8>>;
@@ -40,7 +42,7 @@ impl Remote<'_> {
             "--",
             self.state["snapshot_binary"]
                 .as_str()
-                .unwrap_or("/usr/local/bin/ladyshell"),
+                .unwrap_or(IMAGE_SNAPSHOT_BINARY),
             operation,
         ]);
         for excluded in exclusions(self.state)? {

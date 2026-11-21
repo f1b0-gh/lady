@@ -14,6 +14,9 @@ fn catalog() -> Catalog {
         schema_version: 1,
         environment: EnvironmentPin {
             state: PathBuf::from("/state"),
+            state_dev: 1,
+            state_ino: 2,
+            sandbox_name: "sandbox".into(),
             sandbox_id: "sandbox-a".into(),
             owner: "owner-a".into(),
             policy_hash: "policy".into(),

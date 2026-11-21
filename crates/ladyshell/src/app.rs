@@ -118,6 +118,7 @@ fn invalid(message: String) -> Error {
 pub fn sync(args: &crate::request::SyncArgs) -> Result<Value> {
     let selected = crate::associations::resolve(args.state.as_deref())?;
     let lock = state::StateLock::acquire(&selected.directory)?;
+    let _lease = state::SessionLock::acquire(&lock.directory, false)?;
     crate::continuous::host::execution_directory(&lock.directory)?;
     let current =
         state::load(&lock.directory)?.ok_or_else(|| invalid("State is missing".into()))?;
