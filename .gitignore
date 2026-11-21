@@ -1,0 +1,38 @@
+# Build outputs and caches
+/target/
+**/target/
+/result
+/result-*
+.direnv/
+.venv/
+__pycache__/
+*.pyc
+
+# Local tooling and version-control metadata
+/.jj/
+/.superpowers/
+/.publication/
+/.agents/
+/.codex/
+/.aws/
+
+# Runtime state, credentials and disposable results
+/state/
+/exports/
+/reports/
+.env
+.env.*
+auth.json
+credentials.json
+*.log
+/docs/validation/
+/docs/superpowers/
+/docs/audits/*-20*/
+/qualification/**/results/
+/qualification/ladyhost-*/
+/qualification/vxdf/
+/audit-versions.md
+/todo-*.md
+/reduire-doublons.md
+/rewrite-ockam.md
+# Keep source fixtures, schemas, provider locks and synthetic test certificates.

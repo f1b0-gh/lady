@@ -1,0 +1,7 @@
+[package]
+name = "interop-local"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+interop-cargo-leaf = "=1.0.0"

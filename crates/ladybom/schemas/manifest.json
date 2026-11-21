@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "retrieved_on": "2026-11-05",
+  "schema": {
+    "file": "vxdf-0.0.1.schema.json",
+    "source": "https://vxdf.org/schemas/vxdf-0.0.1.json",
+    "sha256": "757177284eb87d75ecb6133c6aafdf8877cc1eef6cd6a69d401495f905129da9",
+    "draft": "2020-12"
+  },
+  "license": {
+    "file": "LICENSE-VXDF",
+    "source": "https://raw.githubusercontent.com/mihir-shah99/vxdf/f1ca4345fdce2b450c5d3cb8a77885299211c5a1/LICENSE",
+    "sha256": "d9d51c1581eb73e1c6587114eb4c4e3bae34a73b1b94e79b51efdb11593651cb",
+    "spdx": "Apache-2.0"
+  },
+  "limitation": "Published schema pinned by content digest. It differs from docs/normative-schema.json at the license repository revision; no matching source revision is claimed.",
+  "validator": {
+    "crate": "jsonschema",
+    "version": "0.60.2",
+    "default_features": false,
+    "draft": "2020-12",
+    "formats": true,
+    "external_retrieval": "denied",
+    "regex_engine": "linear-time regex"
+  }
+}

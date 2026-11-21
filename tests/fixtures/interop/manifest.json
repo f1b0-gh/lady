@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "retrieved_on": "2026-11-05",
+  "resources": [
+    {
+      "file": "bom-1.5.schema.json",
+      "sha256": "067f7824b08653839ea050ae9e09ca48375eadc2652b0e2a299476e7db90335b",
+      "source": "https://raw.githubusercontent.com/CycloneDX/specification/c320fc0f0b46873864927d9d5684eea7ba439728/schema/bom-1.5.schema.json"
+    },
+    {
+      "file": "spdx.schema.json",
+      "sha256": "4f6e2b05c05d26a4f2dc5879fbc2fca94b0a28db46289d0c51345621b71cfbfc",
+      "source": "https://raw.githubusercontent.com/CycloneDX/specification/c320fc0f0b46873864927d9d5684eea7ba439728/schema/spdx.schema.json"
+    },
+    {
+      "file": "jsf-0.82.schema.json",
+      "sha256": "8bae002c25e723db7ee1f26afde680ae1a2b1a8f6b4b4b0fd65dc3becb090aae",
+      "source": "https://raw.githubusercontent.com/CycloneDX/specification/c320fc0f0b46873864927d9d5684eea7ba439728/schema/jsf-0.82.schema.json"
+    },
+    {
+      "file": "vxdf-0.0.1.schema.json",
+      "sha256": "757177284eb87d75ecb6133c6aafdf8877cc1eef6cd6a69d401495f905129da9",
+      "source": "https://vxdf.org/schemas/vxdf-0.0.1.json"
+    },
+    {
+      "file": "LICENSE-CycloneDX",
+      "sha256": "6c29f22a4a7385285c6f579ec9f33c5e989f00739d6b257243a0b082ec9447ae",
+      "source": "https://raw.githubusercontent.com/CycloneDX/specification/c320fc0f0b46873864927d9d5684eea7ba439728/LICENSE"
+    },
+    {
+      "file": "LICENSE-VXDF",
+      "sha256": "d9d51c1581eb73e1c6587114eb4c4e3bae34a73b1b94e79b51efdb11593651cb",
+      "source": "https://raw.githubusercontent.com/mihir-shah99/vxdf/f1ca4345fdce2b450c5d3cb8a77885299211c5a1/LICENSE"
+    }
+  ],
+  "cyclonedx_revision": "c320fc0f0b46873864927d9d5684eea7ba439728",
+  "dependency_track": {
+    "version": "5.2.1",
+    "image": "docker.io/dependencytrack/apiserver@sha256:a7ce7a42928c6c03e94e8255e2ee871f5268f55b638a69729cae7afc47ef43b8",
+    "tag": "5.2.1",
+    "platforms": [
+      {
+        "os": "linux",
+        "architecture": "amd64",
+        "digest": "sha256:e397bc147be419a9f902ba427cb6d737dbc6567e8cda0d449e47a1a41184533b"
+      },
+      {
+        "os": "linux",
+        "architecture": "arm64",
+        "digest": "sha256:e46d3dee171aaac6e0cce60da2fbb6b987b7fafa22b8ff7c1300b3f4c356491e"
+      }
+    ],
+    "release_source": "https://github.com/DependencyTrack/dependency-track/releases/tag/5.2.1",
+    "image_source": "https://hub.docker.com/v2/repositories/dependencytrack/apiserver/tags/5.2.1",
+    "qualification": "partial",
+    "reason": "Synthetic npm graph, scoped INTERNAL VEX, explicit expiry reimport and duplicate-context merging exercised; coverage metadata losses remain.",
+    "evidence": "qualification/dependency-track/results/2026-11-05/summary.json"
+  },
+  "vxdf_source_review": {
+    "repository_revision": "f1ca4345fdce2b450c5d3cb8a77885299211c5a1",
+    "schema_path": "docs/normative-schema.json",
+    "published_schema_matches_repository": false,
+    "limitation": "The website schema is pinned by content digest only; no matching repository revision established.",
+    "repository_schema_sha256": "205abe52a35e372e9815dbd331306a36975a364c88477f4be1e084a55d57912c"
+  }
+}

@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Rust and native fixtures
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    env:
+      CARGO_BUILD_JOBS: '2'
+      RUST_TEST_THREADS: '2'
+      CARGO_TERM_COLOR: always
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@bb0495a1086c46893eee56f32fd192dfe4a15bb9 # v32.0.0
+        with:
+          enable_kvm: false
+          set_as_trusted_user: false
+          extra_nix_config: |
+            sandbox = true
+            max-jobs = 2
+            cores = 2
+
+      - name: Prepare the pinned Nickel evaluators
+        run: |
+          nix build --no-update-lock-file --no-write-lock-file --no-link \
+            path:./nix#nickel path:./crates/ladyboot#nickel
+
+      - name: Verify sources and run checks
+        run: |
+          export CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target"
+          nix develop --no-update-lock-file --no-write-lock-file \
+            path:./nix#ci --command bash -euo pipefail <<'CHECKS'
+          rustc --version
+          cargo --version
+          python3 scripts/check_sources.py
+          cargo fetch --locked
+          export CARGO_NET_OFFLINE=true
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+          cargo test --workspace --all-features --locked
+          python3 tests/check_boundaries.py --bootc crates/ladyboot
+          python3 scripts/check_sources.py
+          CHECKS
+
+      - name: Verify that validation preserved locked inputs
+        run: git diff --exit-code -- Cargo.lock ':(glob)**/flake.lock' sources/nickeling.json vendor/nickel-util

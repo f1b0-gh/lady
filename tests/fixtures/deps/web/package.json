@@ -1,0 +1,11 @@
+{
+  "name": "ladyshell-typescript-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "engines": { "node": ">=22" },
+  "dependencies": { "is-number": "7.0.0" },
+  "devDependencies": { "typescript": "5.9.3" },
+  "scripts": {
+    "preinstall": "node -e \"throw Error('project install scripts must not run')\""
+  }
+}

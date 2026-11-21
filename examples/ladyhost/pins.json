@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "platform": "linux-x86_64",
+  "jjpr": {
+    "version": "0.45.1",
+    "source": "https://github.com/michaeldhopkins/jjpr",
+    "revision": "b116c58a0227a3b50357ad026a6a5dc5e953705f",
+    "license": "MIT OR Apache-2.0",
+    "url": "https://github.com/michaeldhopkins/jjpr/releases/download/v0.45.1/jjpr-x86_64-unknown-linux-gnu.tar.gz",
+    "sha256": "4ff834db216e7b93499d6f5a4b78b21b24966fb978c3bdf68f7e7d69eab0ce38"
+  },
+  "jj": {
+    "version": "0.47.1",
+    "source": "https://github.com/jj-vcs/jj",
+    "url": "https://github.com/jj-vcs/jj/releases/download/v0.47.1/jj-v0.47.1-x86_64-unknown-linux-musl.tar.gz",
+    "sha256": "d4b657f622ee50929c8916466dfa3d6a6c17a0a32b50e7b2c793707ec9ebcad7"
+  },
+  "forgejo": {
+    "version": "17.0.1",
+    "image": "codeberg.org/forgejo/forgejo@sha256:fcd19ff4ebc85fb098a67e8e1d0d5a84d07dd6e8a23edcfdfd5b71a6178953be"
+  },
+  "github_cli": {
+    "version": "2.103.3",
+    "source": "https://github.com/cli/cli",
+    "url": "https://github.com/cli/cli/releases/download/v2.103.3/gh_2.103.3_linux_amd64.tar.gz",
+    "sha256": "4c806978ffce1cec70853302a56d70ac6da4f19bae7adca4e1a8ab00633dd91d",
+    "purpose": "host authentication; no GitHub CLI or credentials in agent sandboxes",
+    "dependency_build": {
+      "source_revision": "63837fb778d6a39f02be0ce76ff89f2bc8d74bdc",
+      "go_version": "1.27.3",
+      "overrides": {
+        "golang.org/x/net": "v0.62.0",
+        "golang.org/x/crypto": "v0.58.1-0.20261009181718-2f1f834330b2"
+      },
+      "lock_directory": "tool-locks/github-cli",
+      "binary_sha256": "d6a1f04b4f73a5ce10eee608883245b72166b26bc1115c1ebcc6dd44d098487d",
+      "reason": "resolve GO-2026-5932, GO-2026-6860 and GO-2026-6866 candidates in upstream release module inventory",
+      "source_edits": false
+    }
+  }
+}

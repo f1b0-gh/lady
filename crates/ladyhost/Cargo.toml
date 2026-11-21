@@ -1,0 +1,23 @@
+[package]
+name = "ladyhost"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Host-owned GitHub setup, signed jj publication and reviewed integration"
+publish = false
+default-run = "ladyhost"
+autobins = false
+
+[[bin]]
+name = "ladyhost"
+path = "src/bin/ladyhost.rs"
+
+[[bin]]
+name = "ladyhost-jjpr"
+path = "src/main.rs"
+
+[dependencies]
+jjpr.workspace = true
+anyhow.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true

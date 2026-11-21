@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "repository": "https://github.com/f1b0-gh/nickeling",
+  "revision": "9a80a323c32fdf4a3eb98b0f334ab2488e5127af",
+  "package": "nickel-util",
+  "version": "0.1.0",
+  "path": "crates/nickel-util",
+  "bundled_path": "vendor/nickel-util",
+  "license_path": "LICENSE",
+  "files_sha256": {
+    "Cargo.toml": "1e328d75aa14fd961bd65801a95b949588d3321bbdaeb947a3fb0c10cac4ac29",
+    "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "README.md": "334864e4d0d764f8b68a5643b0c406fa2781cdfc16ad03473d7ffd7844f7b67e",
+    "src/error.rs": "c24b31b07a3138599fd2466cbea4a0640a61c1ca09828799f62cd336c105cf05",
+    "src/evaluation.rs": "da015f9dc2bed15c2037c72c3dae7680099c03eb668ace8f354c130169bf146e",
+    "src/files.rs": "4dcce452203a7620ebfe95ea294cbb0f9a9e7498660f36946d4b4f9fe7572347",
+    "src/json.rs": "5fb3017395674ecd819e9c15b35373a83833c71e018b52df3345ee8a430dd216",
+    "src/lib.rs": "dc2e31c6e7ea4db980403b61d64f7bf1d25fab8b81bef39f852bd7b7ab1c3b33",
+    "src/process.rs": "172ef06e29492ac536374ea07ac7cbdb39a393f07e68e587a29ccfc091a496ab",
+    "src/sources.rs": "3ee91f63c91b46d62bc8a4107279dcbddf2e3d2e453a922c5c8c981134718fde",
+    "tests/bundles.rs": "5782777cfc106d46ee5180512fc6830f12827f91afc565b858e56bcc99e05796",
+    "tests/fixtures/nix/flake.lock": "33a749d8f45423cbee7b598f6e7f7084f4f67590f0fd3720f5d9b1fb11001aa6",
+    "tests/fixtures/nix/flake.nix": "315e60da312a9d3107fab0a2a9453424fe72c29bc123265d61796691637cebe7",
+    "tests/hash.rs": "5b3d91e1e4830fd2239a8f7ee18c525f8c51837409232b3925f157a4f20c5569",
+    "tests/json_limits.rs": "46c68f0b565a10172bf81286cc07e85beec2f9de3fd72ae6d34d1a54019b5690",
+    "tests/public_api.rs": "8588f117a1b2025947edb5ce19c14d40092475653d0a86feca37313c914a11ae",
+    "tests/source_credentials.rs": "6447dccd3cff9aa865ccd7b47af8d28bea859da8fe0c34582b574dbdeb5e94a0"
+  }
+}

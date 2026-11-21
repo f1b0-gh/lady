@@ -1,0 +1,55 @@
+[workspace]
+exclude = ["vendor/nickel-util"]
+members = ["crates/ladyshell", "crates/ladybom", "crates/ladybom-cli", "crates/ladyboot", "crates/ladyhost"]
+resolver = "2"
+
+[package]
+license = "Apache-2.0"
+name = "ladyshell-cli"
+default-run = "ladyshell"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "ladyshell"
+path = "src/main.rs"
+
+[[bin]]
+name = "audit-validator"
+path = "src/bin/audit-validator.rs"
+
+[dependencies]
+ladyshell = { path = "crates/ladyshell" }
+clap = { version = "4", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+ladybom = { path = "crates/ladybom", features = ["graph"] }
+sha2.workspace = true
+tempfile = "3"
+libc = "0.2"
+tar = "0.4"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.dependencies]
+nickel-util = { version = "=0.1.0", path = "vendor/nickel-util" }
+sha2 = "0.10"
+# Ladyhost reuses the qualified registry pins; other members retain their
+# existing feature selections and resolve compatible versions through Cargo.lock.
+jjpr = "=0.45.1"
+anyhow = "=1.0.104"
+serde = "=1.0.229"
+serde_json = "=1.0.154"
+
+# Existing validator requirements, shared without changing resolved versions.
+unicode-normalization = "=0.1.25"
+ryu-js = "1.0"

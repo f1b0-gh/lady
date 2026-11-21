@@ -1,0 +1,13 @@
+[package]
+name = "ladybom-cargo-synthetic"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+members = ["local"]
+
+[dependencies]
+interop-local = { path = "local" }
+
+[target.'cfg(unix)'.dependencies]
+interop-cargo-right = "=1.0.0"

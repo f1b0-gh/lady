@@ -1,0 +1,36 @@
+[package]
+license = "Apache-2.0"
+name = "ladyshell"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rusqlite = { version = "=0.41.1", default-features = false, features = ["bundled"] }
+ladybom = { version = "=0.1.0", path = "../ladybom", default-features = false }
+nickel-util.workspace = true
+unicode-normalization.workspace = true
+ryu-js.workspace = true
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2.workspace = true
+tempfile = "3"
+libc = "0.2"
+regex = "1"
+tar = "0.4"
+flate2 = "1"
+base64 = "0.22"
+toml = "0.8"
+pep508_rs = "0.9.2"
+semver = "1"
+url = "2"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"

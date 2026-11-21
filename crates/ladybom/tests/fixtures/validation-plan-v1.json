@@ -1,0 +1,34 @@
+{
+  "after_graph_sha256": "5f12bebb47297e7c15bfa27874e35612b652ce1bd3edd1729b5bf3c6d5004d27",
+  "before_graph_sha256": "744be002410c9f570147022a45f14be954e0e22662464cb12fbb750e8cda9567",
+  "exclusions": [],
+  "expected": {
+    "package-lock.json": {
+      "executable": false,
+      "sha256": "fef3ecdb0a92a97a031c3e2495eb82c5feffd637a740be39f1337d312e9acea5",
+      "size": 78
+    },
+    "package.json": {
+      "executable": false,
+      "sha256": "6121fb9da71e3430413f00e63e2748c5ee8d2e69049c3963bc448cac6880a404",
+      "size": 20
+    }
+  },
+  "removed_declarations": [
+    {
+      "id": "3df3abc479c6190e9246a45d56bf944ed3481dc207a6653fad5f245125973055",
+      "root": {
+        "condition": null,
+        "kind": "runtime",
+        "manifest": "package.json",
+        "native": null,
+        "to": {
+          "graph": "graphs/121a218b97ae85c7ab8c8ffff037123499b8289aeef2ed69848b5692932374b8",
+          "purl": "pkg:npm/a@1.0.0"
+        }
+      }
+    }
+  ],
+  "request_sha256": "a1dc044eff31b6961aef73623d14cea31ef408f37fbca97504ff825d02f7c607",
+  "schema_version": 1
+}

@@ -1,0 +1,38 @@
+{
+  "observed_at": "2026-11-05T15:43:25.678133+00:00",
+  "scope": "Synthetic local runtime only; no complete image advisory audit",
+  "compose_source": {
+    "url": "https://github.com/DependencyTrack/docs/blob/7c10127b96cabc70dc5f7a7d939604ebb5cab6b7/docs/tutorials/docker-compose.quickstart.yml",
+    "revision": "7c10127b96cabc70dc5f7a7d939604ebb5cab6b7"
+  },
+  "images": [
+    {
+      "repository": "docker.io/dependencytrack/apiserver",
+      "release": "5.2.1",
+      "index_digest": "sha256:a7ce7a42928c6c03e94e8255e2ee871f5268f55b638a69729cae7afc47ef43b8",
+      "linux_amd64_manifest": "sha256:e397bc147be419a9f902ba427cb6d737dbc6567e8cda0d449e47a1a41184533b",
+      "local_image_id": "sha256:8eece6539694dfb4ab35f82f6e522f5cfbec453ac92cce2d9d6727ddb9bfe137"
+    },
+    {
+      "repository": "docker.io/library/postgres",
+      "observed_tag": "18-alpine",
+      "release": "18.6-alpine3.24",
+      "index_digest": "sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5",
+      "linux_amd64_manifest": "sha256:3b0ef735388b2cb097fc29b8bb421d86d57d0ddbe7aa1fbd6493e06d65028503",
+      "local_image_id": "sha256:57b23a0326ee442e83b3d3fa027c5a148be0a392d7c91d1ca4e1e70131ee859a",
+      "source_revision": "e00e1bd34ec5c8a8e7ad89b273b3d42efaf6d5bc",
+      "source_path": "18/alpine3.24"
+    }
+  ],
+  "verification": [
+    "docker buildx imagetools inspect at registry",
+    "docker image inspect after pull",
+    "GET /api/version: 5.2.1",
+    "GET management /health/ready: UP; dataSources default UP"
+  ],
+  "ports": {
+    "api": "127.0.0.1:18081",
+    "management": "127.0.0.1:19081"
+  },
+  "secrets": "Synthetic credentials are outside the repository in mode 0600 files; values omitted"
+}

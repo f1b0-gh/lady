@@ -1,0 +1,237 @@
+{
+  "schema_version": 1,
+  "method_version": "ladyshell-audit-2",
+  "files": [
+    {
+      "source": "example-project/tools/audit-validator/LICENSE",
+      "path": "crates/ladyshell/src/audit/validator/LICENSE-MIT",
+      "upstream_sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
+      "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391"
+    },
+    {
+      "source": "example-project/tools/audit-validator/src/common.rs",
+      "path": "crates/ladyshell/src/audit/validator/common.rs",
+      "upstream_sha256": "18437fff447d3738ee3fcb13280f190941031ec873efbbe2f92a6ca3bc58deef",
+      "sha256": "5ba5f4513c0d2f5cd1a4aa8a94f0d98c1a87f91a3a492be09a8c3f5a8f123e5a"
+    },
+    {
+      "source": "example-project/tools/audit-validator/src/coverage.rs",
+      "path": "crates/ladyshell/src/audit/validator/coverage.rs",
+      "upstream_sha256": "09a188148af9ec62c3ead9037680178dac003c158ff52b560a02a4e2def7f2eb",
+      "sha256": "f1df44d85cdb67f522b614aa2442f12e96d595d67aa68a716b7e16a00d63333b"
+    },
+    {
+      "source": "example-project/tools/audit-validator/src/findings.rs",
+      "path": "crates/ladyshell/src/audit/validator/findings.rs",
+      "upstream_sha256": "ccdd69610b0fc68a2b545a9b683148d1fb00fb23e8bf8f50b9eb2bab09a958a7",
+      "sha256": "c2ed744beef77b9509578270abfedcd0d8d88d4de21f209effe48de3f12b82c1"
+    },
+    {
+      "source": "example-project/tools/audit-validator/src/input.rs",
+      "path": "crates/ladyshell/src/audit/validator/input.rs",
+      "upstream_sha256": "2c3036ed5d857a90db1af210f6c03db778617f4f9544d7918347d26b4e66b79e",
+      "sha256": "108c02d04339d80dc77bb415daeb821cb8876c0d71f6f703b553b5dda0e6bbdf"
+    },
+    {
+      "source": "example-project/tools/audit-validator/src/json.rs",
+      "path": "crates/ladyshell/src/audit/validator/json.rs",
+      "upstream_sha256": "316d85a67c8368cb5b3513606c742fb561d7b137ccb85e9103cdc760bbe93e63",
+      "sha256": "514d21178bb1b96a1467d2ae6e8cef5aaf717df23f9f72156739ecd815a50620"
+    },
+    {
+      "source": "example-project/tools/audit-validator/src/lib.rs",
+      "path": "crates/ladyshell/src/audit/validator/mod.rs",
+      "upstream_sha256": "e64899bac346871f67f392722b72d5a7ab1c1bf7dfe5e64db8e15bd37167c40b",
+      "sha256": "3b67ceb3153fb09eb8e6e9918e0200b04cdaaaa6c9948c32e4ac6b18a9cea26b"
+    },
+    {
+      "source": "example-project/tools/audit-validator/src/main.rs",
+      "path": "src/bin/audit-validator.rs",
+      "upstream_sha256": "9c98e0d4ae8d0b232c789885d3ccbfd3bf7803154dce5745e4692eaf1759a584",
+      "sha256": "6e1654b838db96bc74fbc0b9fc0a1c60f4a4a0c90069cf17e492ea2554ad6a01"
+    },
+    {
+      "source": "example-project/tools/audit-validator/src/preflight.rs",
+      "path": "crates/ladyshell/src/audit/validator/preflight.rs",
+      "upstream_sha256": "7f865dcfdd8fe9cd50af97fcf5fcfcb0b824f3262c9f4429555d4f0b87703320",
+      "sha256": "192f9b2509d4c1f883b000f7099275bf5f4cd11bcd445c02f5f8fbc1cfcf3444"
+    },
+    {
+      "source": "example-project/tools/audit-validator/src/report-schema.json",
+      "path": "crates/ladyshell/src/audit/validator/report-schema.json",
+      "upstream_sha256": "6575c9de4a62255699ea052ebf9a49ebfb373a32891bcd89af6f55cc84b35519",
+      "sha256": "6575c9de4a62255699ea052ebf9a49ebfb373a32891bcd89af6f55cc84b35519"
+    },
+    {
+      "source": "example-project/tools/audit-validator/src/unicode_tables.rs",
+      "path": "crates/ladyshell/src/audit/validator/unicode_tables.rs",
+      "upstream_sha256": "c739239a015b37b2cbd1b528d5b99ee7b4796f32a290199da589610862c7fd36",
+      "sha256": "ad941aa0b7fce2a7d0abd61d2c25ab4f70af3a04cfdae2d78abae6a4730ad608"
+    },
+    {
+      "source": "example-project/tools/audit-validator/tests/cli.rs",
+      "path": "tests/audit_validator_cli.rs",
+      "upstream_sha256": "337507127421cf574f526fb2c3bdc1054e9240991940b31696065d86c113c8aa",
+      "sha256": "96c63d918a21aeeec8feefca5d87d2c940543a8d63ad41be547e05c012c4abcc"
+    },
+    {
+      "source": "example-project/tools/audit-validator/tests/contract.rs",
+      "path": "crates/ladyshell/tests/audit_validator.rs",
+      "upstream_sha256": "612b3762d6646a0ce62c0538db04ada30d9da478551646613235cd5c82cd69c3",
+      "sha256": "a4ae5bf96bc64242ed10e3d94ab4c1cdc97fe14868391c56ef8499743e218470"
+    },
+    {
+      "source": "example-project/tools/audit-validator/tests/fixtures.jsonl",
+      "path": "crates/ladyshell/src/audit/validator/fixtures.jsonl",
+      "upstream_sha256": "a5fe5a6a2b891dc85ff68b6a2c432bfaf60e1875fcaf52c15370cde43a7ec8cc",
+      "sha256": "a5fe5a6a2b891dc85ff68b6a2c432bfaf60e1875fcaf52c15370cde43a7ec8cc"
+    },
+    {
+      "source": "cloudflare/security-audit/AI-AND-LLM.md",
+      "path": "resources/audit/security-audit/AI-AND-LLM.md",
+      "upstream_sha256": "7335a95c43554eadefcf03ece639291bb0e038c398a179299e3887ffe06bd2ef",
+      "sha256": "7335a95c43554eadefcf03ece639291bb0e038c398a179299e3887ffe06bd2ef"
+    },
+    {
+      "source": "cloudflare/security-audit/ATTACK-CLASSES.md",
+      "path": "resources/audit/security-audit/ATTACK-CLASSES.md",
+      "upstream_sha256": "3ee4f00c6e8c9dcf6dd02dd5ac2a4ceb322e2085f3e9fbe79cf0c6330bc7ef83",
+      "sha256": "3ee4f00c6e8c9dcf6dd02dd5ac2a4ceb322e2085f3e9fbe79cf0c6330bc7ef83"
+    },
+    {
+      "source": "cloudflare/security-audit/CLIENT-SIDE.md",
+      "path": "resources/audit/security-audit/CLIENT-SIDE.md",
+      "upstream_sha256": "613f6b98f86083e045525c5b60154ffdab122bac35f1e05eb17488e6e453370c",
+      "sha256": "613f6b98f86083e045525c5b60154ffdab122bac35f1e05eb17488e6e453370c"
+    },
+    {
+      "source": "cloudflare/security-audit/CLOUD-AND-DEPLOYMENT.md",
+      "path": "resources/audit/security-audit/CLOUD-AND-DEPLOYMENT.md",
+      "upstream_sha256": "3c80f3088be22345e07b057c056d6ed99fe2b0304f794398964f7ccd5a496ca3",
+      "sha256": "3c80f3088be22345e07b057c056d6ed99fe2b0304f794398964f7ccd5a496ca3"
+    },
+    {
+      "source": "cloudflare/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md",
+      "path": "resources/audit/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md",
+      "upstream_sha256": "307dcb3e24d292715c4a041190e7bb135646a37eb6187619ae01d000a634a4ad",
+      "sha256": "307dcb3e24d292715c4a041190e7bb135646a37eb6187619ae01d000a634a4ad"
+    },
+    {
+      "source": "cloudflare/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md",
+      "path": "resources/audit/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md",
+      "upstream_sha256": "58eae8ee0ca6a46611c501ec5a3ab47fdff88dd7db0d8d74789bbf8bb19d8cb2",
+      "sha256": "58eae8ee0ca6a46611c501ec5a3ab47fdff88dd7db0d8d74789bbf8bb19d8cb2"
+    },
+    {
+      "source": "cloudflare/security-audit/HUNTING.md",
+      "path": "resources/audit/security-audit/HUNTING.md",
+      "upstream_sha256": "71c121decea1322c47c718f6e110f1a892980bb4266bd7ac55ef043a213ade09",
+      "sha256": "98151ea1bf59a898b6e0ddbb351b751853174bccc2c02dd2bcde648ed53199ba"
+    },
+    {
+      "source": "cloudflare/security-audit/MEMORY-SAFETY-AND-BINARY.md",
+      "path": "resources/audit/security-audit/MEMORY-SAFETY-AND-BINARY.md",
+      "upstream_sha256": "7c8b0dccfb35315cca2455509674d49632b2fe37e1f3aac16c1a496a7e9924a7",
+      "sha256": "7c8b0dccfb35315cca2455509674d49632b2fe37e1f3aac16c1a496a7e9924a7"
+    },
+    {
+      "source": "cloudflare/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md",
+      "path": "resources/audit/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md",
+      "upstream_sha256": "8b73816fa5b3697c9c40977f0c836b40f01d6e81929ff2720fe83ce089e9a619",
+      "sha256": "8b73816fa5b3697c9c40977f0c836b40f01d6e81929ff2720fe83ce089e9a619"
+    },
+    {
+      "source": "cloudflare/security-audit/RECONNAISSANCE.md",
+      "path": "resources/audit/security-audit/RECONNAISSANCE.md",
+      "upstream_sha256": "02ca887aca84de8ae137f1891bd2f0a54f28d3fa6da92a27f54734382b3381a2",
+      "sha256": "433cd3b3703e0db2fc9ab53927c12bf44d018c70197afc5f51fe73fd4a19a31c"
+    },
+    {
+      "source": "cloudflare/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
+      "path": "resources/audit/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
+      "upstream_sha256": "4326fab5c92a0b4c420a70196254040105cd794026562130b59bf1a6db3e4baa",
+      "sha256": "4326fab5c92a0b4c420a70196254040105cd794026562130b59bf1a6db3e4baa"
+    },
+    {
+      "source": "cloudflare/security-audit/SKILL.md",
+      "path": "resources/audit/security-audit/SKILL.md",
+      "upstream_sha256": "5e3e96a1e438d8f35fef0a1e38f02d4f00e2bdf910401b7dfe00e6779c6dac85",
+      "sha256": "27bcf8d7706a3ba553469d1d428396fb258c03d929acccb6e05be970d24d44e4"
+    },
+    {
+      "source": "cloudflare/security-audit/SUPPLY-CHAIN-AND-RELEASE.md",
+      "path": "resources/audit/security-audit/SUPPLY-CHAIN-AND-RELEASE.md",
+      "upstream_sha256": "f372e919940e335468ba1ae09f99026c3986a345f7fe26f8068f132e199f52a5",
+      "sha256": "f372e919940e335468ba1ae09f99026c3986a345f7fe26f8068f132e199f52a5"
+    },
+    {
+      "source": "cloudflare/security-audit/VALIDATION-AND-REPORTING.md",
+      "path": "resources/audit/security-audit/VALIDATION-AND-REPORTING.md",
+      "upstream_sha256": "b892470cb89bb31f33403e050d4bdfbe2cdaef940ade1496fa65e32b2e129449",
+      "sha256": "ab352b3243520622fc2a553dd189d248f41d475c06856ead8861e357ce80f540"
+    },
+    {
+      "source": "cloudflare/security-audit/WEB-PROTOCOL-AND-AUTH.md",
+      "path": "resources/audit/security-audit/WEB-PROTOCOL-AND-AUTH.md",
+      "upstream_sha256": "4f3066dffa23c5635859187be9b96c32f2aff29a688186b91ff0c63e47d62b5c",
+      "sha256": "4f3066dffa23c5635859187be9b96c32f2aff29a688186b91ff0c63e47d62b5c"
+    },
+    {
+      "source": "cloudflare/security-audit/LICENSE",
+      "path": "resources/audit/security-audit/LICENSE",
+      "upstream_sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
+      "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391"
+    },
+    {
+      "source": "cloudflare/security-audit/report-schema.json",
+      "path": "resources/audit/security-audit/report-schema.json",
+      "upstream_sha256": "6575c9de4a62255699ea052ebf9a49ebfb373a32891bcd89af6f55cc84b35519",
+      "sha256": "6575c9de4a62255699ea052ebf9a49ebfb373a32891bcd89af6f55cc84b35519"
+    }
+  ],
+  "distribution_files": {
+    "resources/audit/run-contract-v1.json": "98fdccc5e098566339cee2f1f23657a7b4bc895ca71700e4fb118b69746ec402",
+    "resources/audit/security-audit/AI-AND-LLM.md": "7335a95c43554eadefcf03ece639291bb0e038c398a179299e3887ffe06bd2ef",
+    "resources/audit/security-audit/ATTACK-CLASSES.md": "3ee4f00c6e8c9dcf6dd02dd5ac2a4ceb322e2085f3e9fbe79cf0c6330bc7ef83",
+    "resources/audit/security-audit/CLIENT-SIDE.md": "613f6b98f86083e045525c5b60154ffdab122bac35f1e05eb17488e6e453370c",
+    "resources/audit/security-audit/CLOUD-AND-DEPLOYMENT.md": "3c80f3088be22345e07b057c056d6ed99fe2b0304f794398964f7ccd5a496ca3",
+    "resources/audit/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md": "307dcb3e24d292715c4a041190e7bb135646a37eb6187619ae01d000a634a4ad",
+    "resources/audit/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md": "58eae8ee0ca6a46611c501ec5a3ab47fdff88dd7db0d8d74789bbf8bb19d8cb2",
+    "resources/audit/security-audit/LADYSHELL.md": "f46ac8efc4065663eed9d9699058dad9c48d8f03cf596d637b3316ba3d61c987",
+    "resources/audit/security-audit/HUNTING.md": "98151ea1bf59a898b6e0ddbb351b751853174bccc2c02dd2bcde648ed53199ba",
+    "resources/audit/security-audit/LICENSE": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
+    "resources/audit/security-audit/MEMORY-SAFETY-AND-BINARY.md": "7c8b0dccfb35315cca2455509674d49632b2fe37e1f3aac16c1a496a7e9924a7",
+    "resources/audit/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md": "8b73816fa5b3697c9c40977f0c836b40f01d6e81929ff2720fe83ce089e9a619",
+    "resources/audit/security-audit/RECONNAISSANCE.md": "433cd3b3703e0db2fc9ab53927c12bf44d018c70197afc5f51fe73fd4a19a31c",
+    "resources/audit/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md": "4326fab5c92a0b4c420a70196254040105cd794026562130b59bf1a6db3e4baa",
+    "resources/audit/security-audit/SKILL.md": "27bcf8d7706a3ba553469d1d428396fb258c03d929acccb6e05be970d24d44e4",
+    "resources/audit/security-audit/SUPPLY-CHAIN-AND-RELEASE.md": "f372e919940e335468ba1ae09f99026c3986a345f7fe26f8068f132e199f52a5",
+    "resources/audit/security-audit/VALIDATION-AND-REPORTING.md": "ab352b3243520622fc2a553dd189d248f41d475c06856ead8861e357ce80f540",
+    "resources/audit/security-audit/WEB-PROTOCOL-AND-AUTH.md": "4f3066dffa23c5635859187be9b96c32f2aff29a688186b91ff0c63e47d62b5c",
+    "resources/audit/security-audit/report-schema.json": "6575c9de4a62255699ea052ebf9a49ebfb373a32891bcd89af6f55cc84b35519",
+    "resources/audit/agent-response-schema.json": "8a75155dba9ccc36b316a9b4686a0136641aa4bb75b7c381a5d8e931fd23ed14"
+  },
+  "adaptations": [
+    "Workspace Cargo manifest; no upstream release profile in member.",
+    "Native ladyshell audit validate commands replace JavaScript invocations.",
+    "LADYSHELL.md describes native trust and execution limits.",
+    "Embedded development checks use existing authorized sandbox capabilities; isolated audit controls and native evidence remain distinct.",
+    "Native bounded audit wave uses isolated connected agents, offline targets, controller-owned receipts and independent verification.",
+    "Validator integrated into ladyshell::audit::validator; module imports and fixture include path adjusted, original unsafe-code prohibition retained, imported files marked MIT. Compatibility CLI and tests moved into Ladyshell packages without changing their behavior. Standalone Cargo manifest retired; external dependency requirements retained.",
+    "LADYSHELL.md and the Ladyshell introduction in SKILL.md translated into English; authorization, confinement, evidence rules and ladyshell-audit-2 method semantics unchanged."
+  ],
+  "anonymization": {
+    "project_labels": "generic",
+    "historical_paths": "anonymized labels; not usable filesystem locations",
+    "content_hashes": "Original source hashes retained unless explicitly identified as edited report hashes."
+  },
+  "retired_sources": [
+    {
+      "source": "example-project/tools/audit-validator/Cargo.toml",
+      "upstream_sha256": "eb19ccd8ee2ad503ff6d5abe7694f7f4badeb793fee58294cd2afef038485591",
+      "previous_path": "crates/audit-validator/Cargo.toml",
+      "previous_sha256": "84e82a4be9beaa2c030fcb9de633f892f0be22e6e086c6434a1365be9455a07b",
+      "reason": "Standalone Cargo package removed; existing dependency requirements moved into Ladyshell through workspace declarations."
+    }
+  ]
+}

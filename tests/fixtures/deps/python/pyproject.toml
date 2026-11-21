@@ -1,0 +1,11 @@
+[project]
+name = "ladyshell-python-fixture"
+version = "0.1.0"
+requires-python = ">=3.13,<3.14"
+dependencies = ["idna==3.10"]
+
+[project.optional-dependencies]
+format = ["packaging==25.0"]
+
+[dependency-groups]
+dev = ["iniconfig==2.1.0"]

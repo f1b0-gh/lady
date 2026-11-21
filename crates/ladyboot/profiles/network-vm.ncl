@@ -1,0 +1,7 @@
+{
+  schema_version = 1,
+  architecture = "x86_64-linux",
+  os_id = "ladyboot",
+  revision = "1",
+  needs = ["bootc-base", "virtio-vm", "qemu-agent", "network-dhcp", "diagnostics"],
+} | (import "schema.ncl")

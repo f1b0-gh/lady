@@ -1,0 +1,22 @@
+version = 4
+
+[[package]]
+name = "ladybom-cargo-synthetic"
+version = "0.1.0"
+dependencies = ["interop-local", "interop-cargo-right"]
+
+[[package]]
+name = "interop-local"
+version = "0.1.0"
+dependencies = ["interop-cargo-leaf"]
+
+[[package]]
+name = "interop-cargo-right"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = ["interop-cargo-leaf"]
+
+[[package]]
+name = "interop-cargo-leaf"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"

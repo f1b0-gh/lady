@@ -1,0 +1,5 @@
+/result*
+/nickel.lock.ncl
+/reports/runs/
+/target/
+__pycache__/

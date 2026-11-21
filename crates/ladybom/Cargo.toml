@@ -1,0 +1,59 @@
+[package]
+license = "Apache-2.0"
+name = "ladybom"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+graph = ["dep:parquet", "dep:bytes", "dep:tempfile", "dep:libc"]
+
+[dependencies]
+sha2.workspace = true
+nickel-util.workspace = true
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+jsonschema = { version = "=0.60.2", default-features = false }
+cargo-lock = "10.1"
+cyclonedx-bom = "0.8.1"
+time = { version = "0.3", features = ["formatting", "parsing"] }
+packageurl = "0.6"
+pep508_rs = "0.9.2"
+toml = "0.8"
+globset = "0.4"
+semver = "1"
+node-semver = "2"
+pep440_rs = "0.7"
+parquet = { version = "56.2", default-features = false, optional = true }
+bytes = { version = "1", optional = true }
+tempfile = { version = "3", optional = true }
+libc = { version = "0.2", optional = true }
+
+[dev-dependencies]
+tempfile = "3"
+
+[[test]]
+name = "deps_prune"
+required-features = ["graph"]
+
+[[test]]
+name = "deps_usage"
+required-features = ["graph"]
+
+[[test]]
+name = "deps_prune_validation"
+required-features = ["graph"]
+
+[[example]]
+name = "deps_explorer"
+required-features = ["graph"]
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"

@@ -1,0 +1,4176 @@
+{
+  "original": {
+    "contexts": {
+      "podman": [
+        {
+          "module": "cyphar.com/go-pathrs",
+          "version": "v0.2.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "dario.cat/mergo",
+          "version": "v1.0.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/Azure/go-ansiterm",
+          "version": "v0.0.0-20250102033503-faa5f7b0171c",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/BurntSushi/toml",
+          "version": "v1.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/Masterminds/semver/v3",
+          "version": "v3.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/Microsoft/go-winio",
+          "version": "v0.6.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/ProtonMail/go-crypto",
+          "version": "v1.4.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/VividCortex/ewma",
+          "version": "v1.2.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/acarl005/stripansi",
+          "version": "v0.0.0-20180116102854-5a71ef0e047d",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/aead/serpent",
+          "version": "v0.0.0-20160714141033-fba169763ea6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/aperturerobotics/protobuf-go-lite",
+          "version": "v0.15.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/blang/semver/v4",
+          "version": "v4.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cespare/xxhash/v2",
+          "version": "v2.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/checkpoint-restore/checkpointctl",
+          "version": "v1.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/checkpoint-restore/go-criu/v8",
+          "version": "v8.4.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/chzyer/readline",
+          "version": "v1.5.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/clipperhouse/uax29/v2",
+          "version": "v2.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cloudflare/circl",
+          "version": "v1.6.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/errdefs",
+          "version": "v1.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/errdefs/pkg",
+          "version": "v0.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/log",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/platforms",
+          "version": "v1.0.0-rc.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/stargz-snapshotter/estargz",
+          "version": "v0.18.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/typeurl/v2",
+          "version": "v2.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containernetworking/plugins",
+          "version": "v1.9.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/gvisor-tap-vsock",
+          "version": "v0.9.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/libhvee",
+          "version": "v0.11.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/libtrust",
+          "version": "v0.0.0-20230121012942-c1716e8a8d01",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/luksy",
+          "version": "v0.0.0-20251208191447-ca096313c38f",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/ocicrypt",
+          "version": "v1.3.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/psgo",
+          "version": "v1.10.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/winquit",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/coreos/go-oidc/v3",
+          "version": "v3.18.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/coreos/go-systemd",
+          "version": "v0.0.0-20190719114852-fd7a80b32e1f",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/coreos/go-systemd/v22",
+          "version": "v22.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/crc-org/vfkit",
+          "version": "v0.6.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cyberphone/json-canonicalization",
+          "version": "v0.0.0-20241213102144-19d51d7fe467",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cyphar/filepath-securejoin",
+          "version": "v0.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/davecgh/go-spew",
+          "version": "v1.1.2-0.20180830191138-d8f796af33cc",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/digitalocean/go-libvirt",
+          "version": "v0.0.0-20220804181439-8648fbde413e",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/digitalocean/go-qemu",
+          "version": "v0.0.0-20250212194115-ee9b0668d242",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/disiqueira/gotree/v3",
+          "version": "v3.0.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/distribution/reference",
+          "version": "v0.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/distribution",
+          "version": "v2.8.3+incompatible",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/docker-credential-helpers",
+          "version": "v0.9.8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-connections",
+          "version": "v0.8.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-plugins-helpers",
+          "version": "v0.0.0-20240701071450-45e2431495c8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-units",
+          "version": "v0.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/ebitengine/purego",
+          "version": "v0.10.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/felixge/httpsnoop",
+          "version": "v1.0.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/fsnotify/fsnotify",
+          "version": "v1.10.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/fsouza/go-dockerclient",
+          "version": "v1.13.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-jose/go-jose/v4",
+          "version": "v4.1.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-logr/logr",
+          "version": "v1.4.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-logr/stdr",
+          "version": "v1.2.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-ole/go-ole",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-task/slim-sprig/v3",
+          "version": "v3.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/godbus/dbus/v5",
+          "version": "v5.2.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/go-cmp",
+          "version": "v0.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/go-containerregistry",
+          "version": "v0.21.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/go-intervals",
+          "version": "v0.0.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/pprof",
+          "version": "v0.0.0-20260402051712-545e8a4df936",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/shlex",
+          "version": "v0.0.0-20191202100458-e7afc7fbc510",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/uuid",
+          "version": "v1.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/gorilla/handlers",
+          "version": "v1.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/gorilla/mux",
+          "version": "v1.8.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/gorilla/schema",
+          "version": "v1.4.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/errwrap",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/go-cleanhttp",
+          "version": "v0.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/go-multierror",
+          "version": "v1.1.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/go-retryablehttp",
+          "version": "v0.7.8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hugelgupf/p9",
+          "version": "v0.4.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/inconshreveable/mousetrap",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/jinzhu/copier",
+          "version": "v0.4.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/json-iterator/go",
+          "version": "v1.1.12",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/kevinburke/ssh_config",
+          "version": "v1.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/klauspost/compress",
+          "version": "v1.19.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/klauspost/pgzip",
+          "version": "v1.2.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/kr/fs",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/linuxkit/virtsock",
+          "version": "v0.0.0-20241009230534-cb6a20cc0422",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/lufia/plan9stats",
+          "version": "v0.0.0-20240909124753-873cd0166683",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/manifoldco/promptui",
+          "version": "v0.9.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mattn/go-runewidth",
+          "version": "v0.0.27",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mattn/go-shellwords",
+          "version": "v1.0.14",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mattn/go-sqlite3",
+          "version": "v1.14.49",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mdlayher/socket",
+          "version": "v0.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mdlayher/vsock",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/miekg/pkcs11",
+          "version": "v1.1.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mistifyio/go-zfs/v4",
+          "version": "v4.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/buildkit",
+          "version": "v0.31.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/docker-image-spec",
+          "version": "v1.3.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/go-archive",
+          "version": "v0.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/moby/api",
+          "version": "v1.55.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/moby/client",
+          "version": "v0.5.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/patternmatcher",
+          "version": "v0.6.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/capability",
+          "version": "v0.4.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/devices",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/mountinfo",
+          "version": "v0.7.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/sequential",
+          "version": "v0.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/user",
+          "version": "v0.4.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/userns",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/term",
+          "version": "v0.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/modern-go/concurrent",
+          "version": "v0.0.0-20180306012644-bacd9c7ef1dd",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/modern-go/reflect2",
+          "version": "v1.0.3-0.20250322232337-35a7c28c31ee",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/nxadm/tail",
+          "version": "v1.4.11",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/onsi/ginkgo/v2",
+          "version": "v2.33.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/onsi/gomega",
+          "version": "v1.44.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/cgroups",
+          "version": "v0.0.8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/go-digest",
+          "version": "v1.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/image-spec",
+          "version": "v1.1.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/runc",
+          "version": "v1.5.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/runtime-spec",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/runtime-tools",
+          "version": "v0.9.1-0.20260316125833-8a4db579f5c8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/selinux",
+          "version": "v1.15.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/openshift/imagebuilder",
+          "version": "v1.2.21",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/pkg/browser",
+          "version": "v0.0.0-20240102092130-5ac0b6a4141c",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/pkg/errors",
+          "version": "v0.9.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/pkg/sftp",
+          "version": "v1.13.11",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/planetscale/vtprotobuf",
+          "version": "v0.6.1-0.20240319094008-0393e58bdf10",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/pmezard/go-difflib",
+          "version": "v1.0.1-0.20181226105442-5d4384ee4fb2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/power-devops/perfstat",
+          "version": "v0.0.0-20240221224432-82ca36839d55",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/proglottis/gpgme",
+          "version": "v0.1.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/rootless-containers/rootlesskit/v2",
+          "version": "v2.3.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/seccomp/libseccomp-golang",
+          "version": "v0.11.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/secure-systems-lab/go-securesystemslib",
+          "version": "v0.11.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/shirou/gopsutil/v4",
+          "version": "v4.26.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sigstore/fulcio",
+          "version": "v1.8.7",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sigstore/protobuf-specs",
+          "version": "v0.5.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sigstore/sigstore",
+          "version": "v1.10.8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sirupsen/logrus",
+          "version": "v1.10.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/skeema/knownhosts",
+          "version": "v1.3.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/smallstep/pkcs7",
+          "version": "v0.2.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/spf13/cobra",
+          "version": "v1.10.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/spf13/pflag",
+          "version": "v1.0.10",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/stefanberger/go-pkcs11uri",
+          "version": "v0.0.0-20230803200340-78284954bff6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/stretchr/testify",
+          "version": "v1.12.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sylabs/sif/v2",
+          "version": "v2.24.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/tchap/go-patricia/v2",
+          "version": "v2.3.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/tklauser/go-sysconf",
+          "version": "v0.3.16",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/tklauser/numcpus",
+          "version": "v0.11.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/tonistiigi/dchapes-mode",
+          "version": "v0.0.0-20250318174251-73d941a28323",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/u-root/uio",
+          "version": "v0.0.0-20240224005618-d2acac8f3701",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/ulikunitz/xz",
+          "version": "v0.5.16",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vbatts/tar-split",
+          "version": "v0.12.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vbauerster/cupwriter",
+          "version": "v0.0.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vbauerster/mpb/v8",
+          "version": "v8.14.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vishvananda/netlink",
+          "version": "v1.3.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vishvananda/netns",
+          "version": "v0.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/youmark/pkcs8",
+          "version": "v0.0.0-20240726163527-a2c0da244d78",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/yusufpapurcu/wmi",
+          "version": "v1.2.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.etcd.io/bbolt",
+          "version": "v1.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/auto/sdk",
+          "version": "v1.2.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+          "version": "v0.69.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel",
+          "version": "v1.44.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel/metric",
+          "version": "v1.44.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel/trace",
+          "version": "v1.44.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/buildah",
+          "version": "v1.45.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/common",
+          "version": "v0.69.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/image/v5",
+          "version": "v5.41.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/storage",
+          "version": "v1.64.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.yaml.in/yaml/v2",
+          "version": "v2.4.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.yaml.in/yaml/v3",
+          "version": "v3.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/crypto",
+          "version": "v0.57.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/mod",
+          "version": "v0.41.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.59.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/oauth2",
+          "version": "v0.36.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/sync",
+          "version": "v0.23.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/sys",
+          "version": "v0.48.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/term",
+          "version": "v0.46.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/text",
+          "version": "v0.42.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/tools",
+          "version": "v0.49.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/genproto/googleapis/api",
+          "version": "v0.0.0-20260526163538-3dc84a4a5aaa",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/genproto/googleapis/rpc",
+          "version": "v0.0.0-20260526163538-3dc84a4a5aaa",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.82.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/protobuf",
+          "version": "v1.36.11",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "gopkg.in/inf.v0",
+          "version": "v0.9.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "gopkg.in/tomb.v1",
+          "version": "v1.0.0-20141024135613-dd632973f1e7",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "gopkg.in/yaml.v3",
+          "version": "v3.0.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "sigs.k8s.io/yaml",
+          "version": "v1.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "tags.cncf.io/container-device-interface",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "tags.cncf.io/container-device-interface/specs-go",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        }
+      ],
+      "runc": [
+        {
+          "module": "cyphar.com/go-pathrs",
+          "version": "v0.2.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/aperturerobotics/protobuf-go-lite",
+          "version": "v0.14.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/checkpoint-restore/go-criu/v8",
+          "version": "v8.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cilium/ebpf",
+          "version": "v0.17.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/console",
+          "version": "v1.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/coreos/go-systemd/v22",
+          "version": "v22.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cpuguy83/go-md2man/v2",
+          "version": "v2.0.7",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cyphar/filepath-securejoin",
+          "version": "v0.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-units",
+          "version": "v0.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/godbus/dbus/v5",
+          "version": "v5.2.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/capability",
+          "version": "v0.4.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/devices",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/mountinfo",
+          "version": "v0.7.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/user",
+          "version": "v0.4.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/userns",
+          "version": "v0.2.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mrunalp/fileutils",
+          "version": "v0.5.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/cgroups",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/runtime-spec",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/selinux",
+          "version": "v1.13.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/russross/blackfriday/v2",
+          "version": "v2.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/seccomp/libseccomp-golang",
+          "version": "v0.12.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sirupsen/logrus",
+          "version": "v1.9.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/urfave/cli",
+          "version": "v1.22.17",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vishvananda/netlink",
+          "version": "v1.3.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vishvananda/netns",
+          "version": "v0.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.55.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/sys",
+          "version": "v0.46.0",
+          "source": "Go module proxy / upstream vendor"
+        }
+      ]
+    },
+    "vendor_sha256": {
+      "podman": "5ec86975721d0c150215f628f75354c6223d7ba920f60a657b3f2d0995d2c13f",
+      "runc": "56ff155e0e95c61e49aacd3634c2448dfe6091222db9946d1d1c21893225de23"
+    },
+    "module_identities": 187,
+    "module_versions": 198,
+    "multiversion_families": 11,
+    "excess_versions": 11
+  },
+  "upstream_candidates": {
+    "contexts": {
+      "podman": [
+        {
+          "module": "cyphar.com/go-pathrs",
+          "version": "v0.2.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "dario.cat/mergo",
+          "version": "v1.0.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/Azure/go-ansiterm",
+          "version": "v0.0.0-20261006220739-8c912ac31dd4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/BurntSushi/toml",
+          "version": "v1.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/Masterminds/semver/v3",
+          "version": "v3.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/Microsoft/go-winio",
+          "version": "v0.6.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/ProtonMail/go-crypto",
+          "version": "v1.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/VividCortex/ewma",
+          "version": "v1.2.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/acarl005/stripansi",
+          "version": "v0.0.0-20180116102854-5a71ef0e047d",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/aead/serpent",
+          "version": "v0.0.0-20160714141033-fba169763ea6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/aperturerobotics/protobuf-go-lite",
+          "version": "v0.19.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/blang/semver/v4",
+          "version": "v4.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cespare/xxhash/v2",
+          "version": "v2.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/checkpoint-restore/checkpointctl",
+          "version": "v1.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/checkpoint-restore/go-criu/v8",
+          "version": "v8.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/chzyer/readline",
+          "version": "v1.5.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/clipperhouse/uax29/v2",
+          "version": "v2.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cloudflare/circl",
+          "version": "v1.6.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/errdefs",
+          "version": "v1.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/errdefs/pkg",
+          "version": "v0.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/log",
+          "version": "v0.2.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/platforms",
+          "version": "v1.0.0-rc.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/stargz-snapshotter/estargz",
+          "version": "v0.19.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/typeurl/v2",
+          "version": "v2.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containernetworking/plugins",
+          "version": "v1.9.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/gvisor-tap-vsock",
+          "version": "v0.9.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/libhvee",
+          "version": "v0.11.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/libtrust",
+          "version": "v0.0.0-20230121012942-c1716e8a8d01",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/luksy",
+          "version": "v0.0.0-20251208191447-ca096313c38f",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/ocicrypt",
+          "version": "v1.3.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/psgo",
+          "version": "v1.10.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/winquit",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/coreos/go-oidc/v3",
+          "version": "v3.20.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/coreos/go-systemd",
+          "version": "v0.0.0-20190719114852-fd7a80b32e1f",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/coreos/go-systemd/v22",
+          "version": "v22.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/crc-org/vfkit",
+          "version": "v0.6.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cyberphone/json-canonicalization",
+          "version": "v0.0.0-20241213102144-19d51d7fe467",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cyphar/filepath-securejoin",
+          "version": "v0.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/digitalocean/go-libvirt",
+          "version": "v0.0.0-20220804181439-8648fbde413e",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/digitalocean/go-qemu",
+          "version": "v0.0.0-20250212194115-ee9b0668d242",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/disiqueira/gotree/v3",
+          "version": "v3.0.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/distribution/reference",
+          "version": "v0.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/distribution",
+          "version": "v2.8.3+incompatible",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/docker-credential-helpers",
+          "version": "v0.9.10",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-connections",
+          "version": "v0.8.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-plugins-helpers",
+          "version": "v0.0.0-20240701071450-45e2431495c8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-units",
+          "version": "v0.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/ebitengine/purego",
+          "version": "v0.11.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/felixge/httpsnoop",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/fsnotify/fsnotify",
+          "version": "v1.10.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/fsouza/go-dockerclient",
+          "version": "v1.13.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-jose/go-jose/v4",
+          "version": "v4.1.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-logr/logr",
+          "version": "v1.4.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-logr/stdr",
+          "version": "v1.2.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-ole/go-ole",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-task/slim-sprig/v3",
+          "version": "v3.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/godbus/dbus/v5",
+          "version": "v5.2.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/go-cmp",
+          "version": "v0.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/go-containerregistry",
+          "version": "v0.22.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/go-intervals",
+          "version": "v0.0.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/pprof",
+          "version": "v0.0.0-20260402051712-545e8a4df936",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/shlex",
+          "version": "v0.0.0-20191202100458-e7afc7fbc510",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/uuid",
+          "version": "v1.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/gorilla/handlers",
+          "version": "v1.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/gorilla/mux",
+          "version": "v1.8.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/gorilla/schema",
+          "version": "v1.4.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/errwrap",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/go-cleanhttp",
+          "version": "v0.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/go-multierror",
+          "version": "v1.1.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/go-retryablehttp",
+          "version": "v0.7.8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hugelgupf/p9",
+          "version": "v0.4.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/inconshreveable/mousetrap",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/jinzhu/copier",
+          "version": "v0.4.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/json-iterator/go",
+          "version": "v1.1.12",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/kevinburke/ssh_config",
+          "version": "v1.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/klauspost/compress",
+          "version": "v1.20.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/klauspost/pgzip",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/kr/fs",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/linuxkit/virtsock",
+          "version": "v0.0.0-20241009230534-cb6a20cc0422",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/lufia/plan9stats",
+          "version": "v0.0.0-20240909124753-873cd0166683",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/manifoldco/promptui",
+          "version": "v0.9.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mattn/go-runewidth",
+          "version": "v0.0.31",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mattn/go-shellwords",
+          "version": "v1.0.16",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mattn/go-sqlite3",
+          "version": "v1.14.52",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mdlayher/socket",
+          "version": "v0.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mdlayher/vsock",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/miekg/pkcs11",
+          "version": "v1.1.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mistifyio/go-zfs/v4",
+          "version": "v4.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/buildkit",
+          "version": "v0.34.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/docker-image-spec",
+          "version": "v1.3.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/go-archive",
+          "version": "v0.3.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/moby/api",
+          "version": "v1.56.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/moby/client",
+          "version": "v0.6.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/patternmatcher",
+          "version": "v0.6.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/capability",
+          "version": "v0.4.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/devices",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/mountinfo",
+          "version": "v0.7.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/sequential",
+          "version": "v0.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/user",
+          "version": "v0.4.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/userns",
+          "version": "v0.2.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/term",
+          "version": "v0.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/modern-go/concurrent",
+          "version": "v0.0.0-20180306012644-bacd9c7ef1dd",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/modern-go/reflect2",
+          "version": "v1.0.3-0.20250322232337-35a7c28c31ee",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/nxadm/tail",
+          "version": "v1.4.11",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/onsi/ginkgo/v2",
+          "version": "v2.33.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/onsi/gomega",
+          "version": "v1.44.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/cgroups",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/go-digest",
+          "version": "v1.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/image-spec",
+          "version": "v1.1.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/runc",
+          "version": "v1.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/runtime-spec",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/runtime-tools",
+          "version": "v0.9.1-0.20260316125833-8a4db579f5c8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/selinux",
+          "version": "v1.15.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/openshift/imagebuilder",
+          "version": "v1.2.22",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/pkg/browser",
+          "version": "v0.0.0-20240102092130-5ac0b6a4141c",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/pkg/errors",
+          "version": "v0.9.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/pkg/sftp",
+          "version": "v1.13.11",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/planetscale/vtprotobuf",
+          "version": "v0.6.1-0.20240319094008-0393e58bdf10",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/power-devops/perfstat",
+          "version": "v0.0.0-20260805114148-88456608a4f6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/proglottis/gpgme",
+          "version": "v0.1.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/rootless-containers/rootlesskit/v2",
+          "version": "v2.3.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/seccomp/libseccomp-golang",
+          "version": "v0.12.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/secure-systems-lab/go-securesystemslib",
+          "version": "v0.11.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/shirou/gopsutil/v4",
+          "version": "v4.26.9",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sigstore/fulcio",
+          "version": "v1.8.8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sigstore/protobuf-specs",
+          "version": "v0.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sigstore/sigstore",
+          "version": "v1.10.11",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sirupsen/logrus",
+          "version": "v1.10.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/skeema/knownhosts",
+          "version": "v1.3.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/smallstep/pkcs7",
+          "version": "v0.2.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/spf13/cobra",
+          "version": "v1.10.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/spf13/pflag",
+          "version": "v1.0.10",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/stefanberger/go-pkcs11uri",
+          "version": "v0.0.0-20230803200340-78284954bff6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/stretchr/testify",
+          "version": "v1.12.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sylabs/sif/v2",
+          "version": "v2.24.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/tchap/go-patricia/v2",
+          "version": "v2.3.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/tklauser/go-sysconf",
+          "version": "v0.4.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/tklauser/numcpus",
+          "version": "v0.12.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/tonistiigi/dchapes-mode",
+          "version": "v0.0.0-20250318174251-73d941a28323",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/u-root/uio",
+          "version": "v0.0.0-20240224005618-d2acac8f3701",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/ulikunitz/xz",
+          "version": "v0.5.17",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/varlink/go",
+          "version": "v0.4.1-0.20261015173642-c935be0c53f7",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vbatts/tar-split",
+          "version": "v0.12.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vbauerster/cupwriter",
+          "version": "v0.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vbauerster/mpb/v8",
+          "version": "v8.16.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vishvananda/netlink",
+          "version": "v1.3.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vishvananda/netns",
+          "version": "v0.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/youmark/pkcs8",
+          "version": "v0.0.0-20240726163527-a2c0da244d78",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/yusufpapurcu/wmi",
+          "version": "v1.2.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.etcd.io/bbolt",
+          "version": "v1.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/auto/sdk",
+          "version": "v1.2.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+          "version": "v0.71.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel",
+          "version": "v1.46.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel/metric",
+          "version": "v1.46.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel/trace",
+          "version": "v1.46.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/buildah",
+          "version": "v1.46.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/common",
+          "version": "v0.70.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/image/v5",
+          "version": "v5.42.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/storage",
+          "version": "v1.65.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.yaml.in/yaml/v2",
+          "version": "v2.4.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.yaml.in/yaml/v3",
+          "version": "v3.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/crypto",
+          "version": "v0.58.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/mod",
+          "version": "v0.42.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.61.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/oauth2",
+          "version": "v0.37.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/sync",
+          "version": "v0.24.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/sys",
+          "version": "v0.50.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/term",
+          "version": "v0.47.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/text",
+          "version": "v0.43.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/tools",
+          "version": "v0.52.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/genproto/googleapis/api",
+          "version": "v0.0.0-20260825221802-da73d73af1c5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/genproto/googleapis/rpc",
+          "version": "v0.0.0-20260825221802-da73d73af1c5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.84.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/protobuf",
+          "version": "v1.36.12",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "gopkg.in/inf.v0",
+          "version": "v0.9.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "gopkg.in/tomb.v1",
+          "version": "v1.0.0-20141024135613-dd632973f1e7",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "gopkg.in/yaml.v3",
+          "version": "v3.0.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "sigs.k8s.io/yaml",
+          "version": "v1.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "tags.cncf.io/container-device-interface",
+          "version": "v1.1.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "tags.cncf.io/container-device-interface/specs-go",
+          "version": "v1.1.1",
+          "source": "Go module proxy / upstream vendor"
+        }
+      ],
+      "skopeo": [
+        {
+          "module": "cyphar.com/go-pathrs",
+          "version": "v0.2.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "dario.cat/mergo",
+          "version": "v1.0.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/BurntSushi/toml",
+          "version": "v1.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/Masterminds/semver/v3",
+          "version": "v3.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/Microsoft/go-winio",
+          "version": "v0.6.3-0.20260930231756-f19d9717deb0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/ProtonMail/go-crypto",
+          "version": "v1.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/VividCortex/ewma",
+          "version": "v1.2.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/acarl005/stripansi",
+          "version": "v0.0.0-20180116102854-5a71ef0e047d",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cespare/xxhash/v2",
+          "version": "v2.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/clipperhouse/uax29/v2",
+          "version": "v2.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cloudflare/circl",
+          "version": "v1.6.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/errdefs",
+          "version": "v1.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/errdefs/pkg",
+          "version": "v0.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/stargz-snapshotter/estargz",
+          "version": "v0.19.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/libtrust",
+          "version": "v0.0.0-20230121012942-c1716e8a8d01",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/ocicrypt",
+          "version": "v1.3.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/coreos/go-oidc/v3",
+          "version": "v3.20.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cyberphone/json-canonicalization",
+          "version": "v0.0.0-20241213102144-19d51d7fe467",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cyphar/filepath-securejoin",
+          "version": "v0.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/distribution/reference",
+          "version": "v0.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/distribution",
+          "version": "v2.8.3+incompatible",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/docker-credential-helpers",
+          "version": "v0.9.10",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-connections",
+          "version": "v0.8.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-units",
+          "version": "v0.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/dsnet/compress",
+          "version": "v0.0.2-0.20230904184137-39efe44ab707",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/felixge/httpsnoop",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-jose/go-jose/v4",
+          "version": "v4.1.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-logr/logr",
+          "version": "v1.4.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-logr/stdr",
+          "version": "v1.2.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/go-containerregistry",
+          "version": "v0.22.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/go-intervals",
+          "version": "v0.0.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/uuid",
+          "version": "v1.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/gorilla/mux",
+          "version": "v1.8.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/go-cleanhttp",
+          "version": "v0.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/go-multierror",
+          "version": "v1.1.2-0.20250313123807-1ee6e1a1957a",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/go-retryablehttp",
+          "version": "v0.7.8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/inconshreveable/mousetrap",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/json-iterator/go",
+          "version": "v1.1.12",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/klauspost/compress",
+          "version": "v1.20.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/klauspost/pgzip",
+          "version": "v1.2.7",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mattn/go-runewidth",
+          "version": "v0.0.31",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mattn/go-sqlite3",
+          "version": "v1.14.52",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/miekg/pkcs11",
+          "version": "v1.1.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mistifyio/go-zfs/v4",
+          "version": "v4.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/docker-image-spec",
+          "version": "v1.3.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/moby/api",
+          "version": "v1.56.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/moby/client",
+          "version": "v0.6.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/capability",
+          "version": "v0.4.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/mountinfo",
+          "version": "v0.7.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/user",
+          "version": "v0.4.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/modern-go/concurrent",
+          "version": "v0.0.0-20180306012644-bacd9c7ef1dd",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/modern-go/reflect2",
+          "version": "v1.0.3-0.20250322232337-35a7c28c31ee",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/go-digest",
+          "version": "v1.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/image-spec",
+          "version": "v1.1.2-0.20260709172216-af26a05fba5e",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/image-spec/schema",
+          "version": "v0.0.0-20250717171153-ab80ff15c2dd",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/image-tools",
+          "version": "v1.0.0-rc3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/runtime-spec",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/selinux",
+          "version": "v1.15.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/pkg/browser",
+          "version": "v0.0.0-20240102092130-5ac0b6a4141c",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/pkg/errors",
+          "version": "v0.9.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/proglottis/gpgme",
+          "version": "v0.1.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/santhosh-tekuri/jsonschema/v6",
+          "version": "v6.0.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/secure-systems-lab/go-securesystemslib",
+          "version": "v0.11.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sigstore/fulcio",
+          "version": "v1.8.8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sigstore/protobuf-specs",
+          "version": "v0.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sigstore/sigstore",
+          "version": "v1.10.11",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sirupsen/logrus",
+          "version": "v1.10.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/smallstep/pkcs7",
+          "version": "v0.2.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/spf13/cobra",
+          "version": "v1.10.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/spf13/pflag",
+          "version": "v1.0.10",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/stefanberger/go-pkcs11uri",
+          "version": "v0.0.0-20230803200340-78284954bff6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/stretchr/testify",
+          "version": "v1.12.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sylabs/sif/v2",
+          "version": "v2.24.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/tchap/go-patricia/v2",
+          "version": "v2.3.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/ulikunitz/xz",
+          "version": "v0.5.17",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/varlink/go",
+          "version": "v0.4.1-0.20261015173642-c935be0c53f7",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vbatts/tar-split",
+          "version": "v0.12.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vbauerster/cupwriter",
+          "version": "v0.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vbauerster/mpb/v8",
+          "version": "v8.16.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/youmark/pkcs8",
+          "version": "v0.0.0-20240726163527-a2c0da244d78",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/auto/sdk",
+          "version": "v1.2.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+          "version": "v0.71.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel",
+          "version": "v1.46.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel/metric",
+          "version": "v1.46.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel/trace",
+          "version": "v1.46.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/common",
+          "version": "v0.70.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/image/v5",
+          "version": "v5.42.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/storage",
+          "version": "v1.65.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.yaml.in/yaml/v3",
+          "version": "v3.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/crypto",
+          "version": "v0.58.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.60.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/oauth2",
+          "version": "v0.37.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/sync",
+          "version": "v0.24.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/sys",
+          "version": "v0.49.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/term",
+          "version": "v0.47.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/text",
+          "version": "v0.43.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/genproto/googleapis/api",
+          "version": "v0.0.0-20260825221802-da73d73af1c5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/genproto/googleapis/rpc",
+          "version": "v0.0.0-20260825221802-da73d73af1c5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.83.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/protobuf",
+          "version": "v1.36.12",
+          "source": "Go module proxy / upstream vendor"
+        }
+      ],
+      "runc": [
+        {
+          "module": "cyphar.com/go-pathrs",
+          "version": "v0.2.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/aperturerobotics/protobuf-go-lite",
+          "version": "v0.14.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/checkpoint-restore/go-criu/v8",
+          "version": "v8.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cilium/ebpf",
+          "version": "v0.17.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/console",
+          "version": "v1.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/coreos/go-systemd/v22",
+          "version": "v22.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cpuguy83/go-md2man/v2",
+          "version": "v2.0.7",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cyphar/filepath-securejoin",
+          "version": "v0.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-units",
+          "version": "v0.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/godbus/dbus/v5",
+          "version": "v5.2.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/capability",
+          "version": "v0.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/devices",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/mountinfo",
+          "version": "v0.7.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/user",
+          "version": "v0.4.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/userns",
+          "version": "v0.2.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mrunalp/fileutils",
+          "version": "v0.5.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/cgroups",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/runtime-spec",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/selinux",
+          "version": "v1.13.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/russross/blackfriday/v2",
+          "version": "v2.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/seccomp/libseccomp-golang",
+          "version": "v0.12.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sirupsen/logrus",
+          "version": "v1.9.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/urfave/cli",
+          "version": "v1.22.17",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vishvananda/netlink",
+          "version": "v1.3.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vishvananda/netns",
+          "version": "v0.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.55.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/sys",
+          "version": "v0.46.0",
+          "source": "Go module proxy / upstream vendor"
+        }
+      ]
+    },
+    "vendor_sha256": {
+      "podman": "035ba8af0bcd9ab9aa3c3b0ce098d170f26e8d09e72f9412846c4c938f364290",
+      "skopeo": "19e1344fcd18d01c579609f2b6fc3d06be3ca997afbedabc362212181142fa99",
+      "runc": "8d9bd769c516ef2158f6bc393230f10e5f33b58fe533d44cfda75981dc607932"
+    },
+    "module_identities": 190,
+    "module_versions": 208,
+    "multiversion_families": 16,
+    "excess_versions": 18
+  },
+  "corrected": {
+    "contexts": {
+      "podman": [
+        {
+          "module": "cyphar.com/go-pathrs",
+          "version": "v0.2.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "dario.cat/mergo",
+          "version": "v1.0.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/Azure/go-ansiterm",
+          "version": "v0.0.0-20261006220739-8c912ac31dd4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/BurntSushi/toml",
+          "version": "v1.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/Masterminds/semver/v3",
+          "version": "v3.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/Microsoft/go-winio",
+          "version": "v0.6.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/ProtonMail/go-crypto",
+          "version": "v1.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/VividCortex/ewma",
+          "version": "v1.2.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/acarl005/stripansi",
+          "version": "v0.0.0-20180116102854-5a71ef0e047d",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/aead/serpent",
+          "version": "v0.0.0-20160714141033-fba169763ea6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/aperturerobotics/protobuf-go-lite",
+          "version": "v0.19.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/blang/semver/v4",
+          "version": "v4.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cespare/xxhash/v2",
+          "version": "v2.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/checkpoint-restore/checkpointctl",
+          "version": "v1.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/checkpoint-restore/go-criu/v8",
+          "version": "v8.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/chzyer/readline",
+          "version": "v1.5.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/clipperhouse/uax29/v2",
+          "version": "v2.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cloudflare/circl",
+          "version": "v1.6.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/errdefs",
+          "version": "v1.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/errdefs/pkg",
+          "version": "v0.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/log",
+          "version": "v0.2.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/platforms",
+          "version": "v1.0.0-rc.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/stargz-snapshotter/estargz",
+          "version": "v0.19.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/typeurl/v2",
+          "version": "v2.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containernetworking/plugins",
+          "version": "v1.9.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/gvisor-tap-vsock",
+          "version": "v0.9.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/libhvee",
+          "version": "v0.11.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/libtrust",
+          "version": "v0.0.0-20230121012942-c1716e8a8d01",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/luksy",
+          "version": "v0.0.0-20251208191447-ca096313c38f",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/ocicrypt",
+          "version": "v1.3.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/psgo",
+          "version": "v1.10.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/winquit",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/coreos/go-oidc/v3",
+          "version": "v3.20.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/coreos/go-systemd",
+          "version": "v0.0.0-20190719114852-fd7a80b32e1f",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/coreos/go-systemd/v22",
+          "version": "v22.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/crc-org/vfkit",
+          "version": "v0.6.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cyberphone/json-canonicalization",
+          "version": "v0.0.0-20241213102144-19d51d7fe467",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cyphar/filepath-securejoin",
+          "version": "v0.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/digitalocean/go-libvirt",
+          "version": "v0.0.0-20220804181439-8648fbde413e",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/digitalocean/go-qemu",
+          "version": "v0.0.0-20250212194115-ee9b0668d242",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/disiqueira/gotree/v3",
+          "version": "v3.0.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/distribution/reference",
+          "version": "v0.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/distribution",
+          "version": "v2.8.3+incompatible",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/docker-credential-helpers",
+          "version": "v0.9.10",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-connections",
+          "version": "v0.8.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-plugins-helpers",
+          "version": "v0.0.0-20240701071450-45e2431495c8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-units",
+          "version": "v0.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/ebitengine/purego",
+          "version": "v0.11.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/felixge/httpsnoop",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/fsnotify/fsnotify",
+          "version": "v1.10.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/fsouza/go-dockerclient",
+          "version": "v1.13.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-jose/go-jose/v4",
+          "version": "v4.1.9",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-logr/logr",
+          "version": "v1.4.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-logr/stdr",
+          "version": "v1.2.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-ole/go-ole",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-task/slim-sprig/v3",
+          "version": "v3.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/godbus/dbus/v5",
+          "version": "v5.2.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/go-cmp",
+          "version": "v0.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/go-containerregistry",
+          "version": "v0.22.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/go-intervals",
+          "version": "v0.0.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/pprof",
+          "version": "v0.0.0-20260402051712-545e8a4df936",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/shlex",
+          "version": "v0.0.0-20191202100458-e7afc7fbc510",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/uuid",
+          "version": "v1.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/gorilla/handlers",
+          "version": "v1.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/gorilla/mux",
+          "version": "v1.8.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/gorilla/schema",
+          "version": "v1.4.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/errwrap",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/go-cleanhttp",
+          "version": "v0.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/go-multierror",
+          "version": "v1.1.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/go-retryablehttp",
+          "version": "v0.7.8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hugelgupf/p9",
+          "version": "v0.4.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/inconshreveable/mousetrap",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/jinzhu/copier",
+          "version": "v0.4.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/json-iterator/go",
+          "version": "v1.1.12",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/kevinburke/ssh_config",
+          "version": "v1.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/klauspost/compress",
+          "version": "v1.20.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/klauspost/pgzip",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/kr/fs",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/linuxkit/virtsock",
+          "version": "v0.0.0-20241009230534-cb6a20cc0422",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/lufia/plan9stats",
+          "version": "v0.0.0-20240909124753-873cd0166683",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/manifoldco/promptui",
+          "version": "v0.9.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mattn/go-runewidth",
+          "version": "v0.0.31",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mattn/go-shellwords",
+          "version": "v1.0.16",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mattn/go-sqlite3",
+          "version": "v1.14.52",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mdlayher/socket",
+          "version": "v0.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mdlayher/vsock",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/miekg/pkcs11",
+          "version": "v1.1.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mistifyio/go-zfs/v4",
+          "version": "v4.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/buildkit",
+          "version": "v0.34.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/docker-image-spec",
+          "version": "v1.3.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/go-archive",
+          "version": "v0.3.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/moby/api",
+          "version": "v1.56.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/moby/client",
+          "version": "v0.6.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/patternmatcher",
+          "version": "v0.6.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/capability",
+          "version": "v0.4.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/devices",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/mountinfo",
+          "version": "v0.7.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/sequential",
+          "version": "v0.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/user",
+          "version": "v0.4.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/userns",
+          "version": "v0.2.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/term",
+          "version": "v0.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/modern-go/concurrent",
+          "version": "v0.0.0-20180306012644-bacd9c7ef1dd",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/modern-go/reflect2",
+          "version": "v1.0.3-0.20250322232337-35a7c28c31ee",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/nxadm/tail",
+          "version": "v1.4.11",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/onsi/ginkgo/v2",
+          "version": "v2.33.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/onsi/gomega",
+          "version": "v1.44.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/cgroups",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/go-digest",
+          "version": "v1.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/image-spec",
+          "version": "v1.1.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/runc",
+          "version": "v1.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/runtime-spec",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/runtime-tools",
+          "version": "v0.9.1-0.20260316125833-8a4db579f5c8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/selinux",
+          "version": "v1.15.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/openshift/imagebuilder",
+          "version": "v1.2.22",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/pkg/browser",
+          "version": "v0.0.0-20240102092130-5ac0b6a4141c",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/pkg/errors",
+          "version": "v0.9.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/pkg/sftp",
+          "version": "v1.13.11",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/planetscale/vtprotobuf",
+          "version": "v0.6.1-0.20240319094008-0393e58bdf10",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/power-devops/perfstat",
+          "version": "v0.0.0-20260805114148-88456608a4f6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/proglottis/gpgme",
+          "version": "v0.1.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/rootless-containers/rootlesskit/v2",
+          "version": "v2.3.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/seccomp/libseccomp-golang",
+          "version": "v0.12.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/secure-systems-lab/go-securesystemslib",
+          "version": "v0.11.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/shirou/gopsutil/v4",
+          "version": "v4.26.9",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sigstore/fulcio",
+          "version": "v1.8.8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sigstore/protobuf-specs",
+          "version": "v0.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sigstore/sigstore",
+          "version": "v1.10.11",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sirupsen/logrus",
+          "version": "v1.10.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/skeema/knownhosts",
+          "version": "v1.3.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/smallstep/pkcs7",
+          "version": "v0.2.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/spf13/cobra",
+          "version": "v1.10.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/spf13/pflag",
+          "version": "v1.0.10",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/stefanberger/go-pkcs11uri",
+          "version": "v0.0.0-20230803200340-78284954bff6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/stretchr/testify",
+          "version": "v1.12.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sylabs/sif/v2",
+          "version": "v2.24.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/tchap/go-patricia/v2",
+          "version": "v2.3.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/tklauser/go-sysconf",
+          "version": "v0.4.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/tklauser/numcpus",
+          "version": "v0.12.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/tonistiigi/dchapes-mode",
+          "version": "v0.0.0-20250318174251-73d941a28323",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/u-root/uio",
+          "version": "v0.0.0-20240224005618-d2acac8f3701",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/ulikunitz/xz",
+          "version": "v0.5.17",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/varlink/go",
+          "version": "v0.4.1-0.20261015173642-c935be0c53f7",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vbatts/tar-split",
+          "version": "v0.12.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vbauerster/cupwriter",
+          "version": "v0.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vbauerster/mpb/v8",
+          "version": "v8.16.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vishvananda/netlink",
+          "version": "v1.3.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vishvananda/netns",
+          "version": "v0.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/youmark/pkcs8",
+          "version": "v0.0.0-20240726163527-a2c0da244d78",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/yusufpapurcu/wmi",
+          "version": "v1.2.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.etcd.io/bbolt",
+          "version": "v1.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/auto/sdk",
+          "version": "v1.2.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+          "version": "v0.71.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel",
+          "version": "v1.47.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel/log",
+          "version": "v1.47.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel/metric",
+          "version": "v1.47.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel/trace",
+          "version": "v1.47.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/buildah",
+          "version": "v1.46.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/common",
+          "version": "v0.70.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/image/v5",
+          "version": "v5.42.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/storage",
+          "version": "v1.65.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.yaml.in/yaml/v2",
+          "version": "v2.4.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.yaml.in/yaml/v3",
+          "version": "v3.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/crypto",
+          "version": "v0.58.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/mod",
+          "version": "v0.42.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.62.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/oauth2",
+          "version": "v0.37.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/sync",
+          "version": "v0.24.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/sys",
+          "version": "v0.50.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/term",
+          "version": "v0.47.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/text",
+          "version": "v0.43.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/tools",
+          "version": "v0.52.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/genproto/googleapis/api",
+          "version": "v0.0.0-20260825221802-da73d73af1c5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/genproto/googleapis/rpc",
+          "version": "v0.0.0-20260825221802-da73d73af1c5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.84.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/protobuf",
+          "version": "v1.36.12",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "gopkg.in/inf.v0",
+          "version": "v0.9.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "gopkg.in/tomb.v1",
+          "version": "v1.0.0-20141024135613-dd632973f1e7",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "gopkg.in/yaml.v3",
+          "version": "v3.0.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "sigs.k8s.io/yaml",
+          "version": "v1.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "tags.cncf.io/container-device-interface",
+          "version": "v1.1.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "tags.cncf.io/container-device-interface/specs-go",
+          "version": "v1.1.1",
+          "source": "Go module proxy / upstream vendor"
+        }
+      ],
+      "skopeo": [
+        {
+          "module": "cyphar.com/go-pathrs",
+          "version": "v0.2.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "dario.cat/mergo",
+          "version": "v1.0.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/BurntSushi/toml",
+          "version": "v1.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/Masterminds/semver/v3",
+          "version": "v3.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/Microsoft/go-winio",
+          "version": "v0.6.3-0.20260930231756-f19d9717deb0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/ProtonMail/go-crypto",
+          "version": "v1.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/VividCortex/ewma",
+          "version": "v1.2.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/acarl005/stripansi",
+          "version": "v0.0.0-20180116102854-5a71ef0e047d",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cespare/xxhash/v2",
+          "version": "v2.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/clipperhouse/uax29/v2",
+          "version": "v2.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cloudflare/circl",
+          "version": "v1.6.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/errdefs",
+          "version": "v1.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/errdefs/pkg",
+          "version": "v0.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/stargz-snapshotter/estargz",
+          "version": "v0.19.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/libtrust",
+          "version": "v0.0.0-20230121012942-c1716e8a8d01",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containers/ocicrypt",
+          "version": "v1.3.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/coreos/go-oidc/v3",
+          "version": "v3.20.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cyberphone/json-canonicalization",
+          "version": "v0.0.0-20241213102144-19d51d7fe467",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cyphar/filepath-securejoin",
+          "version": "v0.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/distribution/reference",
+          "version": "v0.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/distribution",
+          "version": "v2.8.3+incompatible",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/docker-credential-helpers",
+          "version": "v0.9.10",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-connections",
+          "version": "v0.8.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-units",
+          "version": "v0.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/dsnet/compress",
+          "version": "v0.0.2-0.20230904184137-39efe44ab707",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/felixge/httpsnoop",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-jose/go-jose/v4",
+          "version": "v4.1.9",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-logr/logr",
+          "version": "v1.4.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/go-logr/stdr",
+          "version": "v1.2.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/go-containerregistry",
+          "version": "v0.22.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/go-intervals",
+          "version": "v0.0.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/google/uuid",
+          "version": "v1.6.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/gorilla/mux",
+          "version": "v1.8.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/go-cleanhttp",
+          "version": "v0.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/go-multierror",
+          "version": "v1.1.2-0.20250313123807-1ee6e1a1957a",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/hashicorp/go-retryablehttp",
+          "version": "v0.7.8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/inconshreveable/mousetrap",
+          "version": "v1.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/json-iterator/go",
+          "version": "v1.1.12",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/klauspost/compress",
+          "version": "v1.20.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/klauspost/pgzip",
+          "version": "v1.2.7",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mattn/go-runewidth",
+          "version": "v0.0.31",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mattn/go-sqlite3",
+          "version": "v1.14.52",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/miekg/pkcs11",
+          "version": "v1.1.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mistifyio/go-zfs/v4",
+          "version": "v4.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/docker-image-spec",
+          "version": "v1.3.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/moby/api",
+          "version": "v1.56.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/moby/client",
+          "version": "v0.6.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/capability",
+          "version": "v0.4.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/mountinfo",
+          "version": "v0.7.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/user",
+          "version": "v0.4.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/modern-go/concurrent",
+          "version": "v0.0.0-20180306012644-bacd9c7ef1dd",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/modern-go/reflect2",
+          "version": "v1.0.3-0.20250322232337-35a7c28c31ee",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/go-digest",
+          "version": "v1.0.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/image-spec",
+          "version": "v1.1.2-0.20260709172216-af26a05fba5e",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/image-spec/schema",
+          "version": "v0.0.0-20250717171153-ab80ff15c2dd",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/image-tools",
+          "version": "v1.0.0-rc3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/runtime-spec",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/selinux",
+          "version": "v1.15.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/pkg/browser",
+          "version": "v0.0.0-20240102092130-5ac0b6a4141c",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/pkg/errors",
+          "version": "v0.9.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/proglottis/gpgme",
+          "version": "v0.1.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/santhosh-tekuri/jsonschema/v6",
+          "version": "v6.0.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/secure-systems-lab/go-securesystemslib",
+          "version": "v0.11.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sigstore/fulcio",
+          "version": "v1.8.8",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sigstore/protobuf-specs",
+          "version": "v0.5.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sigstore/sigstore",
+          "version": "v1.10.11",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sirupsen/logrus",
+          "version": "v1.10.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/smallstep/pkcs7",
+          "version": "v0.2.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/spf13/cobra",
+          "version": "v1.10.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/spf13/pflag",
+          "version": "v1.0.10",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/stefanberger/go-pkcs11uri",
+          "version": "v0.0.0-20230803200340-78284954bff6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/stretchr/testify",
+          "version": "v1.12.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sylabs/sif/v2",
+          "version": "v2.24.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/tchap/go-patricia/v2",
+          "version": "v2.3.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/ulikunitz/xz",
+          "version": "v0.5.17",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/varlink/go",
+          "version": "v0.4.1-0.20261015173642-c935be0c53f7",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vbatts/tar-split",
+          "version": "v0.12.3",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vbauerster/cupwriter",
+          "version": "v0.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vbauerster/mpb/v8",
+          "version": "v8.16.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/youmark/pkcs8",
+          "version": "v0.0.0-20240726163527-a2c0da244d78",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/auto/sdk",
+          "version": "v1.2.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+          "version": "v0.71.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel",
+          "version": "v1.47.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel/log",
+          "version": "v1.47.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel/metric",
+          "version": "v1.47.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.opentelemetry.io/otel/trace",
+          "version": "v1.47.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/common",
+          "version": "v0.70.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/image/v5",
+          "version": "v5.42.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.podman.io/storage",
+          "version": "v1.65.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "go.yaml.in/yaml/v3",
+          "version": "v3.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/crypto",
+          "version": "v0.58.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.62.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/oauth2",
+          "version": "v0.37.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/sync",
+          "version": "v0.24.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/sys",
+          "version": "v0.49.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/term",
+          "version": "v0.47.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/text",
+          "version": "v0.43.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/genproto/googleapis/api",
+          "version": "v0.0.0-20260825221802-da73d73af1c5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/genproto/googleapis/rpc",
+          "version": "v0.0.0-20260825221802-da73d73af1c5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.83.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "google.golang.org/protobuf",
+          "version": "v1.36.12",
+          "source": "Go module proxy / upstream vendor"
+        }
+      ],
+      "runc": [
+        {
+          "module": "cyphar.com/go-pathrs",
+          "version": "v0.2.6",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/aperturerobotics/protobuf-go-lite",
+          "version": "v0.14.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/checkpoint-restore/go-criu/v8",
+          "version": "v8.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cilium/ebpf",
+          "version": "v0.22.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/containerd/console",
+          "version": "v1.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/coreos/go-systemd/v22",
+          "version": "v22.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cpuguy83/go-md2man/v2",
+          "version": "v2.0.7",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/cyphar/filepath-securejoin",
+          "version": "v0.7.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/docker/go-units",
+          "version": "v0.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/godbus/dbus/v5",
+          "version": "v5.2.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/capability",
+          "version": "v0.5.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/devices",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/mountinfo",
+          "version": "v0.7.2",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/user",
+          "version": "v0.4.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/moby/sys/userns",
+          "version": "v0.2.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/mrunalp/fileutils",
+          "version": "v0.5.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/cgroups",
+          "version": "v0.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/runtime-spec",
+          "version": "v1.3.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/opencontainers/selinux",
+          "version": "v1.13.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/russross/blackfriday/v2",
+          "version": "v2.1.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/seccomp/libseccomp-golang",
+          "version": "v0.12.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/sirupsen/logrus",
+          "version": "v1.9.4",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/urfave/cli",
+          "version": "v1.22.17",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vishvananda/netlink",
+          "version": "v1.3.1",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "github.com/vishvananda/netns",
+          "version": "v0.0.5",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.62.0",
+          "source": "Go module proxy / upstream vendor"
+        },
+        {
+          "module": "golang.org/x/sys",
+          "version": "v0.49.0",
+          "source": "Go module proxy / upstream vendor"
+        }
+      ]
+    },
+    "vendor_sha256": {
+      "podman": "26d8235949b5674c08fe87b022067199abb4f7d3ae4b808d92b3dae574f4f5f5",
+      "skopeo": "15c98772072f58ddd903712a934715ca2378fa3aa0b3821c7860f1977a25f60f",
+      "runc": "c4f6dd6b9503d7734bc892e730fd9fb647cd44fa16ecb0414bac4380951df4dd"
+    },
+    "module_identities": 191,
+    "module_versions": 205,
+    "multiversion_families": 14,
+    "excess_versions": 14
+  }
+}

@@ -1,0 +1,51 @@
+# Local synthetic qualification only. No imports or source scans run at startup.
+name: ladybom-interop
+services:
+  apiserver:
+    image: docker.io/dependencytrack/apiserver@sha256:a7ce7a42928c6c03e94e8255e2ee871f5268f55b638a69729cae7afc47ef43b8
+    platform: linux/amd64
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 2g
+    environment:
+      DT_DATASOURCE_URL: jdbc:postgresql://postgres:5432/dtrack
+      DT_DATASOURCE_USERNAME: dtrack
+      DT_TASK_SCHEDULER_ENABLED: "false"
+      DT_TELEMETRY_SUBMISSION_DEFAULT_ENABLED: "false"
+      DT_OUTBOUND_ALLOWED_DESTINATIONS: "127.0.0.1"
+      DT_DATASOURCE_PASSWORD: ${LADYBOM_DTRACK_DATABASE_PASSWORD:?Generate a private env file first}
+    ports:
+      - 127.0.0.1:18081:8080
+      - 127.0.0.1:19081:9000
+    volumes:
+      - apiserver-data:/data
+    networks:
+      - qualification
+      - api-access
+    restart: "no"
+  postgres:
+    image: docker.io/library/postgres@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
+    platform: linux/amd64
+    mem_limit: 512m
+    environment:
+      POSTGRES_DB: dtrack
+      POSTGRES_USER: dtrack
+      POSTGRES_PASSWORD: ${LADYBOM_DTRACK_DATABASE_PASSWORD:?Generate a private env file first}
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    networks:
+      - qualification
+    restart: "no"
+volumes:
+  apiserver-data: {}
+  postgres-data: {}
+networks:
+  qualification:
+    internal: true
+  api-access: {}

@@ -1,0 +1,84 @@
+--- a/ntpd/src/daemon/config/ntp_source.rs
++++ b/ntpd/src/daemon/config/ntp_source.rs
+@@ -81,6 +81,9 @@
+ #[serde(rename_all = "kebab-case", deny_unknown_fields)]
+ pub struct NtsSourceConfig {
+     pub address: NtsKeAddress,
++    /// Optional administrator pin for the endpoint negotiated through NTS-KE.
++    #[serde(default)]
++    pub expected_ntp_address: Option<std::net::SocketAddr>,
+     #[serde(default)]
+     pub enable_srv_resolution: bool,
+     #[serde(
+@@ -94,6 +97,13 @@
+         deserialize_with = "deserialize_ntp_version"
+     )]
+     pub ntp_version: ProtocolVersion,
++}
++
++impl NtsSourceConfig {
++    pub(crate) fn permits_ntp_address(&self, address: std::net::SocketAddr) -> bool {
++        self.expected_ntp_address
++            .is_none_or(|expected| expected == address)
++    }
+ }
+ 
+ fn deserialize_certificate_authorities<'de, D>(
+@@ -753,6 +763,28 @@
+     }
+ 
+     #[test]
++    fn fixed_ntp_endpoint_rejects_other_addresses_and_ports() {
++        let config: NtsSourceConfig =
++            toml::from_str("address = \"nts.test:4460\"\nexpected-ntp-address = \"192.0.2.1:123\"")
++                .unwrap();
++        assert!(config.permits_ntp_address("192.0.2.1:123".parse().unwrap()));
++        for endpoint in [
++            "192.0.2.1:53",
++            "192.0.2.1:4460",
++            "192.0.2.2:123",
++            "127.0.0.1:123",
++            "[::1]:123",
++        ] {
++            assert!(
++                !config.permits_ntp_address(endpoint.parse().unwrap()),
++                "{endpoint}"
++            );
++        }
++        let unpinned: NtsSourceConfig = toml::from_str("address = \"nts.test:4460\"").unwrap();
++        assert!(unpinned.permits_ntp_address("192.0.2.2:321".parse().unwrap()));
++    }
++
++    #[test]
+     fn test_deserialize_source() {
+         let test: TestConfig = toml::from_str(
+             r#"
+--- a/ntpd/src/daemon/spawn/nts.rs
++++ b/ntpd/src/daemon/spawn/nts.rs
+@@ -140,6 +140,10 @@
+                 ))
+                 .await
+                 {
++                    if !self.config.permits_ntp_address(address) {
++                        warn!(%address, "Negotiated NTP endpoint refused by source policy");
++                        return Ok(());
++                    }
+                     action_tx
+                         .send(SpawnEvent::new(
+                             self.id,
+@@ -219,6 +223,7 @@
+ 
+         let mut spawner = NtsSpawner::new(
+             NtsSourceConfig {
++                expected_ntp_address: None,
+                 address: NtsKeAddress(NormalizedAddress::new_from_parts("localhost", addr.port())),
+                 enable_srv_resolution: false,
+                 certificate_authorities: Arc::default(),
+@@ -252,6 +257,7 @@
+ 
+         let mut spawner = NtsSpawner::new(
+             NtsSourceConfig {
++                expected_ntp_address: None,
+                 address: NtsKeAddress(NormalizedAddress::new_from_parts("localhost.", addr.port())),
+                 enable_srv_resolution: true,
+                 certificate_authorities: Arc::default(),

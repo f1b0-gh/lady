@@ -1,0 +1,46 @@
+{
+  "architecture": "x86_64-linux",
+  "needs": [
+    "bootc-base",
+    "virtio-vm",
+    "podman-rootless",
+    "network-runtime"
+  ],
+  "network": {
+    "dns": [
+      "192.0.2.1"
+    ],
+    "egress": [
+      {
+        "address": "192.0.2.2",
+        "port": 443,
+        "protocol": "tcp"
+      }
+    ],
+    "ingress": [
+      {
+        "address": "192.0.2.3",
+        "port": 8080,
+        "protocol": "tcp"
+      }
+    ],
+    "interface": "enp0s2",
+    "nts": [
+      {
+        "address": "192.0.2.1",
+        "server": "nts.test"
+      }
+    ]
+  },
+  "os_id": "bootc-podman",
+  "podman": {
+    "gid": 1000,
+    "range_size": 65536,
+    "subgid_start": 65536,
+    "subuid_start": 65536,
+    "uid": 1000,
+    "user": "containers"
+  },
+  "revision": "1",
+  "schema_version": 1
+}

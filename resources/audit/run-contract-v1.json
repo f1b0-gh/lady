@@ -1,0 +1,218 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "document_schema": {
+      "const": "upstream-v1"
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+    },
+    "status": {
+      "enum": [
+        "planned",
+        "running",
+        "interrupted",
+        "blocked",
+        "failed",
+        "partial",
+        "complete"
+      ]
+    },
+    "profile": {
+      "enum": [
+        "quick",
+        "targeted"
+      ]
+    },
+    "scope_paths": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "config_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "toolchain_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "method_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "documents": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "findings.json": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "coverage-ledger.json": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "source-manifest.json": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "evidence-manifest.json": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "findings.json",
+        "coverage-ledger.json",
+        "source-manifest.json",
+        "evidence-manifest.json"
+      ]
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1
+          },
+          "coverage_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "artifact_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "hunter_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "verifier_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "fingerprint",
+          "coverage_ids",
+          "artifact_ids",
+          "hunter_id",
+          "verifier_id"
+        ]
+      }
+    },
+    "invocations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "enum": [
+              "recon",
+              "hunter",
+              "verifier",
+              "critic"
+            ]
+          },
+          "status": {
+            "enum": [
+              "finished",
+              "failed",
+              "interrupted"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "status"
+        ]
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "invocations": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967295
+        },
+        "seconds": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "invocations",
+        "seconds"
+      ]
+    },
+    "elapsed_seconds": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "open_obligations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "environment_verified": {
+      "type": "boolean"
+    },
+    "cleanup_verified": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schema_version",
+    "document_schema",
+    "run_id",
+    "status",
+    "profile",
+    "scope_paths",
+    "config_sha256",
+    "toolchain_sha256",
+    "method_sha256",
+    "documents",
+    "links",
+    "invocations",
+    "budget",
+    "elapsed_seconds",
+    "open_obligations",
+    "environment_verified",
+    "cleanup_verified"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ladyshell audit run metadata v1",
+  "$comment": "Reference schema. Native verify also enforces byte limits, strict JSON, cross-document relations and evidence integrity. Metadata claims do not establish authenticity."
+}

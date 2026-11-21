@@ -1,0 +1,11 @@
+{
+  "name": "ladybom-synthetic",
+  "version": "1.0.0",
+  "dependencies": {
+    "interop-left": "1.0.0",
+    "interop-right": "1.0.0"
+  },
+  "scripts": {
+    "preinstall": "exit 99"
+  }
+}
