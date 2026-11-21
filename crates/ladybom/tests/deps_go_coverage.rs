@@ -3,7 +3,7 @@ use std::{fs, path::Path};
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 const NAMES: [&str; 4] = ["go.mod", "go.sum", "go.work", "go.work.sum"];
-const MODULE: &str = "module example.org/demo\n";
+const MODULE: &str = "module example.org/demo\nrequire example.org/x v1.0.0\n";
 
 fn write(root: &Path, name: &str, content: &[u8]) -> std::io::Result<()> {
     let path = root.join(name);
@@ -23,14 +23,19 @@ fn standalone_go_inputs_are_fingerprinted_and_blocked_at_any_depth() -> TestResu
             write(root.path(), &path, MODULE.as_bytes())?;
             let report = deps::scan_project(root.path())?;
             assert!(!report.complete, "{path}");
-            assert!(report.projects.is_empty());
+            assert_eq!(report.projects.len(), usize::from(name == "go.mod"));
             assert_eq!(report.inputs.len(), 1);
             assert_eq!(
                 report.inputs[&path],
-                "dd21404f6b13747770ca97bce0f72e6a2b7f0adec857fc560d05c33af8ba3fb7"
+                ladybom::files::hash(MODULE.as_bytes())
             );
             assert_eq!(report.diagnostics.len(), 1);
-            assert_eq!(report.diagnostics[0].code, "unsupported_go_input");
+            let expected = match name {
+                "go.mod" => "go_resolution_unknown",
+                "go.work" => "invalid_manifest",
+                _ => "invalid_go_checksum",
+            };
+            assert_eq!(report.diagnostics[0].code, expected);
             assert_eq!(report.diagnostics[0].file, path);
             assert!(report.diagnostics[0].blocking);
             report.validate()?;
@@ -148,8 +153,12 @@ fn go_references_are_not_followed_or_inferred_as_packages() -> TestResult {
     let report = deps::scan_snapshot(root.path(), &sources::snapshot(root.path(), &spec, None)?)?;
     assert!(!report.complete);
     assert_eq!(report.inputs.len(), 2);
-    assert!(report.projects.is_empty());
-    assert_eq!(report.diagnostics.len(), 2);
+    assert_eq!(report.projects.len(), 2);
+    assert!(report.projects.iter().all(|p| p.ecosystem == "go"));
+    assert!(report
+        .diagnostics
+        .iter()
+        .any(|d| d.code == "go_workspace_member_unavailable"));
     assert!(!serde_json::to_string(&report)?.contains("SECRET_SENTINEL"));
     Ok(())
 }
@@ -183,7 +192,13 @@ fn mixed_inventory_preserves_known_findings_but_blocks_global_coverage() -> Test
     let after = deps::scan_project(root.path())?;
     assert_eq!(
         serde_json::to_value(&before.projects)?,
-        serde_json::to_value(&after.projects)?
+        serde_json::to_value(
+            after
+                .projects
+                .iter()
+                .filter(|p| p.ecosystem != "go")
+                .collect::<Vec<_>>()
+        )?
     );
     assert_eq!(after.inputs.len(), before.inputs.len() + 1);
     let partial = vuln::assess(&after, &advisory, "2026-11-07T12:00:00Z", 86400)?;

@@ -1,6 +1,6 @@
 # Dependency inventory, maintenance and preparation
 
-Ladybom statically reads Cargo, Python and npm inputs without package-manager
+Ladybom statically reads Cargo, Python, npm and Go inputs without package-manager
 execution, network access or project code. Ladyshell separately authorizes and
 prepares dependencies; a Ladybom report never grants installation or network
 permission. See the [CLI](../crates/ladybom-cli/README.md) for build instructions.
@@ -48,9 +48,37 @@ not reproducible. `{"pip-index":"unverified"}` and blocking
 `pip_inventory_incomplete` retain unknown provenance, graph and artifact choice;
 no public advisory equivalence or preparation support is inferred.
 
-Selected Go manifests/checksum files are fingerprinted but block coverage with
-`unsupported_go_input`; directives are not followed. Explicit
-[Nix/Go artifact collection](artifact-sbom.md) is separate.
+### Go source inventory
+
+Ladybom reads `go.mod`, `go.work`, `go.sum`, `go.work.sum` and
+`vendor/modules.txt` within the selected snapshot. It retains direct/indirect
+minimum requirements, Go/toolchain directives, replacements, exclusions and
+workspace membership. Local paths are resolved only against already selected
+valid manifests; excluded, external and missing targets remain coverage gaps.
+No Go executable, module cache, package manager or network is used.
+
+Checksum records are evidence, including unused versions and `/go.mod` hashes;
+they never create components or a lockfile. Vendor records supply observed
+module versions and packages, checked against selected declarations. Remote
+replacements keep the replacement identity; local replacements have no public
+registry PURL. Vendor source authenticity is not established by its metadata.
+
+Go projects remain `locked=false`. `go_resolution_unknown` keeps builds with
+requirements incomplete (exit 2): manifests do not establish the selected build
+list, transitive dependency edges, target activation or the compiler actually
+used. Graph alignment and advisory coverage must not treat those gaps as a pass.
+Versioned vendor observations can appear in CycloneDX, without a claim of
+runtime presence. Go advisory identity matching and preparation are not enabled
+by this source inventory. Unknown directives and unsupported quoted escapes
+produce explicit diagnostics rather than being silently skipped. Vendor consistency
+for absent or pre-1.14 Go directives remains an explicit coverage gap. Directive,
+checksum and vendor record counts are bounded in addition to the file limits.
+
+For example, a selected `go.mod` containing `require example.org/lib v1.2.3`
+records a minimum requirement; it does not assert that version 1.2.3 shipped.
+`go.sum` entries for 1.2.3 and 1.4.0 do not prove either is selected. Explicit
+[Nix/Go artifact collection](artifact-sbom.md) can inspect delivered Go binaries
+through its separate, trusted-tool workflow.
 
 ## Dependency maintenance
 

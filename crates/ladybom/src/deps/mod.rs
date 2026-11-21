@@ -2,6 +2,7 @@
 pub mod constraints;
 pub mod cyclonedx;
 pub mod declarations;
+mod go;
 pub mod graph;
 pub mod interop;
 mod model;
@@ -108,6 +109,7 @@ pub fn scan_snapshot(root: &Path, snapshot: &Snapshot) -> Result<Report> {
             ),
         }
     }
+    go::scan(&inputs, &mut report);
     for (name, content) in &inputs {
         let result = match basename(name) {
             "Cargo.toml" => rust::parse(
@@ -119,16 +121,6 @@ pub fn scan_snapshot(root: &Path, snapshot: &Snapshot) -> Result<Report> {
             ),
             "pyproject.toml" => python::parse(name, content, &inputs, &mut report.diagnostics),
             "package.json" => npm::parse(name, content, &inputs, &mut report.diagnostics),
-            "go.mod" | "go.sum" | "go.work" | "go.work.sum" => {
-                diagnostic(
-                    &mut report.diagnostics,
-                    "unsupported_go_input",
-                    name,
-                    "Entrée Go détectée mais non analysée ; couverture des modules et de leur résolution inconnue",
-                    true,
-                );
-                continue;
-            }
             _ if python::is_requirements_file(name) => {
                 python::requirements(name, content, &mut report.diagnostics)
             }
@@ -162,7 +154,8 @@ pub fn scan_snapshot(root: &Path, snapshot: &Snapshot) -> Result<Report> {
 }
 
 fn is_input(name: &str) -> bool {
-    python::is_requirements_file(name)
+    go::is_vendor(name)
+        || python::is_requirements_file(name)
         || matches!(
             basename(name),
             "Cargo.toml"

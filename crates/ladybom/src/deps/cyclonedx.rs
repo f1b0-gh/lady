@@ -396,6 +396,7 @@ fn convert_component(
         .filter(|_| {
             profile == ExportProfile::PrivateDetailed
                 || super::vuln::public_identity(project, source).is_some()
+                || super::go::public_component(project, source)
         })
         .map(|purl| {
             purl.parse()
