@@ -1,4 +1,4 @@
-"""Verify actual Cargo graphs of independent Nickel domains."""
+"""Verify Cargo dependency boundaries between Lady components."""
 
 import argparse
 import json

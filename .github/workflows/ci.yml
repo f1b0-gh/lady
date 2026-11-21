@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   checks:
-    name: Rust and native fixtures
+    name: Rust workspace
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     env:
@@ -27,6 +27,10 @@ jobs:
     steps:
       - name: Check out sources
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
         with:
           persist-credentials: false
 
@@ -83,6 +87,10 @@ jobs:
     steps:
       - name: Check out sources
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
         with:
           persist-credentials: false
 
@@ -104,3 +112,144 @@ jobs:
           cargo fetch --locked
           python3 tests/check_ladybom_packages.py
           CHECKS
+
+  ladybom-native-graph:
+    name: Ladybom native graph fixtures
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    env:
+      CARGO_BUILD_JOBS: '2'
+      CARGO_INCREMENTAL: '0'
+      RUST_TEST_THREADS: '2'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
+        with:
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@bb0495a1086c46893eee56f32fd192dfe4a15bb9 # v32.0.0
+        with:
+          enable_kvm: false
+          set_as_trusted_user: false
+          extra_nix_config: |
+            sandbox = true
+            max-jobs = 2
+            cores = 2
+
+      - name: Install the verified LadybugDB CLI
+        timeout-minutes: 5
+        run: |
+          archive="$RUNNER_TEMP/lbug_cli-linux-x86_64.tar.gz"
+          engine_dir="$RUNNER_TEMP/ladybugdb/bin"
+          curl --fail --location --proto '=https' --proto-redir '=https' \
+            --connect-timeout 30 --max-time 120 --output "$archive" \
+            https://github.com/LadybugDB/ladybug/releases/download/v0.17.1/lbug_cli-linux-x86_64.tar.gz
+          printf '%s  %s\n' \
+            1f0ba3676750aad3117e1daa15c876970f6cd6cf45555d68c174e069c30149cd \
+            "$archive" | sha256sum --check --strict -
+          install -d -m 755 "$engine_dir"
+          tar --extract --gzip --file "$archive" --directory "$engine_dir" \
+            --no-same-owner --no-same-permissions -- lbug
+          test -x "$engine_dir/lbug"
+          test "$("$engine_dir/lbug" --version)" = 'Lbug 0.17.1'
+
+      - name: Run six native graph fixtures
+        timeout-minutes: 35
+        run: |
+          export CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target"
+          engine=$(realpath -- "$RUNNER_TEMP/ladybugdb/bin/lbug")
+          test -x "$engine"
+          export LADYBOM_LADYBUG_BIN="$engine"
+          nix develop --no-update-lock-file --no-write-lock-file \
+            path:./nix#ci --command bash -euo pipefail <<'CHECKS'
+          cargo fetch --locked
+          export CARGO_NET_OFFLINE=true
+          bash tests/check_native_fixtures.sh graph
+          CHECKS
+
+      - name: Verify that validation preserved locked inputs
+        run: git diff --exit-code -- Cargo.lock ':(glob)**/flake.lock' tests/requirements-interop.txt
+
+  nix-dependency-fixtures:
+    name: Nix dependency fixtures
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    env:
+      CARGO_BUILD_JOBS: '2'
+      CARGO_INCREMENTAL: '0'
+      RUST_TEST_THREADS: '2'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
+        with:
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@bb0495a1086c46893eee56f32fd192dfe4a15bb9 # v32.0.0
+        with:
+          enable_kvm: false
+          set_as_trusted_user: false
+          extra_nix_config: |
+            sandbox = true
+            max-jobs = 2
+            cores = 2
+
+      - name: Realize the locked fixture toolchains
+        timeout-minutes: 20
+        run: |
+          # Keep cold toolchain substitutions outside the fixture subprocess deadlines.
+          nix build --impure --no-link --no-update-lock-file --no-write-lock-file --expr '
+            let pkgs = import (builtins.getFlake ("path:" + toString ./nix)).inputs.nixpkgs {
+              system = "x86_64-linux";
+            };
+            in [ pkgs.nodejs pkgs.cargo pkgs.rustc pkgs.stdenv.cc ]
+          '
+
+      - name: Run three dependency preparation fixtures
+        timeout-minutes: 35
+        run: |
+          export CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target"
+          nix develop --no-update-lock-file --no-write-lock-file \
+            path:./nix#ci --command bash -euo pipefail <<'CHECKS'
+          cargo fetch --locked
+          export CARGO_NET_OFFLINE=true
+          bash tests/check_native_fixtures.sh dependencies
+          CHECKS
+
+      - name: Verify that validation preserved locked inputs
+        run: git diff --exit-code -- Cargo.lock ':(glob)**/flake.lock' tests/requirements-interop.txt
+
+  required:
+    name: Rust and native fixtures
+    needs: [checks, ladybom-packages, ladybom-native-graph, nix-dependency-fixtures]
+    if: ${{ always() }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every validation job to succeed
+        env:
+          RUST_WORKSPACE: ${{ needs.checks.result }}
+          LADYBOM_PACKAGES: ${{ needs.ladybom-packages.result }}
+          NATIVE_GRAPH: ${{ needs.ladybom-native-graph.result }}
+          NIX_DEPENDENCIES: ${{ needs.nix-dependency-fixtures.result }}
+        run: |
+          printf '%s\n' "Rust workspace: $RUST_WORKSPACE" \
+            "Ladybom packages: $LADYBOM_PACKAGES" "Native graph: $NATIVE_GRAPH" \
+            "Nix dependencies: $NIX_DEPENDENCIES"
+          test "$RUST_WORKSPACE" = success &&
+            test "$LADYBOM_PACKAGES" = success &&
+            test "$NATIVE_GRAPH" = success &&
+            test "$NIX_DEPENDENCIES" = success
