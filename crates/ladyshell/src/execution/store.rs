@@ -378,6 +378,7 @@ impl Store {
             admission.validate()?;
             l.authorize(&invocation.scope, admission)?;
             let definition = self.definition(&invocation.task)?;
+            definition.stdin_bytes(&invocation.intent)?;
             ensure!(
                 self.catalog.definition_digest(&invocation.task)? == invocation.definition_sha256,
                 "Retained task definition mismatch"

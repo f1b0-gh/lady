@@ -38,6 +38,15 @@ pub struct TaskDefinition {
     pub argv: Vec<String>,
     pub timeout_seconds: u32,
     pub output_limit_bytes: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input: Option<InputChannel>,
+}
+/// An installed data channel, included in the task definition's identity.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum InputChannel {
+    /// Compact JSON of the original retained intent, followed by EOF.
+    IntentJsonV1 { max_bytes: u32 },
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -291,6 +300,18 @@ impl Admission {
     }
 }
 impl TaskDefinition {
+    pub(super) fn stdin_bytes(&self, intent: &Value) -> Result<Option<Vec<u8>>> {
+        let Some(InputChannel::IntentJsonV1 { max_bytes }) = self.input else {
+            return Ok(None);
+        };
+        let bytes = serde_json::to_vec(intent)?;
+        ensure!(
+            (1..=16384).contains(&max_bytes) && bytes.len() <= max_bytes as usize,
+            "Retained input exceeds installed channel bound"
+        );
+        Ok(Some(bytes))
+    }
+
     fn validate(&self) -> Result<()> {
         crate::config::identifier(&self.id)?;
         ensure!(
@@ -309,6 +330,9 @@ impl TaskDefinition {
                 && (1..=1048576).contains(&self.output_limit_bytes),
             "Invalid task execution bounds"
         );
+        if let Some(InputChannel::IntentJsonV1 { max_bytes }) = self.input {
+            ensure!((1..=16384).contains(&max_bytes), "Invalid task input bound");
+        }
         Ok(())
     }
 }

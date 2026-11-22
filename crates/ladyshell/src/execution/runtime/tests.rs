@@ -81,6 +81,9 @@ fn fixture() -> Result<Fixture> {
     fixture_with_continuous(true)
 }
 fn fixture_with_continuous(continuous: bool) -> Result<Fixture> {
+    fixture_with_input(continuous, None)
+}
+fn fixture_with_input(continuous: bool, input: Option<InputChannel>) -> Result<Fixture> {
     let root = tempfile::tempdir()?;
     fs::set_permissions(
         root.path(),
@@ -109,6 +112,7 @@ fn fixture_with_continuous(continuous: bool) -> Result<Fixture> {
         argv: vec!["cmd".into(), "weird argument".into(), "".into()],
         timeout_seconds: 3,
         output_limit_bytes: 4096,
+        input,
     }];
     let mut driver = Observed::default();
     let receiver = root.path().join("receiver");
@@ -143,7 +147,12 @@ fn fixture_with_continuous(continuous: bool) -> Result<Fixture> {
         driver,
     })
 }
-fn no_launch(_: Command, _: Duration, _: usize) -> (ClientResult, CapturedOutputs) {
+fn no_launch(
+    _: Command,
+    _: Duration,
+    _: usize,
+    _: Option<&[u8]>,
+) -> (ClientResult, CapturedOutputs) {
     unreachable!("refused work launched")
 }
 #[test]
@@ -226,7 +235,8 @@ fn dispatch_once_and_release_fence_only_for_intact_completed_receipt() -> Result
         &f.key,
         &mut f.driver,
         || Ok(20),
-        |cmd, timeout, limit| {
+        |cmd, timeout, limit, input| {
+            assert!(input.is_none());
             let args: Vec<_> = cmd.get_args().map(|s| s.to_string_lossy()).collect();
             assert!(args.ends_with(&[
                 "example".into(),
@@ -245,13 +255,42 @@ fn dispatch_once_and_release_fence_only_for_intact_completed_receipt() -> Result
                     "sh",
                 ])
                 .arg(&counter);
-            super::super::capture::run(shell, timeout, limit)
+            super::super::capture::run_with_input(shell, timeout, limit, input)
         },
     )?;
     assert_eq!(r.phase, Phase::Completed);
     assert_eq!(fs::read_to_string(counter)?, "ran\n");
     assert!(worker_with(&f.store, &f.key, &mut f.driver, || Ok(21), no_launch).is_err());
     SessionLock::acquire(&f.state, true)?;
+    Ok(())
+}
+
+#[test]
+fn reopened_worker_delivers_original_retained_intent_to_fixed_command() -> Result<()> {
+    let mut f = fixture_with_input(true, Some(InputChannel::IntentJsonV1 { max_bytes: 128 }))?;
+    let original = f.store.inspect(&f.key)?;
+    let expected = serde_json::to_vec(&original.invocation.intent)?;
+    f.store = Store::open(f.store.directory(), &original.binding.receiver_id)?;
+    let record = worker_with(
+        &f.store,
+        &f.key,
+        &mut f.driver,
+        || Ok(20),
+        |cmd, timeout, limit, input| {
+            assert_eq!(input, Some(expected.as_slice()));
+            let args: Vec<_> = cmd.get_args().map(|s| s.to_string_lossy()).collect();
+            assert!(args.ends_with(&["cmd".into(), "weird argument".into(), "".into()]));
+            capture::run_with_input(Command::new("cat"), timeout, limit, input)
+        },
+    )?;
+    assert_eq!(record.phase, Phase::Completed);
+    assert_eq!(record.invocation, original.invocation);
+    let outcome = record
+        .outcome
+        .ok_or_else(|| invalid("missing retained outcome"))?;
+    assert_eq!(outcome.stdout.length as usize, expected.len());
+    assert_eq!(outcome.stdout.sha256, files::hash(&expected));
+    assert!(worker_with(&f.store, &f.key, &mut f.driver, || Ok(21), no_launch).is_err());
     Ok(())
 }
 #[test]
@@ -262,10 +301,10 @@ fn uncertain_retains_state_exclusion_until_same_stopped_generation_is_observed()
         &f.key,
         &mut f.driver,
         || Ok(20),
-        |_, timeout, limit| {
+        |_, timeout, limit, input| {
             let mut c = Command::new("sh");
             c.args(["-c", "printf error >&2; exit 1"]);
-            super::super::capture::run(c, timeout, limit)
+            super::super::capture::run_with_input(c, timeout, limit, input)
         },
     )?;
     assert_eq!(r.phase, Phase::Uncertain);
@@ -417,7 +456,7 @@ fn worker_crash_helper() -> Result<()> {
         &key,
         &mut Observed::default(),
         || Ok(20),
-        |_, _, _| {
+        |_, _, _, _| {
             if root.join("after").exists() {
                 let mut cmd = Command::new("sh");
                 cmd.args(["-c", "echo ran >> \"$1\"", "sh"])
@@ -488,7 +527,9 @@ fn abandoned_unpublished_fence_stage_does_not_wedge_future_work() -> Result<()> 
         &f.key,
         &mut f.driver,
         || Ok(20),
-        |_, timeout, limit| capture::run(Command::new("true"), timeout, limit),
+        |_, timeout, limit, input| {
+            capture::run_with_input(Command::new("true"), timeout, limit, input)
+        },
     )?;
     assert_eq!(r.phase, Phase::Completed);
     assert!(!staged.exists());
@@ -545,7 +586,7 @@ fn provider_revocation_during_live_inventory_refuses_before_dispatch() -> Result
         &f.key,
         &mut f.driver,
         || Ok(20),
-        |_, _, _| (ClientResult::Exit { code: 0 }, CapturedOutputs::default()),
+        |_, _, _, _| (ClientResult::Exit { code: 0 }, CapturedOutputs::default()),
     )?;
     assert_eq!(r.phase, Phase::Refused);
     assert!(r.dispatched_at.is_none());
@@ -585,7 +626,7 @@ fn untrusted_snapshot_binary_refuses_accepted_worker_before_inventory() -> Resul
         &f.key,
         &mut f.driver,
         || Ok(20),
-        |_, _, _| (ClientResult::Exit { code: 0 }, CapturedOutputs::default()),
+        |_, _, _, _| (ClientResult::Exit { code: 0 }, CapturedOutputs::default()),
     )?;
     assert_eq!(
         f.driver.inventories, 1,

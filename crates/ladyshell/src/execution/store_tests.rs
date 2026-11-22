@@ -33,8 +33,77 @@ fn catalog() -> Catalog {
             argv: vec!["cmd".into(), "".into()],
             timeout_seconds: 5,
             output_limit_bytes: 16,
+            input: None,
         }],
     }
+}
+
+#[test]
+fn absent_input_keeps_original_definition_encoding() -> Result<()> {
+    let original = r#"{"id":"test","argv":["cmd",""],"timeout_seconds":5,"output_limit_bytes":16}"#;
+    let task: TaskDefinition = serde_json::from_str(original)?;
+    assert_eq!(serde_json::to_string(&task)?, original);
+    Ok(())
+}
+
+#[test]
+fn installed_input_mode_is_pinned_and_bounds_acceptance() -> Result<()> {
+    let temp = tempfile::tempdir()?;
+    fs::set_permissions(temp.path(), fs::Permissions::from_mode(0o700))?;
+    let original = catalog();
+    let mut encoded = serde_json::to_value(&original)?;
+    encoded["tasks"][0]["input"] = json!({"kind":"intent_json_v1","max_bytes":10});
+    let c: Catalog = serde_json::from_value(encoded)?;
+    assert_ne!(
+        c.definition_digest("test")?,
+        original.definition_digest("test")?
+    );
+    let b = Store::create(&temp.path().join("receiver"), c)?;
+    let s = Store::open(&temp.path().join("receiver"), &b.receiver_id)?;
+    s.bind_owner("scope", None)?;
+    s.advance_claim("scope", None, 1)?;
+    let mut i = Invocation {
+        scope: "scope".into(),
+        id: "id".into(),
+        task: "test".into(),
+        definition_sha256: s.catalog().definition_digest("test")?,
+        intent: json!({"long":"exceeds installed bound"}),
+    };
+    let a = Admission {
+        reference: "test".into(),
+        admit_before: 20,
+        owner: None,
+        claim: 1,
+    };
+    assert!(s.accept(&i, &a, 10).is_err());
+    assert!(s.lookup(&i)?.is_none());
+    i.intent = json!({"x":1});
+    assert!(s.accept(&i, &a, 11)?.is_new);
+    drop(s);
+    let reopened = Store::open(&temp.path().join("receiver"), &b.receiver_id)?;
+    let retained = reopened
+        .lookup(&i)?
+        .ok_or_else(|| invalid("missing retained invocation"))?;
+    assert_eq!(retained.invocation, i);
+    Ok(())
+}
+
+#[test]
+fn input_channel_rejects_unknown_modes_fields_and_invalid_bounds() -> Result<()> {
+    for input in [
+        json!({"kind":"argv","max_bytes":100}),
+        json!({"kind":"intent_json_v1","max_bytes":0}),
+        json!({"kind":"intent_json_v1","max_bytes":16385}),
+        json!({"kind":"intent_json_v1","max_bytes":100,"program":"other"}),
+    ] {
+        let mut c = serde_json::to_value(catalog())?;
+        c["tasks"][0]["input"] = input;
+        let valid = serde_json::from_value::<Catalog>(c)
+            .ok()
+            .is_some_and(|catalog| catalog.validate().is_ok());
+        assert!(!valid);
+    }
+    Ok(())
 }
 struct Fixture {
     _temp: tempfile::TempDir,

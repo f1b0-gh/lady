@@ -175,11 +175,13 @@ fn check_directory(dir: &File, e: &EnvironmentPin) -> Result<()> {
     );
     fence::verify_named(dir, &e.state)
 }
-fn preflight(
-    store: &Store,
-    driver: &mut impl Driver,
-    record: &Record,
-) -> Result<(StateLock, SessionLock, Command)> {
+struct Prepared {
+    lock: StateLock,
+    lease: SessionLock,
+    command: Command,
+    input: Option<Vec<u8>>,
+}
+fn preflight(store: &Store, driver: &mut impl Driver, record: &Record) -> Result<Prepared> {
     let env = &record.environment;
     let lock = StateLock::acquire_existing(&env.state)?;
     let lease = SessionLock::acquire(&lock.directory, true)?;
@@ -207,23 +209,33 @@ fn preflight(
         &task.argv,
         task.timeout_seconds,
     )?;
-    Ok((lock, lease, cmd))
+    Ok(Prepared {
+        lock,
+        lease,
+        command: cmd,
+        input: task.stdin_bytes(&record.invocation.intent)?,
+    })
 }
 /// Run only an already accepted invocation under its independent worker lease.
 pub fn worker(store: &Store, key: &Key) -> Result<Record> {
-    worker_with(store, key, &mut Native, now, capture::run)
+    worker_with(store, key, &mut Native, now, capture::run_with_input)
 }
 fn worker_with(
     store: &Store,
     key: &Key,
     driver: &mut impl Driver,
     mut clock: impl FnMut() -> Result<u64>,
-    launch: impl FnOnce(Command, Duration, usize) -> (ClientResult, CapturedOutputs),
+    launch: impl FnOnce(Command, Duration, usize, Option<&[u8]>) -> (ClientResult, CapturedOutputs),
 ) -> Result<Record> {
     let worker = store.acquire_worker(key)?;
     let record = store.inspect(key)?;
     let fence = Fence::for_record(store, &record);
-    let (lock, lease, command) = match preflight(store, driver, &record) {
+    let Prepared {
+        lock,
+        lease,
+        command,
+        input,
+    } = match preflight(store, driver, &record) {
         Ok(prepared) => prepared,
         // Native errors can contain transport diagnostics. Keep a bounded, nonsecret refusal.
         Err(_) => {
@@ -307,7 +319,7 @@ fn worker_with(
             last,
         );
     }
-    let (result, outputs) = launch(command, timeout, limit);
+    let (result, outputs) = launch(command, timeout, limit, input.as_deref());
     let receipt = store.complete(&worker, result, outputs, clock()?)?;
     if receipt.phase == Phase::Completed {
         fence.clear(&lease, &record.environment.state)?;
