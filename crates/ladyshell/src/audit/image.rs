@@ -135,7 +135,7 @@ pub fn build(current: &Value, run_dir: &Path, expected_sources: &Snapshot) -> Re
         "Runtime sources changed since the audit lock"
     );
     files::read_limited(
-        &trusted.join("resources/audit/agent-response-schema.json"),
+        &trusted.join("crates/ladyshell/resources/audit/agent-response-schema.json"),
         1024 * 1024,
     )?;
     for name in RECIPES {
@@ -286,17 +286,10 @@ fn store_path(value: &str, binary: bool) -> Result<()> {
 
 fn runtime_spec() -> Sources {
     Sources {
-        include: [
-            "Cargo.toml",
-            "Cargo.lock",
-            "LICENSE",
-            "src",
-            "crates",
-            "resources",
-        ]
-        .into_iter()
-        .map(str::to_owned)
-        .collect(),
+        include: ["Cargo.toml", "Cargo.lock", "LICENSE", "src", "crates"]
+            .into_iter()
+            .map(str::to_owned)
+            .collect(),
         exclude: Vec::new(),
     }
 }

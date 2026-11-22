@@ -82,13 +82,13 @@ pub fn create(
     let audit = crate::sources::snapshot(
         resources,
         &crate::config::Sources {
-            include: vec!["resources/audit".into()],
+            include: vec!["crates/ladyshell/resources/audit".into()],
             exclude: vec![],
         },
         None,
     )?;
     ensure!(
-        audit.contains_key("resources/audit/security-audit/SKILL.md"),
+        audit.contains_key("crates/ladyshell/resources/audit/security-audit/SKILL.md"),
         "Missing audit distribution"
     );
     for (path, record) in audit {

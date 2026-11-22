@@ -48,7 +48,7 @@
       "source": "example-project/tools/audit-validator/src/main.rs",
       "path": "src/bin/audit-validator.rs",
       "upstream_sha256": "9c98e0d4ae8d0b232c789885d3ccbfd3bf7803154dce5745e4692eaf1759a584",
-      "sha256": "6e1654b838db96bc74fbc0b9fc0a1c60f4a4a0c90069cf17e492ea2554ad6a01"
+      "sha256": "3c7feaa041cdcb6045a248bbb3ec97b2140b3a37d4fd9481b91710307dd0363c"
     },
     {
       "source": "example-project/tools/audit-validator/src/preflight.rs",
@@ -88,130 +88,132 @@
     },
     {
       "source": "cloudflare/security-audit/AI-AND-LLM.md",
-      "path": "resources/audit/security-audit/AI-AND-LLM.md",
+      "path": "crates/ladyshell/resources/audit/security-audit/AI-AND-LLM.md",
       "upstream_sha256": "7335a95c43554eadefcf03ece639291bb0e038c398a179299e3887ffe06bd2ef",
       "sha256": "7335a95c43554eadefcf03ece639291bb0e038c398a179299e3887ffe06bd2ef"
     },
     {
       "source": "cloudflare/security-audit/ATTACK-CLASSES.md",
-      "path": "resources/audit/security-audit/ATTACK-CLASSES.md",
+      "path": "crates/ladyshell/resources/audit/security-audit/ATTACK-CLASSES.md",
       "upstream_sha256": "3ee4f00c6e8c9dcf6dd02dd5ac2a4ceb322e2085f3e9fbe79cf0c6330bc7ef83",
       "sha256": "3ee4f00c6e8c9dcf6dd02dd5ac2a4ceb322e2085f3e9fbe79cf0c6330bc7ef83"
     },
     {
       "source": "cloudflare/security-audit/CLIENT-SIDE.md",
-      "path": "resources/audit/security-audit/CLIENT-SIDE.md",
+      "path": "crates/ladyshell/resources/audit/security-audit/CLIENT-SIDE.md",
       "upstream_sha256": "613f6b98f86083e045525c5b60154ffdab122bac35f1e05eb17488e6e453370c",
       "sha256": "613f6b98f86083e045525c5b60154ffdab122bac35f1e05eb17488e6e453370c"
     },
     {
       "source": "cloudflare/security-audit/CLOUD-AND-DEPLOYMENT.md",
-      "path": "resources/audit/security-audit/CLOUD-AND-DEPLOYMENT.md",
+      "path": "crates/ladyshell/resources/audit/security-audit/CLOUD-AND-DEPLOYMENT.md",
       "upstream_sha256": "3c80f3088be22345e07b057c056d6ed99fe2b0304f794398964f7ccd5a496ca3",
       "sha256": "3c80f3088be22345e07b057c056d6ed99fe2b0304f794398964f7ccd5a496ca3"
     },
     {
       "source": "cloudflare/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md",
-      "path": "resources/audit/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md",
+      "path": "crates/ladyshell/resources/audit/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md",
       "upstream_sha256": "307dcb3e24d292715c4a041190e7bb135646a37eb6187619ae01d000a634a4ad",
       "sha256": "307dcb3e24d292715c4a041190e7bb135646a37eb6187619ae01d000a634a4ad"
     },
     {
       "source": "cloudflare/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md",
-      "path": "resources/audit/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md",
+      "path": "crates/ladyshell/resources/audit/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md",
       "upstream_sha256": "58eae8ee0ca6a46611c501ec5a3ab47fdff88dd7db0d8d74789bbf8bb19d8cb2",
       "sha256": "58eae8ee0ca6a46611c501ec5a3ab47fdff88dd7db0d8d74789bbf8bb19d8cb2"
     },
     {
       "source": "cloudflare/security-audit/HUNTING.md",
-      "path": "resources/audit/security-audit/HUNTING.md",
+      "path": "crates/ladyshell/resources/audit/security-audit/HUNTING.md",
       "upstream_sha256": "71c121decea1322c47c718f6e110f1a892980bb4266bd7ac55ef043a213ade09",
       "sha256": "98151ea1bf59a898b6e0ddbb351b751853174bccc2c02dd2bcde648ed53199ba"
     },
     {
       "source": "cloudflare/security-audit/MEMORY-SAFETY-AND-BINARY.md",
-      "path": "resources/audit/security-audit/MEMORY-SAFETY-AND-BINARY.md",
+      "path": "crates/ladyshell/resources/audit/security-audit/MEMORY-SAFETY-AND-BINARY.md",
       "upstream_sha256": "7c8b0dccfb35315cca2455509674d49632b2fe37e1f3aac16c1a496a7e9924a7",
       "sha256": "7c8b0dccfb35315cca2455509674d49632b2fe37e1f3aac16c1a496a7e9924a7"
     },
     {
       "source": "cloudflare/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md",
-      "path": "resources/audit/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md",
+      "path": "crates/ladyshell/resources/audit/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md",
       "upstream_sha256": "8b73816fa5b3697c9c40977f0c836b40f01d6e81929ff2720fe83ce089e9a619",
       "sha256": "8b73816fa5b3697c9c40977f0c836b40f01d6e81929ff2720fe83ce089e9a619"
     },
     {
       "source": "cloudflare/security-audit/RECONNAISSANCE.md",
-      "path": "resources/audit/security-audit/RECONNAISSANCE.md",
+      "path": "crates/ladyshell/resources/audit/security-audit/RECONNAISSANCE.md",
       "upstream_sha256": "02ca887aca84de8ae137f1891bd2f0a54f28d3fa6da92a27f54734382b3381a2",
       "sha256": "433cd3b3703e0db2fc9ab53927c12bf44d018c70197afc5f51fe73fd4a19a31c"
     },
     {
       "source": "cloudflare/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
-      "path": "resources/audit/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
+      "path": "crates/ladyshell/resources/audit/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
       "upstream_sha256": "4326fab5c92a0b4c420a70196254040105cd794026562130b59bf1a6db3e4baa",
       "sha256": "4326fab5c92a0b4c420a70196254040105cd794026562130b59bf1a6db3e4baa"
     },
     {
       "source": "cloudflare/security-audit/SKILL.md",
-      "path": "resources/audit/security-audit/SKILL.md",
+      "path": "crates/ladyshell/resources/audit/security-audit/SKILL.md",
       "upstream_sha256": "5e3e96a1e438d8f35fef0a1e38f02d4f00e2bdf910401b7dfe00e6779c6dac85",
       "sha256": "27bcf8d7706a3ba553469d1d428396fb258c03d929acccb6e05be970d24d44e4"
     },
     {
       "source": "cloudflare/security-audit/SUPPLY-CHAIN-AND-RELEASE.md",
-      "path": "resources/audit/security-audit/SUPPLY-CHAIN-AND-RELEASE.md",
+      "path": "crates/ladyshell/resources/audit/security-audit/SUPPLY-CHAIN-AND-RELEASE.md",
       "upstream_sha256": "f372e919940e335468ba1ae09f99026c3986a345f7fe26f8068f132e199f52a5",
       "sha256": "f372e919940e335468ba1ae09f99026c3986a345f7fe26f8068f132e199f52a5"
     },
     {
       "source": "cloudflare/security-audit/VALIDATION-AND-REPORTING.md",
-      "path": "resources/audit/security-audit/VALIDATION-AND-REPORTING.md",
+      "path": "crates/ladyshell/resources/audit/security-audit/VALIDATION-AND-REPORTING.md",
       "upstream_sha256": "b892470cb89bb31f33403e050d4bdfbe2cdaef940ade1496fa65e32b2e129449",
       "sha256": "ab352b3243520622fc2a553dd189d248f41d475c06856ead8861e357ce80f540"
     },
     {
       "source": "cloudflare/security-audit/WEB-PROTOCOL-AND-AUTH.md",
-      "path": "resources/audit/security-audit/WEB-PROTOCOL-AND-AUTH.md",
+      "path": "crates/ladyshell/resources/audit/security-audit/WEB-PROTOCOL-AND-AUTH.md",
       "upstream_sha256": "4f3066dffa23c5635859187be9b96c32f2aff29a688186b91ff0c63e47d62b5c",
       "sha256": "4f3066dffa23c5635859187be9b96c32f2aff29a688186b91ff0c63e47d62b5c"
     },
     {
       "source": "cloudflare/security-audit/LICENSE",
-      "path": "resources/audit/security-audit/LICENSE",
+      "path": "crates/ladyshell/resources/audit/security-audit/LICENSE",
       "upstream_sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
       "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391"
     },
     {
       "source": "cloudflare/security-audit/report-schema.json",
-      "path": "resources/audit/security-audit/report-schema.json",
+      "path": "crates/ladyshell/resources/audit/security-audit/report-schema.json",
       "upstream_sha256": "6575c9de4a62255699ea052ebf9a49ebfb373a32891bcd89af6f55cc84b35519",
       "sha256": "6575c9de4a62255699ea052ebf9a49ebfb373a32891bcd89af6f55cc84b35519"
     }
   ],
   "distribution_files": {
-    "resources/audit/run-contract-v1.json": "98fdccc5e098566339cee2f1f23657a7b4bc895ca71700e4fb118b69746ec402",
-    "resources/audit/security-audit/AI-AND-LLM.md": "7335a95c43554eadefcf03ece639291bb0e038c398a179299e3887ffe06bd2ef",
-    "resources/audit/security-audit/ATTACK-CLASSES.md": "3ee4f00c6e8c9dcf6dd02dd5ac2a4ceb322e2085f3e9fbe79cf0c6330bc7ef83",
-    "resources/audit/security-audit/CLIENT-SIDE.md": "613f6b98f86083e045525c5b60154ffdab122bac35f1e05eb17488e6e453370c",
-    "resources/audit/security-audit/CLOUD-AND-DEPLOYMENT.md": "3c80f3088be22345e07b057c056d6ed99fe2b0304f794398964f7ccd5a496ca3",
-    "resources/audit/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md": "307dcb3e24d292715c4a041190e7bb135646a37eb6187619ae01d000a634a4ad",
-    "resources/audit/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md": "58eae8ee0ca6a46611c501ec5a3ab47fdff88dd7db0d8d74789bbf8bb19d8cb2",
-    "resources/audit/security-audit/LADYSHELL.md": "f46ac8efc4065663eed9d9699058dad9c48d8f03cf596d637b3316ba3d61c987",
-    "resources/audit/security-audit/HUNTING.md": "98151ea1bf59a898b6e0ddbb351b751853174bccc2c02dd2bcde648ed53199ba",
-    "resources/audit/security-audit/LICENSE": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
-    "resources/audit/security-audit/MEMORY-SAFETY-AND-BINARY.md": "7c8b0dccfb35315cca2455509674d49632b2fe37e1f3aac16c1a496a7e9924a7",
-    "resources/audit/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md": "8b73816fa5b3697c9c40977f0c836b40f01d6e81929ff2720fe83ce089e9a619",
-    "resources/audit/security-audit/RECONNAISSANCE.md": "433cd3b3703e0db2fc9ab53927c12bf44d018c70197afc5f51fe73fd4a19a31c",
-    "resources/audit/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md": "4326fab5c92a0b4c420a70196254040105cd794026562130b59bf1a6db3e4baa",
-    "resources/audit/security-audit/SKILL.md": "27bcf8d7706a3ba553469d1d428396fb258c03d929acccb6e05be970d24d44e4",
-    "resources/audit/security-audit/SUPPLY-CHAIN-AND-RELEASE.md": "f372e919940e335468ba1ae09f99026c3986a345f7fe26f8068f132e199f52a5",
-    "resources/audit/security-audit/VALIDATION-AND-REPORTING.md": "ab352b3243520622fc2a553dd189d248f41d475c06856ead8861e357ce80f540",
-    "resources/audit/security-audit/WEB-PROTOCOL-AND-AUTH.md": "4f3066dffa23c5635859187be9b96c32f2aff29a688186b91ff0c63e47d62b5c",
-    "resources/audit/security-audit/report-schema.json": "6575c9de4a62255699ea052ebf9a49ebfb373a32891bcd89af6f55cc84b35519",
-    "resources/audit/agent-response-schema.json": "8a75155dba9ccc36b316a9b4686a0136641aa4bb75b7c381a5d8e931fd23ed14"
+    "crates/ladyshell/resources/audit/run-contract-v1.json": "98fdccc5e098566339cee2f1f23657a7b4bc895ca71700e4fb118b69746ec402",
+    "crates/ladyshell/resources/audit/security-audit/AI-AND-LLM.md": "7335a95c43554eadefcf03ece639291bb0e038c398a179299e3887ffe06bd2ef",
+    "crates/ladyshell/resources/audit/security-audit/ATTACK-CLASSES.md": "3ee4f00c6e8c9dcf6dd02dd5ac2a4ceb322e2085f3e9fbe79cf0c6330bc7ef83",
+    "crates/ladyshell/resources/audit/security-audit/CLIENT-SIDE.md": "613f6b98f86083e045525c5b60154ffdab122bac35f1e05eb17488e6e453370c",
+    "crates/ladyshell/resources/audit/security-audit/CLOUD-AND-DEPLOYMENT.md": "3c80f3088be22345e07b057c056d6ed99fe2b0304f794398964f7ccd5a496ca3",
+    "crates/ladyshell/resources/audit/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md": "307dcb3e24d292715c4a041190e7bb135646a37eb6187619ae01d000a634a4ad",
+    "crates/ladyshell/resources/audit/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md": "58eae8ee0ca6a46611c501ec5a3ab47fdff88dd7db0d8d74789bbf8bb19d8cb2",
+    "crates/ladyshell/resources/audit/security-audit/LADYSHELL.md": "f46ac8efc4065663eed9d9699058dad9c48d8f03cf596d637b3316ba3d61c987",
+    "crates/ladyshell/resources/audit/security-audit/HUNTING.md": "98151ea1bf59a898b6e0ddbb351b751853174bccc2c02dd2bcde648ed53199ba",
+    "crates/ladyshell/resources/audit/security-audit/LICENSE": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
+    "crates/ladyshell/resources/audit/security-audit/MEMORY-SAFETY-AND-BINARY.md": "7c8b0dccfb35315cca2455509674d49632b2fe37e1f3aac16c1a496a7e9924a7",
+    "crates/ladyshell/resources/audit/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md": "8b73816fa5b3697c9c40977f0c836b40f01d6e81929ff2720fe83ce089e9a619",
+    "crates/ladyshell/resources/audit/security-audit/RECONNAISSANCE.md": "433cd3b3703e0db2fc9ab53927c12bf44d018c70197afc5f51fe73fd4a19a31c",
+    "crates/ladyshell/resources/audit/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md": "4326fab5c92a0b4c420a70196254040105cd794026562130b59bf1a6db3e4baa",
+    "crates/ladyshell/resources/audit/security-audit/SKILL.md": "27bcf8d7706a3ba553469d1d428396fb258c03d929acccb6e05be970d24d44e4",
+    "crates/ladyshell/resources/audit/security-audit/SUPPLY-CHAIN-AND-RELEASE.md": "f372e919940e335468ba1ae09f99026c3986a345f7fe26f8068f132e199f52a5",
+    "crates/ladyshell/resources/audit/security-audit/VALIDATION-AND-REPORTING.md": "ab352b3243520622fc2a553dd189d248f41d475c06856ead8861e357ce80f540",
+    "crates/ladyshell/resources/audit/security-audit/WEB-PROTOCOL-AND-AUTH.md": "4f3066dffa23c5635859187be9b96c32f2aff29a688186b91ff0c63e47d62b5c",
+    "crates/ladyshell/resources/audit/security-audit/report-schema.json": "6575c9de4a62255699ea052ebf9a49ebfb373a32891bcd89af6f55cc84b35519",
+    "crates/ladyshell/resources/audit/agent-response-schema.json": "8a75155dba9ccc36b316a9b4686a0136641aa4bb75b7c381a5d8e931fd23ed14"
   },
   "adaptations": [
+    "The compatibility CLI license comment now points to LICENSE-MIT bundled in the ladyshell-cli package; its MIT license and executable behavior are unchanged.",
+    "Audit resources moved into crates/ladyshell/resources/audit for self-contained Cargo archives; resource bytes, upstream hashes and method semantics retained. Repository-relative provenance paths updated.",
     "Workspace Cargo manifest; no upstream release profile in member.",
     "Native ladyshell audit validate commands replace JavaScript invocations.",
     "LADYSHELL.md describes native trust and execution limits.",

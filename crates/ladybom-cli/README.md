@@ -5,13 +5,11 @@ CycloneDX SBOMs. It scans without running project code or package managers, and
 without network access, Nickel, OpenShell or a model provider. The Cargo package
 is `ladybom-cli` and installs the `ladybom` command.
 
-Install from a source checkout on Linux with stable Rust, a C compiler and Git.
+Install on Linux with stable Rust, a C compiler and Git.
 Cargo may download locked dependencies during the build.
 
 ```sh
-git clone https://github.com/f1b0-gh/lady.git
-cd lady
-cargo install --locked --path crates/ladybom-cli
+cargo install ladybom-cli --version 0.1.0 --locked
 ```
 
 With Cargo's installation directory on `PATH`, scan a project and keep any
@@ -29,14 +27,15 @@ selection. CycloneDX 1.5 is the exchange format. Use `ladybom --help` or
 
 ## Build and install choices
 
-From this checkout, install either configuration with Cargo.
+Install either configuration from crates.io with Cargo.
 
 | Configuration | Command | Available commands |
 | --- | --- | --- |
-| Default (`graph`) | `cargo install --locked --path crates/ladybom-cli` | All commands below |
-| Minimal | `cargo install --locked --path crates/ladybom-cli --no-default-features` | `scan` (including CycloneDX), `artifact`, `interop`, `vuln`, `vxdf` |
+| Default (`graph`) | `cargo install ladybom-cli --version 0.1.0 --locked` | All commands below |
+| Minimal | `cargo install ladybom-cli --version 0.1.0 --locked --no-default-features` | `scan` (including CycloneDX), `artifact`, `interop`, `vuln`, `vxdf` |
 
-Use `cargo build -p ladybom-cli --locked` to build without installing. Add
+From a Lady source checkout, use `cargo install --locked --path crates/ladybom-cli`
+or `cargo build -p ladybom-cli --locked` to build without installing. Add
 `--no-default-features` for the minimal build. The default `graph` feature includes the [graph library](https://github.com/f1b0-gh/lady/blob/main/crates/ladybom-graph/README.md)
 and Parquet. Native graph traversal and removal simulation require an explicit
 LadybugDB executable. Clap parsing and help reflect the selected commands.

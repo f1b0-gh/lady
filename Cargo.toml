@@ -3,11 +3,15 @@ members = ["crates/ladyshell", "crates/ladybom", "crates/ladybom-cli", "crates/l
 resolver = "2"
 
 [package]
-license = "Apache-2.0"
+license = "Apache-2.0 AND MIT"
 name = "ladyshell-cli"
 default-run = "ladyshell"
 version = "0.1.0"
 edition = "2021"
+description = "Run authorized OpenShell tasks and retain their execution evidence"
+repository = "https://github.com/f1b0-gh/lady"
+readme = "docs/ladyshell-cli.md"
+include = ["/src/**", "/tests/**", "/examples/source_snapshot.rs", "/Cargo.toml", "/Cargo.lock", "/docs/ladyshell-cli.md", "/LICENSE", "/LICENSE-MIT"]
 
 [[bin]]
 name = "ladyshell"
@@ -18,7 +22,7 @@ name = "audit-validator"
 path = "src/bin/audit-validator.rs"
 
 [dependencies]
-ladyshell = { path = "crates/ladyshell" }
+ladyshell = { version = "=0.1.0", path = "crates/ladyshell" }
 clap = { version = "4", features = ["derive"] }
 serde_json = "1"
 

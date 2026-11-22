@@ -1,4 +1,4 @@
-{ flakePath, configPath, sourcePath, codexPath, codexHostPath, runtimePath, auditPath ? flakePath + "/../resources/audit", preparationPath ? null }:
+{ flakePath, configPath, sourcePath, codexPath, codexHostPath, runtimePath, auditPath ? flakePath + "/../crates/ladyshell/resources/audit", preparationPath ? null }:
 let flake = builtins.getFlake ("path:" + flakePath);
 in flake.lib.mkImage {
   preparationPath = if preparationPath == null then null else builtins.toPath preparationPath;

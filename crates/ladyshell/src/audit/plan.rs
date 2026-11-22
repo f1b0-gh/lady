@@ -59,7 +59,7 @@ pub fn make(directory: &Path, profile: Option<Profile>, run_requested: bool) -> 
     {
         blockers.push(json!({"code":"native_state_incomplete","detail":"Incomplete locked native state; explicit lock and apply required"}));
     }
-    let inputs = json!({"config":config,"sources":selected,"source_snapshot":all,"state_sha256":crate::plan::digest(&current)?,"method_sha256":files::hash(include_bytes!("../../../../resources/audit/provenance.json"))});
+    let inputs = json!({"config":config,"sources":selected,"source_snapshot":all,"state_sha256":crate::plan::digest(&current)?,"method_sha256":files::hash(include_bytes!("../../resources/audit/provenance.json"))});
     Ok(
         json!({"schema_version":1,"operation":if run_requested {"run"} else {"plan"},"blocked":true,"target_executed":false,"plan_sha256":crate::plan::digest(&inputs)?,"inputs":inputs,"budget_reserve":{"recon":4,"hunter":1,"critic":1,"verifier_minimum":1},"blockers":blockers}),
     )

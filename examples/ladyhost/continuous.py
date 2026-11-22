@@ -42,7 +42,7 @@ class Trial:
             target = self.resources / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(args.lady_source / name, target)
-        shutil.copytree(args.lady_source / 'resources/audit', self.resources / 'resources/audit')
+        shutil.copytree(args.lady_source / 'crates/ladyshell/resources/audit', self.resources / 'crates/ladyshell/resources/audit')
         durable(self.root / 'inputs.json', {'schema_version': 1,
                 'scenario_sha256': sha(Path(__file__)), 'ladyshell_sha256': sha(self.cli),
                 'codex_sha256': sha(args.codex), 'profile': 'local-docker-openshell',

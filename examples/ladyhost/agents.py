@@ -415,7 +415,7 @@ class Campaign:
         shutil.copytree(origin, source)
         self.baseline = inventory(source)
         require(self.baseline==expected, 'Staged source changed during copying')
-        for path in ('config', 'nix', 'resources/audit'):
+        for path in ('config', 'nix', 'crates/ladyshell/resources/audit'):
             shutil.copytree(self.args.lady_source / path, self.run / 'resources' / path)
         self.call(['git', 'init', '-b', 'main', source], self.run, 'git-init')
         self.call(['git', '-C', source, 'add', '.'], self.run, 'git-add')

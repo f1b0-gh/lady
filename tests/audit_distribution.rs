@@ -5,8 +5,9 @@ use std::{error::Error, fs, path::Path};
 #[test]
 fn distribution_matches_its_locked_resource_hashes() -> Result<(), Box<dyn Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let manifest: Value =
-        serde_json::from_slice(&fs::read(root.join("resources/audit/provenance.json"))?)?;
+    let manifest: Value = serde_json::from_slice(&fs::read(
+        root.join("crates/ladyshell/resources/audit/provenance.json"),
+    )?)?;
     for (path, expected) in manifest["distribution_files"]
         .as_object()
         .ok_or("resource map")?

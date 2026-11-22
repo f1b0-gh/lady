@@ -3,7 +3,7 @@
 The executable contract is in
 [`model.rs`](../../crates/ladyshell/src/audit/model.rs) and
 [`verify.rs`](../../crates/ladyshell/src/audit/verify.rs).
-[`run-contract-v1.json`](../../resources/audit/run-contract-v1.json) describes
+[`run-contract-v1.json`](../../crates/ladyshell/resources/audit/run-contract-v1.json) describes
 metadata; Rust also checks file contents and cross-document relationships.
 
 ## Required files
@@ -45,7 +45,7 @@ Required fields:
 
 Exceeded duration is publishable only for a non-complete state with open
 obligations. Method provenance is retained in
-[`provenance.json`](../../resources/audit/provenance.json). The native controller
+[`provenance.json`](../../crates/ladyshell/resources/audit/provenance.json). The native controller
 sets `method_sha256` to the selected bundle; external runs need not use the
 locally installed bundle.
 

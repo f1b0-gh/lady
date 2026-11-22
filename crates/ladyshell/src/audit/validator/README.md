@@ -29,9 +29,9 @@ The imported validator source, schema and fixture corpus retain the
 and use this same notice. This exception does not relicense Ladyshell or Lady;
 the project's own code remains Apache-2.0.
 
-[Provenance](../../../../../resources/audit/provenance.json) records original
+[Provenance](../../../resources/audit/provenance.json) records original
 source hashes, current paths and local adaptations. The standalone Cargo
 manifest is recorded as retired; the validator's dependency requirements now
 belong to Ladyshell. Existing parsing, limits and validation rules are retained.
 
-[Audit workflow](../../../../../docs/audits/usage.md)
+[Audit workflow](https://github.com/f1b0-gh/lady/blob/main/docs/audits/usage.md)

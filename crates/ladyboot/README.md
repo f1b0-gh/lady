@@ -8,7 +8,55 @@ Ladyboot does not deploy instances or manage OpenShell sandboxes.
 It is a library and optional CLI in the Lady workspace. Use
 `default-features = false` to consume it without Clap. The shared
 `nickel-util =0.1.0` dependency comes from crates.io. No sibling checkout is
-required. See [development](../../docs/development.md).
+required. See the [build prerequisites](https://github.com/f1b0-gh/lady/blob/ladyboot-v0.1.0/docs/development.md).
+
+## Install
+
+On Linux with stable Rust and a C compiler:
+
+```sh
+cargo install ladyboot --version 0.1.0 --locked
+ladyboot --version
+ladyboot --help
+```
+
+The installed executable and library do not require a Lady checkout to load.
+Cargo installs the executable; it does not install the Nix recipes, Nickel
+profiles or native tools beside it. Commands that evaluate profiles require an
+explicit trusted `--resources` directory, Nix, Bubblewrap, `prlimit` and the
+pinned Nickel evaluator. Library callers supply the same directory through
+`ArtifactRequest.resources`. There is no automatic resource download.
+
+Acquire the matching recipes explicitly into a new directory:
+
+```sh
+git clone --branch ladyboot-v0.1.0 --depth 1 \
+  https://github.com/f1b0-gh/lady.git ladyboot-resources-0.1.0
+cd ladyboot-resources-0.1.0
+RECIPES="$PWD/crates/ladyboot"
+```
+
+Review the release tag's commit and recipe provenance before trusting this
+source. A versioned tag names the intended release; it is not a signed
+attestation. Keep `flake.nix`, `flake.lock`, `nix/`, `profiles/` and `tests/`
+together. The Cargo source archive also includes these resources, but Cargo's
+installation cache is not their runtime location. Preserve the pinned locks and
+recipe inputs; select changes explicitly and regenerate affected artifact locks.
+
+Prepare the evaluator explicitly, then evaluate a profile:
+
+```sh
+nix --extra-experimental-features 'nix-command flakes' build \
+  "path:$RECIPES#nickel" --no-link --no-update-lock-file --no-write-lock-file \
+  --max-jobs 1 --cores 2
+ladyboot explain --config "$RECIPES/profiles/base.ncl" --resources "$RECIPES"
+```
+
+These acquisition and Nix commands can download their inputs. Recipe selection
+is an execution trust decision: neither Cargo installation nor an inventory
+report authorizes running unreviewed recipes. Keep build outputs and receipts
+outside the resource directory. The source-build examples below use the same
+explicit resource interface.
 
 ## Profiles and needs
 

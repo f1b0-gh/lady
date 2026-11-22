@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Cloudflare, Inc.
-// License: crates/ladyshell/src/audit/validator/LICENSE-MIT.
+// License: LICENSE-MIT in the ladyshell-cli package.
 #![forbid(unsafe_code)]
 use ladyshell::audit::validator::{validate, Env, Error, Mode, RealEnv};
 use std::{
