@@ -313,7 +313,7 @@ fn finalize(mut bom: Bom) -> Result<Bom> {
     bom.serial_number = None;
     let mut payload = Vec::new();
     bom.clone()
-        .output_as_json_v1_5(&mut payload)
+        .output_as_json(&mut payload, SpecVersion::V1_5)
         .map_err(|error| invalid(format!("Cannot serialize VEX: {error}")))?;
     let serial = cyclonedx::serial_from_digest(&crate::files::hash(&payload))?;
     bom.serial_number =
@@ -330,7 +330,7 @@ pub fn write_json(
     mut writer: impl Write,
 ) -> Result<()> {
     from_assessment(assessment, decisions)?
-        .output_as_json_v1_5(&mut writer)
+        .output_as_json(&mut writer, SpecVersion::V1_5)
         .map_err(|error| match error {
             JsonWriteError::JsonElementWriteError { error } => Error::Json(error),
             other => invalid(format!("Cannot serialize VEX: {other}")),
@@ -566,7 +566,7 @@ pub fn write_json_with_export_profile(
     mut writer: impl Write,
 ) -> Result<()> {
     from_report_with_export_profile(report, assessment, decisions, profile, export_profile)?
-        .output_as_json_v1_5(&mut writer)
+        .output_as_json(&mut writer, SpecVersion::V1_5)
         .map_err(|error| match error {
             JsonWriteError::JsonElementWriteError { error } => Error::Json(error),
             other => invalid(format!("Cannot serialize VEX: {other}")),

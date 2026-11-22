@@ -1,4 +1,7 @@
-use cyclonedx_bom::{models::bom::Bom, prelude::Validate};
+use cyclonedx_bom::{
+    models::bom::{Bom, SpecVersion},
+    prelude::Validate,
+};
 use ladybom::{
     cyclonedx,
     vuln::{self, vex, *},
@@ -51,7 +54,7 @@ fn decisions(a: &Assessment, state: DecisionState) -> Decisions {
 fn value(bom: Bom) -> std::result::Result<Value, Box<dyn std::error::Error>> {
     assert!(bom.validate().passed());
     let mut bytes = Vec::new();
-    bom.output_as_json_v1_5(&mut bytes)?;
+    bom.output_as_json(&mut bytes, SpecVersion::V1_5)?;
     Ok(serde_json::from_slice(&bytes)?)
 }
 fn local(report: &Report, a: &Assessment, d: Option<&Decisions>) -> ladybom::error::Result<Bom> {
