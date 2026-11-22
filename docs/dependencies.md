@@ -207,6 +207,21 @@ images. These refusals never broaden network policy.
 ## Native packaging checks
 
 `nix/openssl.nix` pins OpenSSL 3.5.9; `nix/tpm2-tss.nix` pins TPM2-TSS 4.2.1.
+`nix/network-tools.nix` pins Git 2.56.1 because the locked Nixpkgs Git 2.56.0
+is affected by [GHSA-vp2w-7xxj-jvxr](https://github.com/git/git/security/advisories/GHSA-vp2w-7xxj-jvxr).
+The scoped override retains upstream patches and the minimal Git options.
+The [native dependency review](../sources/nixpkgs-review.json) records exact
+inputs, reviewed advisory sources and qualification limits separately from the
+workspace Cargo review.
+
+OpenSSL's [November 10](https://openssl-library.org/news/secadv/20261110.txt) and
+[November 17](https://openssl-library.org/news/secadv/20261117.txt) advisories
+include eight low-severity findings affecting the inherited 3.5.9 release.
+They remain open: consumer reachability has not been established, and the
+network checks do not exercise the affected QUIC, CMS or specialized crypto/API
+paths. Owner `f1b0-gh` must recheck the scheduled 3.5.10 release on 2026-12-01
+and qualify the scoped update. This records follow-up, not an advisory waiver.
+
 The explicit `openssl` and `tpm` shells select Rust 1.99.1 and native libraries,
 with `OPENSSL_NO_VENDOR=1`, `OPENSSL_STATIC=0` and target-specific equivalents.
 Overriding them leaves the qualified profile. In Ladyshell checks, pass those

@@ -40,7 +40,7 @@ fn nix_workspace_preserves_nested_dependencies_and_local_links_without_scripts(
     let tools = BTreeMap::from([(
         "node".into(),
         ladyshell::config::Tool {
-            version: "24.21.0".into(),
+            version: "24.22.2".into(),
             phase: "runtime".into(),
         },
     )]);
@@ -123,7 +123,7 @@ fn nix_refuses_dependency_bytes_with_a_corrupted_lock_hash(
     let tools = BTreeMap::from([(
         "node".into(),
         ladyshell::config::Tool {
-            version: "24.21.0".into(),
+            version: "24.22.2".into(),
             phase: "runtime".into(),
         },
     )]);
@@ -181,7 +181,7 @@ fn nix_image_contains_python_rust_and_typescript_dependencies_offline(
     let config: ResolvedConfig = serde_json::from_value(json!({
         "schema_version":1, "name":"deps-fixture", "mission":"dev",
         "sources":{"include":["python","rust","web"],"exclude":[]},
-        "tools":{"python":{"version":"3.13.15"},"rust":{"version":"1.98.1"},"node":{"version":"24.21.0"}},
+        "tools":{"python":{"version":"3.13.18"},"rust":{"version":"1.99.1"},"node":{"version":"24.22.2"}},
         "checks":[], "sandbox":{"gateway":"fixture","workspace":"deps-fixture","provider":"fixture"},
         "resolved_missions":["dev"],"permissions":{"network":[],"filesystem":[]},
         "image":{"backend":"nix","profile":"openshell-native","platform":"x86_64-linux"},

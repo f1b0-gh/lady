@@ -17,13 +17,23 @@ let
       sha256 = "8dadd7d2536a314f982ad05a651b713f426bf7d02cc2c76cffb9796f2218e6c5";
     };
   });
-  git = pkgs.git.override {
+  git = (pkgs.git.override {
     inherit curl openssl;
     # Ordinary Git operations do not require the optional script tools.
     perlSupport = false;
     pythonSupport = false;
     sendEmailSupport = false;
-  };
+  }).overrideAttrs (_: {
+    # GHSA-vp2w-7xxj-jvxr affects the locked upstream Git 2.56.0.
+    # Archive hash matches kernel.org's published sha256sums.asc.
+    # Review by 2026-12-07; remove when the pinned recipe includes the fix
+    # and passes the same minimal-Git and TLS qualification.
+    version = "2.56.1";
+    src = pkgs.fetchurl {
+      url = "https://www.kernel.org/pub/software/scm/git/git-2.56.1.tar.xz";
+      sha256 = "f0b0bf89264b9bd2e1c640363e7529643989da76281600473c50745cd34a607f";
+    };
+  });
   cargo = pkgs.cargo.override {
     inherit curl openssl;
     # Cargo's recipe also reads the host curl pkg-config files explicitly.

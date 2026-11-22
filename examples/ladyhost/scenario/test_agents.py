@@ -113,9 +113,10 @@ class EvidenceTests(unittest.TestCase):
         self.assertIn('https://api.github.com/repos/f1b0-oss/jjpr-lab', source)
         self.assertIn('https://github.com/f1b0-oss/jjpr-lab.git', source)
 
-    def probe(self, api_error, git_error=b'fatal: could not read Username'):
+    def probe(self, api_error, git_error=b'fatal: could not read Username', api_response=None):
         opener = Mock()
         opener.open.side_effect = api_error
+        opener.open.return_value = api_response
         output = io.StringIO()
         git = subprocess.CompletedProcess([], 128, b'', git_error)
         with patch.dict('os.environ', {}, clear=True), patch('pathlib.Path.exists', return_value=False), \
@@ -126,7 +127,10 @@ class EvidenceTests(unittest.TestCase):
 
     def test_http_refusal_does_not_establish_repository_existence_or_privacy(self):
         for status in (401, 403, 404):
-            result = self.probe(urllib.error.HTTPError('https://api.github.com', status, 'refused', {}, None))
+            error = urllib.error.HTTPError('https://api.github.com', status, 'refused', {}, None)
+            self.addCleanup(error.close)
+            result = self.probe(error)
+            self.assertTrue(error.closed)
             self.assertEqual(result['direct_api']['outcome'], 'http-refusal')
             self.assertEqual(result['direct_api']['status'], status)
             self.assertFalse(result['privacy_established'])
@@ -139,17 +143,22 @@ class EvidenceTests(unittest.TestCase):
         self.assertFalse(result['privacy_established'])
 
     def test_successful_anonymous_api_access_refuses_campaign(self):
+        response = io.BytesIO(b'{}')
+        self.addCleanup(response.close)
         with self.assertRaisesRegex(AssertionError, 'direct API'):
-            self.probe(None)
+            self.probe(None, api_response=response)
+        self.assertTrue(response.closed)
 
     def test_successful_anonymous_git_access_refuses_campaign(self):
         opener = Mock()
         opener.open.side_effect = urllib.error.HTTPError('https://api.github.com', 404, 'missing', {}, None)
+        self.addCleanup(opener.open.side_effect.close)
         with patch.dict('os.environ', {}, clear=True), patch('pathlib.Path.exists', return_value=False), \
              patch('urllib.request.build_opener', return_value=opener), \
              patch('subprocess.run', return_value=subprocess.CompletedProcess([], 0, b'', b'')):
             with self.assertRaisesRegex(AssertionError, 'direct Git'):
                 exec(module.probe_source('f1b0-oss/jjpr-lab'), {})
+        self.assertTrue(opener.open.side_effect.closed)
 
     def test_probe_refuses_credential_environment_before_network(self):
         with patch.dict('os.environ', {'GITHUB_TOKEN': 'test-only'}, clear=True), \
@@ -167,12 +176,14 @@ class EvidenceTests(unittest.TestCase):
     def test_public_github_accepts_anonymous_reads_without_claiming_write_test(self):
         opener = Mock()
         opener.open.return_value = io.BytesIO(b'{"full_name":"f1b0-oss/jjpr-lab","private":false}')
+        self.addCleanup(opener.open.return_value.close)
         output = io.StringIO()
         with patch.dict('os.environ', {}, clear=True), patch('pathlib.Path.exists', return_value=False), \
              patch('urllib.request.build_opener', return_value=opener), \
              patch('subprocess.run', return_value=subprocess.CompletedProcess([], 0, b'', b'')), \
              contextlib.redirect_stdout(output):
             exec(module.probe_source('f1b0-oss/jjpr-lab', public=True), {})
+        self.assertTrue(opener.open.return_value.closed)
         result = json.loads(output.getvalue())
         self.assertEqual(result['direct_api']['outcome'], 'public-read-access')
         self.assertEqual(result['direct_git']['outcome'], 'public-read-access')

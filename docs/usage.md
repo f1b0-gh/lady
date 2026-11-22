@@ -63,7 +63,7 @@ A Python project with a `src/` directory can use `.sandbox/sandbox.ncl`:
   schema_version = 1,
   name = "example-dev",
   sources = { include = ["src"], exclude = [] },
-  tools = { python = { version = "3.12.15" } },
+  tools = { python = { version = "3.12.16" } },
   missions.dev = {
     tools = ["python"], include = [], depends_on = [],
     checks = [["python", "-m", "compileall", "src"]],
@@ -76,8 +76,8 @@ A Python project with a `src/` directory can use `.sandbox/sandbox.ncl`:
 
 Only `.ncl` files beneath the config directory are exposed to the confined
 Nickel evaluator. Absolute host imports, symlink inputs and omitted cache paths
-are refused. Tool versions must exist in the selected recipes. Rust selections
-include 1.98.1 (Cargo 1.98.0) and 1.99.1 (Cargo 1.99.1); adding a tool does not
+are refused. Tool versions must exist in the selected recipes. The current Rust
+selection is 1.99.1 (Cargo 1.99.1); adding a tool does not
 allow downloading its dependencies. See [dependency preparation](dependencies.md).
 
 `lock`, `plan` and `apply` share these options:

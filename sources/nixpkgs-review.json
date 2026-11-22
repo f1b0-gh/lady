@@ -1,0 +1,304 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-11-22T00:18:20.409333+00:00",
+  "scope": "Bounded x86_64-linux review of the Ladyshell Nixpkgs update and scoped native tool recipes; separate from Cargo advisory matching.",
+  "input": {
+    "path": "nix/flake.lock",
+    "sha256": "d4b9b720df16adf1d475f2dfdd43eb0adfc2080b3d7cd721830df694b7c74477",
+    "before_revision": "f20cd90e28fe0403873f473b29e42662cd86e8c4",
+    "after_revision": "e21fec321d73511849707a7585e4ea155ee4bf40",
+    "after_nar_hash": "sha256-ySrWnmZB5UsZTYGHHnBjllT05O5iFjElCRS+mabtfP0="
+  },
+  "catalogue": {
+    "rust": "1.99.1",
+    "node": "24.22.2",
+    "python": [
+      "3.11.18",
+      "3.12.16",
+      "3.13.18",
+      "3.14.10"
+    ],
+    "image_zig": "0.17.0",
+    "upstream_zig": "0.17.1",
+    "selection": "Explicit Rust 1.99.1 image requests retain the official compiler and reconstructed Cargo. Audit tools use the Nixpkgs Rust toolchain. Both native toolchain checks remain. Exact-version refusals remain mandatory.",
+    "migration": "Active examples and native fixtures request the new exact versions. Historical states and synthetic parser/refusal samples remain unchanged; existing receipts require explicit relocking.",
+    "native_cargo": "1.99.0",
+    "official_image_cargo": "1.99.1"
+  },
+  "native_changes": {
+    "git": {
+      "upstream_version": "2.56.0",
+      "effective_version": "2.56.1",
+      "advisory": "GHSA-vp2w-7xxj-jvxr",
+      "source": "https://www.kernel.org/pub/software/scm/git/git-2.56.1.tar.xz",
+      "sha256": "f0b0bf89264b9bd2e1c640363e7529643989da76281600473c50745cd34a607f",
+      "publisher_checksum_source": "https://www.kernel.org/pub/software/scm/git/sha256sums.asc",
+      "publisher_checksum_response_sha256": "c5c22f0619d05131352a6a58038c0cb96911b16695ae897c68443f310782424b",
+      "verification": "Downloaded archive matches publisher SHA-256 over HTTPS; detached signature verification is not claimed.",
+      "owner": "f1b0-gh",
+      "review_by": "2026-12-07",
+      "retirement_condition": "Pinned upstream Git includes the fix and passes minimal-Git and TLS checks.",
+      "maintenance_cost": "Maintain one scoped version/source override while preserving upstream recipe patches/options and rerun Git/TLS qualification."
+    },
+    "openssl": {
+      "effective_version_before": "3.5.9",
+      "effective_version_after": "3.5.9",
+      "source_sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a",
+      "local_recipe_sha256": "e4730bf64dcff430265e48d2d1ee0ee3a26adec3a9c30b6a3e1aac7769410cce",
+      "source_comparison": "The scoped archive and local recipe are unchanged. Upstream use-etc-ssl-certs.patch adds a default Nix-profile CA bundle fallback only if the system bundle is absent (ENOENT); other upstream patch bytes match. This is an effective patch/closure change, not identical complete package source.",
+      "open_findings": [
+        "CVE-2026-107496",
+        "CVE-2026-88822",
+        "CVE-2026-88823",
+        "CVE-2026-95691",
+        "CVE-2026-95692",
+        "CVE-2026-107493",
+        "CVE-2026-124709",
+        "CVE-2026-35190"
+      ],
+      "vendor_severity": "Low",
+      "fixed_release": "3.5.10",
+      "scheduled_release": "2026-12-01",
+      "owner": "f1b0-gh",
+      "review_by": "2026-12-01",
+      "action": "Recheck the scheduled fixed release and qualify the scoped update; retained findings are not waived.",
+      "consumer_limitations": "Scoped consumers include curl/Git/Cargo and TPM tools. Current TLS checks cover synthetic trusted/untrusted certificates and wrong hostnames, not the affected QUIC, CMS, AES-GCM-SIV, Suite-B or caller-supplied PEM stack paths. Reachability is not established."
+    },
+    "tpm2_tss": {
+      "effective_version_before": "4.2.1",
+      "effective_version_after": "4.2.1",
+      "assessment": "Current upstream advisory GHSA-h664-qxhh-gx3w lists 4.2.1 as fixed. Transport/platform coverage remains bounded by explicit native tests."
+    },
+    "ladybugdb": {
+      "version": "0.17.1",
+      "assessment": "Upstream archive hash unchanged; new upstream Thrift cstdint include patch overlaps the retained local include adjustment. The CI CLI remains the existing hash-pinned official binary. No engine build is part of this update."
+    },
+    "other_changes": {
+      "bubblewrap": [
+        "0.12.0",
+        "0.13.1"
+      ],
+      "util_linux": [
+        "2.42.3",
+        "2.42.4"
+      ],
+      "uv": [
+        "0.13.0",
+        "0.13.7"
+      ],
+      "cmake": [
+        "4.4.3",
+        "4.4.4"
+      ]
+    }
+  },
+  "advisory_sources": [
+    {
+      "repository": "openssl/openssl",
+      "source": "https://api.github.com/repos/openssl/openssl/security-advisories?per_page=100",
+      "checked_at": "2026-11-22T00:01:49.041891+00:00",
+      "response_sha256": "cf1cbb66a638b4860a516671fb74850e6ccf787fe6c4c8d29e9c04efe880bd05",
+      "published_advisory_count": 0
+    },
+    {
+      "repository": "curl/curl",
+      "source": "https://api.github.com/repos/curl/curl/security-advisories?per_page=100",
+      "checked_at": "2026-11-22T00:01:49.120157+00:00",
+      "response_sha256": "cf1cbb66a638b4860a516671fb74850e6ccf787fe6c4c8d29e9c04efe880bd05",
+      "published_advisory_count": 0
+    },
+    {
+      "repository": "tpm2-software/tpm2-tss",
+      "source": "https://api.github.com/repos/tpm2-software/tpm2-tss/security-advisories?per_page=100",
+      "checked_at": "2026-11-22T00:01:49.328507+00:00",
+      "response_sha256": "49a78663d7e8f94d554fa1e993b0be32c2b08280beb029bbf9f7fb5edb84c49d",
+      "published_advisory_count": 14
+    },
+    {
+      "repository": "containers/bubblewrap",
+      "source": "https://api.github.com/repos/containers/bubblewrap/security-advisories?per_page=100",
+      "checked_at": "2026-11-22T00:01:49.202366+00:00",
+      "response_sha256": "6479b2ebca4d616eb0d56a83af825b13af927bdd813be28e78407745d092cb7e",
+      "published_advisory_count": 3
+    },
+    {
+      "repository": "git/git",
+      "source": "https://api.github.com/repos/git/git/security-advisories?per_page=100",
+      "checked_at": "2026-11-22T00:01:49.795601+00:00",
+      "response_sha256": "d3f8d5531ddc73e43e51309a5c655cb3cc6a6990a7705612bbad601721f441eb",
+      "published_advisory_count": 33
+    },
+    {
+      "repository": "nodejs/node",
+      "source": "https://api.github.com/repos/nodejs/node/security-advisories?per_page=100",
+      "checked_at": "2026-11-22T00:01:49.703903+00:00",
+      "response_sha256": "cf1cbb66a638b4860a516671fb74850e6ccf787fe6c4c8d29e9c04efe880bd05",
+      "published_advisory_count": 0
+    },
+    {
+      "repository": "python/cpython",
+      "source": "https://api.github.com/repos/python/cpython/security-advisories?per_page=100",
+      "checked_at": "2026-11-22T00:01:49.737789+00:00",
+      "response_sha256": "cf1cbb66a638b4860a516671fb74850e6ccf787fe6c4c8d29e9c04efe880bd05",
+      "published_advisory_count": 0
+    },
+    {
+      "repository": "rust-lang/rust",
+      "source": "https://api.github.com/repos/rust-lang/rust/security-advisories?per_page=100",
+      "checked_at": "2026-11-22T00:01:50.102395+00:00",
+      "response_sha256": "33343ff690c5b15da500e0d132c2cbf755ea88576dbc737a8b0c7904f375ecce",
+      "published_advisory_count": 6
+    },
+    {
+      "repository": "stefanberger/libtpms",
+      "source": "https://api.github.com/repos/stefanberger/libtpms/security-advisories?per_page=100",
+      "checked_at": "2026-11-22T00:01:50.343309+00:00",
+      "response_sha256": "e43b5c034a28fd0e0cc7ddcfb7b2bd8bdc7fcf17a09814cfe42089df0e30b144",
+      "published_advisory_count": 4
+    },
+    {
+      "repository": "stefanberger/swtpm",
+      "source": "https://api.github.com/repos/stefanberger/swtpm/security-advisories?per_page=100",
+      "checked_at": "2026-11-22T00:01:50.425256+00:00",
+      "response_sha256": "97f8b953c808006c06ea13320403b1308443ea6af93f0f90d8b8a1ba5a1456f2",
+      "published_advisory_count": 1
+    },
+    {
+      "repository": "libssh2/libssh2",
+      "source": "https://api.github.com/repos/libssh2/libssh2/security-advisories?per_page=100",
+      "checked_at": "2026-11-22T00:01:50.265784+00:00",
+      "response_sha256": "cf1cbb66a638b4860a516671fb74850e6ccf787fe6c4c8d29e9c04efe880bd05",
+      "published_advisory_count": 0
+    },
+    {
+      "repository": "ngtcp2/ngtcp2",
+      "source": "https://api.github.com/repos/ngtcp2/ngtcp2/security-advisories?per_page=100",
+      "checked_at": "2026-11-22T00:01:50.671565+00:00",
+      "response_sha256": "5f252557037770759623d6ed7db6386a070b0a1e2ef1ee472afcdb26b8a212ca",
+      "published_advisory_count": 2
+    },
+    {
+      "source": "https://openssl-library.org/news/secadv/20261110.txt",
+      "checked_at": "2026-11-22T00:16:01.005075+00:00",
+      "response_sha256": "31f4c88950cd9cd310794a218361b787d293a940d2568f9f82334915ac54a402"
+    },
+    {
+      "source": "https://openssl-library.org/news/secadv/20261117.txt",
+      "checked_at": "2026-11-22T00:16:01.397983+00:00",
+      "response_sha256": "6f4219cd823c3472863cc592182ef571d7485ac2f8735845244dbc13e3e09f27"
+    },
+    {
+      "source": "https://nodejs.org/en/blog/vulnerability/october-2026-security-releases",
+      "checked_at": "2026-11-22T00:16:01.533988+00:00",
+      "response_sha256": "6dd382fd48d799ea5251e1c48b626cbdb0318d094f550bf7834546653e7e267c"
+    },
+    {
+      "source": "https://blog.python.org/2026/10/python-3152-31410-31318-31216-31118/",
+      "checked_at": "2026-11-22T00:16:01.752616+00:00",
+      "response_sha256": "2face3ff0211c5d8201651c02a9a56bc4f667237919fcdd342127ab31b9dda37"
+    },
+    {
+      "source": "https://curl.se/docs/vuln.json",
+      "response_sha256": "795ea0649e403352860ece7d758e3f8423f6f15ba9b78284c496b60e482f1ffc",
+      "assessment": "No explicit affected-version entry for 8.23.0 in the 239 returned records; version matching is not complete exploitability analysis."
+    }
+  ],
+  "qualification": {
+    "nix_evaluation": {
+      "packages": 11,
+      "checks": 13,
+      "builds_performed": false,
+      "result": "passed"
+    },
+    "image_regression": {
+      "command": "cargo test --locked -p ladyshell-cli --test audit_image",
+      "passed": 14,
+      "failed": 0,
+      "includes": "Real Nix development/audit image evaluation and unavailable Rust version refusal"
+    },
+    "format": {
+      "command": "cargo fmt --all --check",
+      "result": "passed"
+    },
+    "native_git_tls": {
+      "result": "passed",
+      "completed_at": "2026-11-22T01:29:14.859728+00:00",
+      "command": "nix --extra-experimental-features 'nix-command flakes' build --no-link --no-write-lock-file --max-jobs 2 --cores 2 path:./nix#checks.x86_64-linux.minimal-git path:./nix#checks.x86_64-linux.network-tools-tls",
+      "exit_code": 0,
+      "checks": {
+        "minimal-git": {
+          "derivation": "/nix/store/ph5i0d7dhbfbh266plj40fg33gw6slfs-ladyshell-minimal-git.drv",
+          "output": "/nix/store/9mlgpxd7x83cxddmwdgkyfl9sndc9c62-ladyshell-minimal-git"
+        },
+        "network-tools-tls": {
+          "derivation": "/nix/store/v6h7x6w531l4iwfpsg920g3bndizabi0-ladyshell-network-tools-tls.drv",
+          "output": "/nix/store/h8q1pbbzn63ri8d1a7linbhfsm2wf8z8-ladyshell-network-tools-tls"
+        }
+      },
+      "git_upstream_suite": {
+        "result": "passed",
+        "files": 1043,
+        "tests": 29808,
+        "wallclock_seconds": 1803,
+        "log_sha256": "6bfed4a2370b7ee2f5a6d38d8cb408099f54989da842b2461da169f2c2ca1a15"
+      },
+      "git_operations": {
+        "schema_version": 1,
+        "git_version": "2.56.1",
+        "operations": [
+          "init",
+          "commit",
+          "diff",
+          "branch",
+          "merge",
+          "clone",
+          "fetch"
+        ],
+        "status": "passed"
+      },
+      "git_operations_sha256": "d7b841c9d89724f7c6e110d25372a1a3f7cd8132dab128f85c6aa6654466fc70",
+      "tls_results_sha256": "deedbd4e7ae244189a97a69c54f0e4ce04333a0d92221cf60b408d7d707bcf9c",
+      "build_log_sha256": "0dc8754c1db70eb65120d72ec6f4facd588add4b386880a8a3197b818e7cfad9",
+      "scope": "Synthetic Git operations and Git/curl TLS success, untrusted-CA and hostname refusal with exact native library linkage; no Cargo TLS, SSH, TPM hardware, Docker or complete closure advisory clearance.",
+      "tls_cases": [
+        {
+          "tool": "curl",
+          "case": "trusted",
+          "exit": 0
+        },
+        {
+          "tool": "git",
+          "case": "trusted",
+          "exit": 0
+        },
+        {
+          "tool": "curl",
+          "case": "wrong-ca",
+          "exit": 60
+        },
+        {
+          "tool": "git",
+          "case": "wrong-ca",
+          "exit": 128
+        },
+        {
+          "tool": "curl",
+          "case": "wrong-name",
+          "exit": 60
+        },
+        {
+          "tool": "git",
+          "case": "wrong-name",
+          "exit": 128
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "Empty GitHub repository advisory lists do not establish absence of vulnerabilities; vendor advisories are retained separately.",
+    "The review does not establish complete Nix closure advisory coverage, cross-platform coverage, affected-path exploitability, or a clean security status.",
+    "Existing Cargo findings, native coverage gaps and exact-version alignment policy are unchanged; no baseline or exception was refreshed.",
+    "Full workspace CI must qualify the final rebased source; focused local tests do not replace it.",
+    "No native LadybugDB engine, Docker image, VM or hardware TPM qualification is claimed by this update."
+  ]
+}

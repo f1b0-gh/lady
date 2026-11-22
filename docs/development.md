@@ -69,7 +69,12 @@ nix --extra-experimental-features 'nix-command flakes' build \
 Run confinement-dependent tests on a Linux host that supports their namespaces.
 Do not bypass confinement when a restricted development environment refuses it.
 Missing native prerequisites are failures or explicit qualification gaps, never
-proof that a deployment works. Ignored tests for LadybugDB, images, OpenShell,
+proof that a deployment works. The current catalogue selects Rust 1.99.1,
+Node 24.22.2 and Python 3.11.18, 3.12.16, 3.13.18 or 3.14.10. Explicit Rust
+1.99.1 image requests select the pinned official compiler and reconstructed
+Cargo even when Nixpkgs supplies the same version. Exact matching remains
+mandatory; old requests require explicit configuration migration and relocking.
+Retain historical plans, locks and receipts unchanged. Ignored tests for LadybugDB, images, OpenShell,
 Jujutsu and VMs have separate commands in the relevant guides. Build outputs,
 state, exports and credentials stay outside published sources.
 

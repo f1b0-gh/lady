@@ -40,7 +40,7 @@ fn nix_vendoring_coexists_with_legacy_cargo_aliases_without_running_project_code
         &BTreeMap::from([(
             "rust".into(),
             Tool {
-                version: "1.98.1".into(),
+                version: "1.99.1".into(),
                 phase: "runtime".into(),
             },
         )]),

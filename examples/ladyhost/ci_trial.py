@@ -82,7 +82,7 @@ def prepare(args):
     expected=snapshots(before,workflow)
     save(root/'inputs.json',{'base':base,'files':before,'workflow_sha256':hashlib.sha256(workflow).hexdigest(),'model_runs':0})
     inputs=root/'configuration';inputs.mkdir()
-    (inputs/'config.ncl').write_text('{ schema_version = 1, name = "jjpr-ci-trial", sources = { include = '+json.dumps(sorted(before))+', exclude = [] }, tools = { python = { version = "3.12.15" } }, missions.dev = { tools = ["python"], include = [], depends_on = [], checks = [] }, sandbox = { gateway = "openshell", workspace = "default", provider = "ladyshell-lo-native" } }\n')
+    (inputs/'config.ncl').write_text('{ schema_version = 1, name = "jjpr-ci-trial", sources = { include = '+json.dumps(sorted(before))+', exclude = [] }, tools = { python = { version = "3.12.16" } }, missions.dev = { tools = ["python"], include = [], depends_on = [], checks = [] }, sandbox = { gateway = "openshell", workspace = "default", provider = "ladyshell-lo-native" } }\n')
     common=['--config',inputs/'config.ncl','--lock',inputs/'environment.lock.json','--resources',campaign/'resources',
             '--codex',recorded['codex']['path'],'--codex-code-mode-host',recorded['codex_code_mode_host']['path'],'--mission','dev']
     task=root/'native-task';state=task/'state';results=[]

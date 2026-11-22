@@ -17,7 +17,7 @@ fn evaluated() -> Result<Evaluated, Box<dyn Error>> {
         "config": {
             "schema_version": 1, "name": "audit-fixture", "mission": "dev",
             "sources": {"include": ["src", "Cargo.toml"], "exclude": []},
-            "tools": {"rust": {"version": "1.98.1", "phase": "runtime"}},
+            "tools": {"rust": {"version": "1.99.1", "phase": "runtime"}},
             "checks": [], "resolved_missions": ["dev"],
             "sandbox": {"gateway": "test", "workspace": "default", "provider": "test"},
             "permissions": {"network": [], "filesystem": []},
@@ -396,7 +396,7 @@ fn builder_receives_frozen_complete_sources_union_tools_and_target_runtime(
     let desired = &mut current["desired_inputs"];
     desired["sources"] = json!({"old-applied-snapshot": {"sha256": "different"}});
     desired["evaluated"]["config"]["audit"]["tools"]["node"] =
-        json!({"version": "24.21.0", "phase": "runtime"});
+        json!({"version": "24.22.2", "phase": "runtime"});
     let evaluated: Evaluated = serde_json::from_value(desired["evaluated"].clone())?;
     let expected =
         ladyshell::sources::snapshot(&dir.path().join("project"), &evaluated.config.sources, None)?;
@@ -446,8 +446,8 @@ fn builder_receives_frozen_complete_sources_union_tools_and_target_runtime(
     );
     assert!(!capture.join("runtime/ladyshell").exists());
     let config: Value = serde_json::from_slice(&fs::read(capture.join("config.json"))?)?;
-    assert_eq!(config["tools"]["rust"]["version"], "1.98.1");
-    assert_eq!(config["tools"]["node"]["version"], "24.21.0");
+    assert_eq!(config["tools"]["rust"]["version"], "1.99.1");
+    assert_eq!(config["tools"]["node"]["version"], "24.22.2");
     let argv = fs::read_to_string(capture.join("argv"))?;
     assert!(argv.contains("--no-write-lock-file\n"));
     assert!(!argv.contains("\nruntimePath\n"));
@@ -470,7 +470,7 @@ fn native_nix_evaluation_preserves_image_identity_and_refuses_wrong_toolchain(
     let config = dir.path().join("config.json");
     fs::write(
         &config,
-        br#"{"tools":{"rust":{"version":"1.98.1"},"node":{"version":"24.21.0"}}}"#,
+        br#"{"name":"catalogue-fixture","tools":{"rust":{"version":"1.99.1"},"node":{"version":"24.22.2"}}}"#,
     )?;
     let codex = dir.path().join("codex");
     fs::write(&codex, b"\x7fELFfixture")?;
@@ -494,7 +494,16 @@ fn native_nix_evaluation_preserves_image_identity_and_refuses_wrong_toolchain(
     runtimeSourcePath = builtins.toPath runtime;
     imageName = "ladyshell-audit-test";
   };
+  development = flake.lib.mkImage {
+    configPath = builtins.toPath config;
+    sourcePath = builtins.toPath source;
+    codexPath = builtins.toPath codex;
+    codexHostPath = builtins.toPath codex;
+    runtimePath = builtins.toPath codex;
+    auditPath = builtins.toPath (root + "/resources/audit");
+  };
 in { inherit (built) config;
+  developmentArchive = toString development;
   archive = toString built.archive;
   runtime = toString built.runtime;
   codex = toString built.codex;
@@ -539,6 +548,10 @@ in { inherit (built) config;
     assert_eq!(value["config"]["User"], "10001:10001");
     assert_eq!(value["config"]["WorkingDir"], "/workspace");
     assert_eq!(value["config"]["Cmd"], json!(["/bin/sleep", "infinity"]));
+    assert!(value["developmentArchive"]
+        .as_str()
+        .ok_or("development archive")?
+        .contains("ladyshell-catalogue-fixture"));
     assert!(value["runtime"]
         .as_str()
         .ok_or("runtime")?

@@ -6,7 +6,7 @@
   sources = { include = ["README.md", "src"], exclude = ["generated"] },
   tools = {
     zig = { version = "0.17.0", phase = "runtime" },
-    node = { version = "24.21.0", phase = "runtime" },
+    node = { version = "24.22.2", phase = "runtime" },
   },
   missions = {
     dev = {

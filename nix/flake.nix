@@ -51,8 +51,12 @@
       '';
     };
     imageRust199 = networkTools.rust199Image rust199;
+    nativeRustPackages = [ pkgs.rustc networkTools.cargo networkTools.rustfmt pkgs.clippy ];
     rustToolchains = {
-      "${pkgs.rustc.version}" = [ pkgs.rustc networkTools.cargo networkTools.rustfmt pkgs.clippy ];
+      "${pkgs.rustc.version}" = nativeRustPackages;
+    } // {
+      # Keep the explicit compiler archives and reconstructed Cargo selected
+      # when the Nixpkgs compiler reaches the same version.
       "1.99.1" = imageRust199.packages;
     };
   in {
@@ -109,11 +113,12 @@
       network-tools-tls = import ./tests/network-tools-tls.nix {
         inherit pkgs networkTools openssl;
       };
-      network-rust198 = import ./tests/network-rust-tools.nix {
+      network-rust-native = import ./tests/network-rust-tools.nix {
         inherit pkgs networkTools openssl;
-        rustPackages = rustToolchains.${pkgs.rustc.version};
+        rustPackages = nativeRustPackages;
         rustVersion = pkgs.rustc.version;
-        cargoVersion = "1.98.0";
+        # Nixpkgs metadata follows rustc; the Cargo executable reports 1.99.0.
+        cargoVersion = "1.99.0";
       };
       network-rust199 = import ./tests/network-rust-tools.nix {
         inherit pkgs networkTools openssl;
@@ -121,7 +126,7 @@
         rustVersion = "1.99.1";
         cargoVersion = "1.99.1";
       };
-      network-cargo198-tls = import ./tests/network-tools-tls.nix {
+      network-cargo-native-tls = import ./tests/network-tools-tls.nix {
         inherit pkgs networkTools openssl;
         cargo = networkTools.cargo;
       };
@@ -132,7 +137,7 @@
       network-rust-curl-closure = import ./tests/network-curl-closure.nix {
         inherit pkgs;
         inherit (networkTools) curl;
-        roots = rustToolchains.${pkgs.rustc.version} ++ imageRust199.packages;
+        roots = nativeRustPackages ++ imageRust199.packages;
       };
       tpm2-tss = import ./tests/tpm2-tss.nix { inherit pkgs tpm2Tss openssl; };
       tpm-openssl-closure = import ./tests/tpm-openssl-closure.nix {
