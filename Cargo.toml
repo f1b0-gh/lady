@@ -54,8 +54,9 @@ anyhow = "=1.0.104"
 serde = "=1.0.229"
 serde_json = "=1.0.154"
 
-# Existing validator requirements, shared without changing resolved versions.
-unicode-normalization = "=0.1.25"
+# Keep the standalone Unicode table selection in Cargo.lock. Embedding hosts
+# may select a compatible patch; their lock and validator tests own that choice.
+unicode-normalization = "0.1.25"
 ryu-js = "1.0"
 
 ladybom = { version = "=0.1.0", path = "crates/ladybom", default-features = false }
