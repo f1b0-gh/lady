@@ -1,6 +1,8 @@
 //! Bounded process helpers retaining Ladyshell's typed application errors.
 use crate::error::Result;
+mod stream;
 use std::{io, os::unix::process::CommandExt, process::Command, time::Duration};
+pub use stream::capture_to_file;
 pub fn capture(command: Command, timeout: Duration, limit: usize) -> Result<Vec<u8>> {
     nickel_util::process::capture(command, timeout, limit).map_err(Into::into)
 }

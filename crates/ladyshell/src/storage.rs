@@ -9,6 +9,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+pub mod export;
 mod journal;
 pub use journal::{prepare, remove, Driver};
 mod mounts;

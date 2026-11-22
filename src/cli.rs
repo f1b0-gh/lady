@@ -120,6 +120,8 @@ pub enum Command {
     #[command(hide = true)]
     BrokerStorageProbe,
     #[command(hide = true)]
+    BrokerExport,
+    #[command(hide = true)]
     SnapshotList(Worker),
     #[command(hide = true)]
     SnapshotPreview(Worker),

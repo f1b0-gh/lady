@@ -148,3 +148,49 @@ This qualification exercises real mount enforcement. It does not execute the LO
 broker, qualify LO policy admission, or replace the remaining ordinary lifecycle
 and retained-receiver integration tests. Python is a test probe, not an SDK or
 production controller.
+
+## Sealed storage exports
+
+`storage::export::worker` streams a bounded tar archive from the three fixed
+broker mounts. The hidden `ladyshell broker-export` entry reads a strict JSON
+`storage::export::Request` from stdin (at most 16,384 bytes) and emits only binary
+archive bytes on stdout. The request includes format 1, a 64-character lowercase
+hexadecimal correlation token, and the original storage profile. The worker
+rechecks the measured tmpfs caps and the denial of writes outside those mounts.
+
+The host must first fence retained receivers and incoming uploads, then seal the
+LO broker generation. The exporter requires the sealed `.lifecycle` directory
+and absence of its `open` directory. It takes an independent exclusive lock on the
+original control directory for the entire snapshot. An active broker writer,
+missing lifecycle metadata or a substituted marker refuses export. This requires
+a worker image with the LO Initialize/Seal protocol; old images cannot provide
+this capability.
+
+Exports preserve empty directories, incomplete dispatch files, installed packages
+and incoming bytes. Reads are descriptor-relative and refuse symlinks, hard-linked
+files, special files and different filesystem devices. Per-scope inode and logical
+byte budgets are checked during traversal; sparse files cannot expand beyond the
+configured byte budget. Paths use printable ASCII components of at most 100 bytes,
+with at most 32 components and 255 bytes overall. Unsupported names refuse the
+export instead of silently dropping recovery evidence.
+
+`storage::export::verify` consumes the complete archive without extracting it.
+It checks the original request, canonical ustar headers, parent directories,
+component-wise lexical order, separate scope budgets and both end blocks. It
+rejects trailing bytes, including extra zero padding. Its receipt hashes all wire
+bytes and records the entry count. `Request::max_bytes` bounds capture space;
+host disk admission and transport deadlines remain separate requirements.
+
+A successful worker exit and valid archive are both required. The host must
+verify the original runtime before and after export, fsync and publish the host
+copy outside the deletion scope, then retain its receipt before any deletion.
+`storage::export::capture` streams a trusted host command into a fresh private
+file, requires successful client exit, verifies the complete archive and fsyncs
+the bytes. It bounds stderr and stdout independently and refuses incomplete pipes
+held by client descendants. Partial output remains on failure. Local filesystem
+I/O is still subject to host scheduling. The caller must authenticate and recheck
+the runtime, publish the copy and receipt durably, and retain the lifecycle lease.
+These primitives do not yet implement that publication or ordinary broker
+deletion. The native destroy guard continues to refuse broker states. No export
+receipt grants lifecycle authority, establishes LO task retirement or permits a
+sealed generation to resume execution.
