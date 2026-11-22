@@ -308,7 +308,9 @@ pub fn freeze_resources(desired: &Value, destination: &Path) -> Result<Value> {
             !name.starts_with("runtime-source/"),
             "CS audit-runtime replacement needs a separate resource profile"
         );
-        let path = if name.starts_with("resources/") {
+        let path = if name.starts_with("resources/")
+            || name.starts_with("crates/ladyshell/resources/audit/")
+        {
             name.clone()
         } else {
             format!("nix/{name}")

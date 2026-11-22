@@ -99,12 +99,28 @@ report admission against packaged core source. Native LadybugDB, live services
 and native artifact collectors have separate qualification paths.
 
 Review the package set, dependency findings, and core/graph/CLI version pins
-before release. With explicit approval, publish `ladybom` first, then
-`ladybom-graph`, then `ladybom-cli`, waiting for each dependency to become
-available before publishing its consumer. Verify a locked CLI installation
-against the registry after publication. Version and tag Ladybom releases
-independently of Ladyshell, Ladyboot and Ladyhost. The CLI guide's source
-installation works before a registry release.
+before release. The additional workspace archive gate checks all seven archives,
+builds and tests Ladyshell, Ladyboot and Ladyhost outside the checkout, and runs
+safe binary smoke checks with an empty home and PATH:
+
+```sh
+python3 tests/check_workspace_packages.py
+```
+
+With publication authorization, publish `ladybom` before `ladybom-graph` and
+`ladyshell`, `ladybom-graph` before `ladybom-cli`, and `ladyshell` before
+`ladyshell-cli`. `ladyboot` and `ladyhost` depend only on already published
+registry crates. Wait for each prerequisite to appear in crates.io before
+publishing its consumers. Review exact archive contents and checksums, and
+verify locked registry installations afterward, including Ladybom's default
+and `--no-default-features` configurations. Use release tags `ladybom-vVERSION`,
+`ladyshell-vVERSION`, `ladyboot-vVERSION` and `ladyhost-vVERSION` so components
+can advance independently.
+
+Cargo installs executables, not the operator's trusted recipe directory.
+Ladyshell and Ladyboot still require their documented native prerequisites and
+explicit version-matched resources. Publication does not qualify a live
+OpenShell deployment, OS image lifecycle, or GitHub App installation.
 
 ## Known dependency findings
 

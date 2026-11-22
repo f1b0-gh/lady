@@ -4,6 +4,9 @@ name = "ladyboot"
 version = "0.1.0"
 edition = "2021"
 default-run = "ladyboot"
+description = "Build and inspect bootc operating-system artifacts from explicit profiles and pinned recipes"
+repository = "https://github.com/f1b0-gh/lady"
+readme = "README.md"
 
 [dependencies]
 nickel-util.workspace = true

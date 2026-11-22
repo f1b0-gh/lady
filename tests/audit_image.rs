@@ -51,10 +51,13 @@ fn resources(root: &Path) -> Result<(), Box<dyn Error>> {
         ),
         ("crates/helper/src/lib.rs", "pub fn helper() {}\n"),
         (
-            "resources/audit/security-audit/SKILL.md",
+            "crates/ladyshell/resources/audit/security-audit/SKILL.md",
             "Fixture instructions\n",
         ),
-        ("resources/audit/agent-response-schema.json", "{}\n"),
+        (
+            "crates/ladyshell/resources/audit/agent-response-schema.json",
+            "{}\n",
+        ),
         ("nix/flake.nix", "{}\n"),
         ("nix/flake.lock", "{}\n"),
         ("nix/build.nix", "{}\n"),
@@ -101,8 +104,8 @@ fn audit_lock_binds_target_runtime_sources_and_audit_recipes() -> Result<(), Box
             "crates/helper/src/lib.rs",
         ),
         (
-            "runtime-source/resources/audit/agent-response-schema.json",
-            "resources/audit/agent-response-schema.json",
+            "runtime-source/crates/ladyshell/resources/audit/agent-response-schema.json",
+            "crates/ladyshell/resources/audit/agent-response-schema.json",
         ),
     ] {
         assert_eq!(
@@ -500,7 +503,7 @@ fn native_nix_evaluation_preserves_image_identity_and_refuses_wrong_toolchain(
     codexPath = builtins.toPath codex;
     codexHostPath = builtins.toPath codex;
     runtimePath = builtins.toPath codex;
-    auditPath = builtins.toPath (root + "/resources/audit");
+    auditPath = builtins.toPath (root + "/crates/ladyshell/resources/audit");
   };
 in { inherit (built) config;
   developmentArchive = toString development;

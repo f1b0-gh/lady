@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2024"
 license = "Apache-2.0"
 description = "Host-owned GitHub setup, signed jj publication and reviewed integration"
-publish = false
+repository = "https://github.com/f1b0-gh/lady"
+readme = "README.md"
 default-run = "ladyhost"
 autobins = false
 

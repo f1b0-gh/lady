@@ -29,10 +29,8 @@ Nickel, Nix, OpenShell or a model provider. Cargo's first build may download
 packages; scanning itself does not access the network or execute project code.
 
 ```sh
-git clone https://github.com/f1b0-gh/lady.git
-cd lady
-cargo build -p ladybom-cli --locked
-./target/debug/ladybom scan --project /absolute/path/to/project --json
+cargo install ladybom-cli --version 0.1.0 --locked
+ladybom scan --project /absolute/path/to/project --json
 ```
 
 For the minimal build or a local Cargo installation, see the
@@ -41,7 +39,7 @@ For the minimal build or a local Cargo installation, see the
 For a CycloneDX SBOM, write outside the scanned project:
 
 ```sh
-./target/debug/ladybom scan --project /absolute/path/to/project \
+ladybom scan --project /absolute/path/to/project \
   --cyclonedx > /absolute/path/outside-project/bom.cdx.json
 ```
 
@@ -72,6 +70,8 @@ permission.
 ## Build and contribute
 
 ```sh
+git clone https://github.com/f1b0-gh/lady.git
+cd lady
 cargo build --workspace --locked
 ```
 

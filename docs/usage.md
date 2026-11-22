@@ -43,9 +43,13 @@ ladyshell help apply
 ```
 
 `--resources` selects trusted distribution inputs, normally the Lady root.
-Keep `config/`, `nix/` and `resources/audit/` together. Native auditing also
+Keep `config/`, `nix/` and `crates/ladyshell/resources/audit/` together. Native auditing also
 requires the runtime workspace sources, manifests, license and `Cargo.lock`.
 Installing the CLI alone does not install this complete resource tree.
+The audit bundle now resides inside the Ladyshell crate. Upgrading an older
+resource tree changes its recorded paths: run `lock → plan → apply` explicitly
+with the selected new resources. Existing receipts and retained states are not
+automatically migrated; preserve the old resource tree for their reproduction.
 `lock` resolves the prepared evaluator offline; it does not build the evaluator
 or an image automatically. Refused isolation never falls back to host execution.
 

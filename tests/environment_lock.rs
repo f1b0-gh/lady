@@ -60,7 +60,7 @@ fn audit_distribution_is_part_of_the_environment_lock() -> Result<(), Box<dyn st
         &artifact,
         &artifact,
     )?;
-    let key = "resources/audit/security-audit/SKILL.md";
+    let key = "crates/ladyshell/resources/audit/security-audit/SKILL.md";
     assert_eq!(
         receipt.recipes_sha256.get(key),
         Some(&ladyshell::files::hash(&fs::read(root.join(key))?))
@@ -78,7 +78,7 @@ fn dependency_recipe_changes_require_a_new_explicit_lock() -> Result<(), Box<dyn
     ladyshell::sources::snapshot(
         root,
         &ladyshell::config::Sources {
-            include: vec!["nix".into(), "resources/audit".into()],
+            include: vec!["nix".into(), "crates/ladyshell/resources/audit".into()],
             exclude: vec![],
         },
         Some(&resources),

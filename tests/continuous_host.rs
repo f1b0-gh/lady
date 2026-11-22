@@ -254,6 +254,39 @@ fn retained_build_resources_refuse_recipe_drift_and_remain_independent(
     assert!(ladyshell::continuous::native::freeze_resources(&desired, &frozen).is_err());
     Ok(())
 }
+#[test]
+fn retained_audit_resources_preserve_paths_and_refuse_changed_content(
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    use std::os::unix::fs::PermissionsExt;
+    for path in [
+        "resources/audit/security-audit/SKILL.md",
+        "crates/ladyshell/resources/audit/security-audit/SKILL.md",
+    ] {
+        let tmp = tempfile::tempdir()?;
+        fs::set_permissions(tmp.path(), fs::Permissions::from_mode(0o700))?;
+        let resources = tmp.path().join("resources");
+        let asset = resources.join(path);
+        fs::create_dir_all(asset.parent().ok_or("asset parent")?)?;
+        fs::write(&asset, b"trusted audit method")?;
+        let desired = json!({"resources":resources,"environment_lock":{"recipes_sha256":{
+            path: ladyshell::files::hash(b"trusted audit method")
+        }}});
+        let frozen = tmp.path().join("frozen");
+        ladyshell::continuous::native::freeze_resources(&desired, &frozen)?;
+        assert_eq!(fs::read(frozen.join(path))?, b"trusted audit method");
+        fs::write(&asset, b"changed audit method")?;
+        assert!(ladyshell::continuous::native::freeze_resources(
+            &desired,
+            &tmp.path().join("changed")
+        )
+        .is_err());
+        assert!(!tmp.path().join("changed").exists());
+        fs::write(frozen.join(path), b"tampered retained method")?;
+        assert!(ladyshell::continuous::native::freeze_resources(&desired, &frozen).is_err());
+    }
+    Ok(())
+}
+
 impl Driver for Replacement {
     fn can_swap_source(&mut self, s: &Value) -> Result<bool> {
         if s["sandbox_id"] == "sandbox" {

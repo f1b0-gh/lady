@@ -13,7 +13,7 @@ let
         rel = pkgs.lib.removePrefix (toString source + "/") (toString path);
         top = builtins.head (pkgs.lib.splitString "/" rel);
       in type != "symlink" &&
-        builtins.elem top [ "Cargo.toml" "Cargo.lock" "LICENSE" "src" "crates" "resources" ] &&
+        builtins.elem top [ "Cargo.toml" "Cargo.lock" "LICENSE" "src" "crates" ] &&
         !(builtins.elem "target" (pkgs.lib.splitString "/" rel));
   };
 in pkgs.rustPlatform.buildRustPackage {
@@ -31,7 +31,7 @@ in pkgs.rustPlatform.buildRustPackage {
     test ! -e $out/bin/ladybom
     test ! -e $out/bin/ladyboot
     mkdir -p $out/share/ladyshell
-    cp -r resources/audit $out/share/ladyshell/audit
+    cp -r crates/ladyshell/resources/audit $out/share/ladyshell/audit
     install -Dm644 LICENSE $out/share/licenses/ladyshell/LICENSE-Apache-2.0
     install -Dm644 crates/ladyshell/src/audit/validator/LICENSE-MIT \
       $out/share/licenses/ladyshell/audit-validator-MIT

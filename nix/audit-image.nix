@@ -49,7 +49,7 @@ let
   };
   sources = builtins.path { path = sourcePath; name = "audit-project-sources"; };
   responseSchema = builtins.path {
-    path = runtimeSourcePath + "/resources/audit/agent-response-schema.json";
+    path = runtimeSourcePath + "/crates/ladyshell/resources/audit/agent-response-schema.json";
     name = "audit-agent-response-schema.json";
   };
   config = {

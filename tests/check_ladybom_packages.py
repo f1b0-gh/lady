@@ -181,7 +181,7 @@ def check_ladyshell(scratch, core):
     shutil.copytree(CRATES / "ladyshell/src", consumer / "src")
     shutil.copyfile(CRATES / "ladyshell/Cargo.toml", consumer / "Cargo.toml")
     shutil.copyfile(CRATES / "ladyshell/tests/ladybom_input.rs", consumer / "tests/ladybom_input.rs")
-    shutil.copytree(ROOT / "resources/audit", workspace / "resources/audit")
+    shutil.copytree(CRATES / "ladyshell/resources", consumer / "resources")
     shutil.copytree(core, crates / "ladybom")
     # Preserve Ladyshell's declarations. Its existing relative path now selects
     # the unmodified archive source inside this disposable test workspace.

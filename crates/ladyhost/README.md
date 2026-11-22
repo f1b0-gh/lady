@@ -2,7 +2,8 @@
 
 Set up GitHub projects and publish/integrate signed Jujutsu candidates from the
 host. Forge tokens, signing keys and repository authority stay outside sandboxes.
-[Ladyshell](../../docs/usage.md) owns sandbox execution and source handoff.
+[Ladyshell](https://github.com/f1b0-gh/lady/blob/main/docs/usage.md) owns sandbox
+execution and source handoff.
 
 The Rust library depends on pinned upstream jjpr; it has no Ladyshell, Nickel,
 LO checkout or direct Clap dependency. Two executables share it:
@@ -15,7 +16,21 @@ Ladyhost is for workflows requiring an App, checks and integration after review.
 
 ## Build and prerequisites
 
-From the Lady repository root:
+Install both executables from crates.io with stable Rust and a C compiler on
+Linux:
+
+```sh
+cargo install ladyhost --version 0.1.0 --locked --bins
+ladyhost help
+ladyhost help init
+```
+
+The package contains the Rust library, both executables, Rust tests, examples
+and license. Installed executables do not need a Lady source checkout. Host
+tools and private configuration remain explicit runtime inputs. Forge HTTPS
+and TLS trust configuration remain owned by the pinned `jjpr` dependency.
+
+To build from a Lady checkout, run from the repository root:
 
 ```sh
 cargo build -p ladyhost --locked --release --bins
@@ -232,6 +247,8 @@ Keep private receipts/App keys until remote cleanup is resolved.
 
 ## Tests and dependency maintenance
 
+From a Lady checkout, run:
+
 ```sh
 cargo test -p ladyhost --all-targets --offline --locked
 cargo clippy -p ladyhost --all-targets --offline --locked -- -D warnings
@@ -239,14 +256,16 @@ python3 -m unittest discover -s examples/ladyhost/scenario
 ```
 
 Tests cover refusals/recovery, App setup, publication journaling,
-signatures/approval/CI and conflict review. [Scenario instructions](../../examples/ladyhost/README.md)
+signatures/approval/CI and conflict review. [Scenario instructions](https://github.com/f1b0-gh/lady/blob/main/examples/ladyhost/README.md)
 separate synthetic tests, native jj and live fixture requirements. Passing them
 does not qualify private plans, new platforms, large projects or unattended merge.
+The Python scenario suite lives in the repository and is not part of the Cargo
+package; the Rust tests are included in the package.
 
 Registry requirements are centralized in the root manifest: jjpr 0.45.1,
 anyhow 1.0.104, serde 1.0.229 and serde_json 1.0.154. Cargo.lock is authoritative.
 Inherited base64/windows-sys splits are maintenance debt, not blanket exceptions.
 Ladyhost maintainers review these contexts with the next jjpr/parent update,
-no later than 2027-02-06. Follow the [dependency policy](../../docs/dependencies.md)
+no later than 2027-02-06. Follow the [dependency policy](https://github.com/f1b0-gh/lady/blob/main/docs/dependencies.md)
 for exact source/version comparisons and fresh all-platform advisory coverage;
 historical publication tests do not provide a current security clearance.
