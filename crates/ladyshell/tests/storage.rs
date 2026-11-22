@@ -194,3 +194,30 @@ fn original_volume_receipt_refuses_replacement_and_weakened_limits(
     assert!(intent.observe(&incomplete).is_err());
     Ok(())
 }
+
+#[test]
+fn published_cleanup_requires_the_original_complete_receipt_set(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = tempfile::tempdir()?;
+    let directory = root.path().join("storage");
+    let mut driver = Volumes::default();
+    let receipts = ladyshell::storage::prepare(
+        &directory,
+        &profile(),
+        &"a".repeat(32),
+        "default",
+        &mut driver,
+    )?;
+    assert!(ladyshell::storage::remove_original(&directory, &receipts[..2], &mut driver).is_err());
+    let mut changed = receipts.clone();
+    changed.swap(0, 1);
+    assert!(ladyshell::storage::remove_original(&directory, &changed, &mut driver).is_err());
+    assert_eq!(driver.deleted, 0);
+    assert_eq!(
+        ladyshell::state::read(&directory.join("storage.json"))?.ok_or("journal")?["deleting"],
+        false
+    );
+    ladyshell::storage::remove_original(&directory, &receipts, &mut driver)?;
+    assert_eq!(driver.deleted, 3);
+    Ok(())
+}

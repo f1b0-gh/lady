@@ -15,14 +15,19 @@ fn docker(args: &[&str]) -> Result<Vec<u8>> {
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local Docker"]
 fn qualified_fixed_image_builds_from_explicit_locked_artifacts() -> Result<()> {
-    qualify(false)
+    qualify(false, false)
 }
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
 fn qualified_broker_provisions_with_original_mounted_caps() -> Result<()> {
-    qualify(true)
+    qualify(true, false)
 }
-fn qualify(provision: bool) -> Result<()> {
+#[test]
+#[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
+fn qualified_broker_destroy_retains_export_at_full_capacity() -> Result<()> {
+    qualify(true, true)
+}
+fn qualify(provision: bool, ordinary_destroy: bool) -> Result<()> {
     let base =
         std::env::var_os("LADYSHELL_BROKER_IMAGE_EVIDENCE").ok_or("evidence directory required")?;
     let worker =
@@ -91,7 +96,11 @@ fn qualify(provision: bool) -> Result<()> {
         result
             .map_err(|error| -> Box<dyn std::error::Error> { Box::new(error) })
             .and_then(|built| {
-                if provision {
+                if ordinary_destroy {
+                    verify_sealed_export(&root, &built, Some(&state))?;
+                    assert!(app::make_broker_plan(&args).is_err());
+                    assert!(app::apply_broker(&args).is_err());
+                } else if provision {
                     verify_recovery(&args, &root, &built)?;
                 }
                 Ok(built)
@@ -124,7 +133,7 @@ fn verify_recovery(args: &BrokerDesired, root: &Path, current: &Value) -> Result
     let planned = app::make_broker_plan(args)?;
     assert_eq!(planned["actions"], json!([]));
     assert_eq!(app::apply_broker(args)?, *current);
-    verify_sealed_export(root, current)?;
+    verify_sealed_export(root, current, None)?;
     let name = ladyshell::state::text(current, "sandbox_name")?;
     let before = serde_json::to_value(ladyshell::continuous::native::Native.observe(current)?)?;
     backend.call(&["sandbox", "stop", name])?;
@@ -162,7 +171,7 @@ fn verify_recovery(args: &BrokerDesired, root: &Path, current: &Value) -> Result
     Ok(())
 }
 
-fn verify_sealed_export(root: &Path, current: &Value) -> Result<()> {
+fn verify_sealed_export(root: &Path, current: &Value, destroy_state: Option<&Path>) -> Result<()> {
     let backend = ladyshell::openshell::Backend::new(&current["context"])?;
     let name = ladyshell::state::text(current, "sandbox_name")?;
     let protocol = ladyshell::state::read(
@@ -208,6 +217,42 @@ fn verify_sealed_export(root: &Path, current: &Value) -> Result<()> {
         )?)?;
     assert_eq!(full[0].available_bytes, 0);
     assert_eq!(full[0].available_inodes, 0);
+    atomic_json(
+        &root.join("full-storage.json"),
+        &json!({"full":full,"byte_failure":byte_failure,"inode_failure":inode_failure}),
+    )?;
+    if let Some(state) = destroy_state {
+        let args = ladyshell::request::Destroy {
+            state: state.to_owned(),
+            discard_work: false,
+        };
+        let result = ladyshell::destroy::run(&args)?;
+        assert_eq!(result["deleted"], true);
+        let receipt: ladyshell::storage::export::Receipt =
+            serde_json::from_value(result["export"]["receipt"].clone())?;
+        let archive = fs::File::open(ladyshell::state::text(&result["export"], "path")?)?;
+        assert_eq!(
+            ladyshell::storage::export::verify(&receipt.request, archive)?,
+            receipt
+        );
+        assert!(backend.sandbox(name)?.is_none());
+        use ladyshell::storage::Driver;
+        let mut docker = ladyshell::storage::PinnedDocker::from_identity(
+            &current["storage"]["backend"]["docker"],
+        )?;
+        let volumes: Vec<ladyshell::storage::Receipt> =
+            serde_json::from_value(current["storage"]["receipts"].clone())?;
+        for volume in &volumes {
+            assert!(docker.observe(&volume.intent().name())?.is_none());
+        }
+        assert_eq!(ladyshell::destroy::run(&args)?, result);
+        atomic_json(
+            &root.join("ordinary-destroy.json"),
+            &json!({"full":full,"byte_failure":byte_failure,
+            "inode_failure":inode_failure,"destroy":result,"original_volumes_absent":true,"retry_idempotent":true}),
+        )?;
+        return Ok(());
+    }
     let token = "f".repeat(64);
     let sealed = ladyshell::process::capture_input(
         command(&[

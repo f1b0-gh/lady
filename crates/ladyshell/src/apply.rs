@@ -105,6 +105,7 @@ struct Operation {
     result: Option<Value>,
 }
 pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -> Result<Value> {
+    crate::destroy::broker::ensure_available(directory)?;
     let state = state::load(directory)?;
     let path = directory.join("operation.json");
     let mut operation = state::read(&path)?

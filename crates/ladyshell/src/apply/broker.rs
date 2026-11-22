@@ -12,7 +12,7 @@ use crate::{
 use serde_json::{json, Value};
 use std::{path::Path, time::Duration};
 
-const BROKER_ARGS: [&str; 5] = [
+pub(crate) const BROKER_ARGS: [&str; 5] = [
     "/usr/local/bin/lo-executor-worker",
     "broker",
     "/var/lib/ladyshell/broker/control",
@@ -102,7 +102,7 @@ pub(super) fn prepare(
     lock.verify_directory()?;
     Ok(json!({"format":1,"directory":directory,"backend":identity,"receipts":receipts}))
 }
-fn bound(backend: &Backend, evidence: &Value) -> Result<PinnedDocker> {
+pub(crate) fn bound(backend: &Backend, evidence: &Value) -> Result<PinnedDocker> {
     ensure!(
         evidence["format"] == 1
             && evidence["backend"]["context"]["gateway"] == backend.gateway
@@ -163,7 +163,7 @@ pub(super) fn create(backend: &Backend, name: &str, build: &Value, owner: &str) 
     ])?;
     Ok(())
 }
-fn receipts(evidence: &Value) -> Result<Vec<Receipt>> {
+pub(crate) fn receipts(evidence: &Value) -> Result<Vec<Receipt>> {
     let receipts: Vec<Receipt> = serde_json::from_value(evidence["receipts"].clone())?;
     ensure!(receipts.len() == 3, "Missing original storage receipts");
     for receipt in &receipts {

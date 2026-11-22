@@ -154,8 +154,36 @@ pub fn prepare(
 /// absent and required exports are retained. This does not attest task retirement.
 /// A partially provisioned operation is also eligible for explicit cleanup.
 pub fn remove(directory: &Path, driver: &mut impl Driver) -> Result<()> {
+    remove_checked(directory, None, driver)
+}
+
+/// Remove a published deployment's volumes only when the complete receipt set
+/// matches its original journal. Validation precedes any deletion intent/effect.
+pub fn remove_original(
+    directory: &Path,
+    original: &[Receipt],
+    driver: &mut impl Driver,
+) -> Result<()> {
+    remove_checked(directory, Some(original), driver)
+}
+fn remove_checked(
+    directory: &Path,
+    original: Option<&[Receipt]>,
+    driver: &mut impl Driver,
+) -> Result<()> {
     let lock = state::StateLock::acquire_existing(directory)?;
     let mut journal = load(&lock)?.ok_or_else(|| invalid("Storage journal missing"))?;
+    if let Some(original) = original {
+        ensure!(
+            original.len() == journal.entries.len()
+                && journal
+                    .entries
+                    .iter()
+                    .zip(original)
+                    .all(|(entry, receipt)| entry.receipt.as_ref() == Some(receipt)),
+            "Storage journal differs from original deployment receipts"
+        );
+    }
     if !journal.deleting {
         journal.deleting = true;
         journal.save(&lock)?;

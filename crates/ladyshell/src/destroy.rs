@@ -8,6 +8,7 @@ use crate::{
 };
 use serde_json::{json, Value};
 mod batch;
+pub(crate) mod broker;
 pub use batch::{all, all_at};
 
 pub fn run(args: &Destroy) -> Result<Value> {
@@ -31,15 +32,11 @@ fn run_selected(
         state::StateLock::acquire(&args.state)?
     };
     let _lease = state::SessionLock::acquire(&lock.directory, true)?;
-    crate::continuous::host::execution_directory(&lock.directory)?;
+    crate::continuous::host::lifecycle_directory(&lock.directory)?;
     lock.verify_directory()?;
     let mut current = state::load(&lock.directory)?.ok_or_else(|| Error::InvalidInput {
         message: "State is missing".into(),
     })?;
-    ensure!(
-        current["image_profile"] != "openshell-wasi",
-        "Use the broker lifecycle to export retained records and remove owned volumes"
-    );
     if let Some(expected) = expected {
         expected.verify(&current)?;
     }
@@ -54,6 +51,14 @@ fn run_selected(
         "Checkout application was interrupted: resume before destroy"
     );
     lock.verify_directory()?;
+    if current["image_profile"] == "openshell-wasi" {
+        ensure!(
+            !args.discard_work,
+            "The broker lifecycle requires retaining records before deletion"
+        );
+        let mut driver = broker::Native::new(&current)?;
+        return broker::run(&lock, &current, &mut driver);
+    }
     let backend = Backend::new(&current["context"])?;
     let name = text(&current, "sandbox_name")?.to_owned();
     let path = lock.directory.join("destroy.json");

@@ -63,6 +63,7 @@ pub fn make_plan(args: &Desired) -> Result<Value> {
 }
 fn plan_inputs(desired: Value, directory: &Path) -> Result<Value> {
     let lock = state::StateLock::acquire(directory)?;
+    crate::destroy::broker::ensure_available(&lock.directory)?;
     let current = state::load(&lock.directory)?;
     let backend = Backend::new(&desired["context"])?;
     let observed = backend.observe(current.as_ref())?;

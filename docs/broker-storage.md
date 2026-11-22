@@ -11,10 +11,11 @@ mount and filesystem observations. This is an optional capability. Ordinary
 `app::lock_broker`, `app::make_broker_plan` and `app::apply_broker` accept an
 explicit `BrokerDesired` with independently selected worker and Ladyshell runtime
 ELFs. Native provisioning supports the closed `openshell-wasi` profile on the
-qualified local OpenShell 0.1.4 Docker backend. Ordinary destruction/export and
-the governed retained-receiver bridge are still being integrated; this is not
-yet a complete task lifecycle API. Native `destroy` refuses broker state,
-including `--discard-work`, until the broker export/deletion path is available.
+qualified local OpenShell 0.1.4 Docker backend. Ordinary `destroy` seals the broker,
+retains a verified storage archive and removes the original sandbox and volumes.
+`--discard-work` refuses broker state. The governed retained-receiver bridge and
+cleanup of incomplete provisioning are still being integrated; this is not yet
+a complete task lifecycle API.
 
 ## Configuration and lifecycle
 
@@ -222,3 +223,59 @@ LADYSHELL_BROKER_CLEANUP_EVIDENCE=/absolute/retained/image-fixture \
 That cleanup helper accepts only the original retained fixture identities. Keep
 its source, locks, compact evidence and exports; generated executable copies can
 be reclaimed after the fixture and every consumer have settled.
+
+
+## Journalled broker destruction
+
+`ladyshell destroy --state /absolute/path/to/state` acquires the original state
+lock and exclusive session lease. It verifies the original daemon, gateway,
+sandbox, running incarnation, policy, mounted ceilings and volume receipts,
+then records `broker-destroy.json`. All managed execution and reapply entry points
+refuse this persistent fence. Recovery uses the same command and state directory;
+a completed deletion never makes that state eligible for reprovisioning.
+
+The journal advances through intent, sealed, captured, exported, deleting,
+sandbox-deleted and complete. Sealing closes the broker generation permanently.
+A bounded streaming export is verified and fsynced before its receipt is retained;
+`broker-recovery/export.partial` is renamed without replacement to `export.tar`,
+and the containing directory is fsynced before recording the deletion intent.
+The archive and journal remain outside the sandbox and volume deletion scopes.
+
+An interrupted, unacknowledged transport copy may be regenerated only while the
+original runtime and sealed source are verified available. The attempt count and
+discarded staging size are recorded before truncation. Captured or published
+archives are never overwritten. Symlinks, hardlinks, unexpected file permissions,
+a missing source identity or insufficient sampled host capacity refuse capture.
+The preflight capacity observation is not a reservation or a host disk hard cap.
+
+Deletion is retried only against the original sandbox identity. Missing sandboxes
+are accepted as cleanup recovery only after the deletion intent was retained;
+otherwise their disappearance is a loss. After API deletion, the pinned Docker
+daemon must also report no original runtime. Each volume is then removed through
+its own original receipt journal, with non-forced removal and attachment refusal.
+`storage::remove_original` checks the complete deployment receipt set before any
+volume deletion intent or effect. Lost replies and partial volume cleanup retain
+the same journal for retry. Every retry revalidates the complete retained archive,
+even when the sandbox is already absent.
+
+These records do not close LO task scopes or release Promise occupancy. Host
+lifecycle policy admission belongs to the embedding orchestrator. A changed or
+lost original runtime is not silently readmitted for export. Incomplete apply
+operations still require their separate provisioning recovery path.
+
+The explicit native qualification exercises ordinary provisioning, simultaneous
+byte and inode exhaustion, ordinary destroy, archive verification after deletion,
+original-volume absence and idempotent retry:
+
+```sh
+LADYSHELL_BROKER_IMAGE_EVIDENCE=/absolute/path/to/evidence \
+LADYSHELL_BROKER_WORKER=/absolute/path/to/lo-executor-worker \
+LADYSHELL_STORAGE_TEST_GATEWAY=openshell \
+cargo test --locked -p ladyshell-cli --test broker_image_native \
+  qualified_broker_destroy -- --ignored --nocapture
+```
+
+The test retains `full-storage.json`, `ordinary-destroy.json`, lifecycle and
+volume journals, the verified tar and its receipt. The fixture removes only its
+owned image tag after the lifecycle assertions; test panics still run the
+fixture's separately bounded cleanup.
