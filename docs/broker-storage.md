@@ -366,5 +366,7 @@ destroy test, plus `LADYSHELL_BROKER_TEST_PACKAGE` naming an explicit maintained
 LO summary package directory (`artifact.json` and `components/<digest>.wasm`).
 It uploads and stages through the ordinary retained receiver, executes the
 summary component, exhausts the incoming byte cap and refuses a partial retry,
-then exports before ordinary deletion. Its host admissions are synthetic; it
+then exports before ordinary deletion. After deletion it reads the verified
+archive to require both the unchanged complete component and a nonempty proper
+prefix of the interrupted upload at their original digest paths. Its host admissions are synthetic; it
 does not qualify LO policy or Promise integration.

@@ -143,6 +143,9 @@ fn qualify(
                 }
                 if ordinary_destroy {
                     verify_sealed_export(&root, &built, Some(&state))?;
+                    if matches!(retained_receiver, Some(receiver::Case::Components)) {
+                        receiver::verify_component_export(&root)?;
+                    }
                     assert!(app::make_broker_plan(&args).is_err());
                     assert!(app::apply_broker(&args).is_err());
                 } else if provision && interruption.is_none() {

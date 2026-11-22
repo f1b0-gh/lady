@@ -3,7 +3,10 @@ use super::*;
 use ladyshell::execution::{
     self, Admission, ClientResult, InputChannel, Invocation, Phase, Store, Stream, TaskDefinition,
 };
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    path::PathBuf,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 #[derive(Clone, Copy)]
 pub(super) enum Case {
@@ -206,8 +209,69 @@ fn components(root: &Path, store: &Store) -> Result<()> {
     atomic_json(
         &root.join("component-execution.json"),
         &json!({"stage":staged, "execution":executed,
-        "incoming":incoming, "partial_digest":partial_digest, "partial_bytes":partial.len(),
+        "incoming":incoming, "partial_digest":partial_digest, "attempted_bytes":partial.len(),
         "repeated_upload_refused":true}),
+    )?;
+    Ok(())
+}
+
+/// Inspect the already verified archive after ordinary destruction. Both the
+/// complete component and the actual interrupted input must survive deletion.
+pub(super) fn verify_component_export(root: &Path) -> Result<()> {
+    use std::io::Read;
+    let read = |name| -> Result<Value> {
+        Ok(ladyshell::json::parse(&ladyshell::files::read_limited(
+            &root.join(name),
+            16384,
+        )?)?)
+    };
+    let uploaded = read("component-upload.json")?;
+    let executed = read("component-execution.json")?;
+    let destroyed = read("ordinary-destroy.json")?;
+    assert_eq!(destroyed["destroy"]["deleted"], true);
+    let original_digest = uploaded["component"].as_str().ok_or("component digest")?;
+    let partial_digest = executed["partial_digest"]
+        .as_str()
+        .ok_or("partial digest")?;
+    let original_path = PathBuf::from(format!("incoming/{original_digest}.wasm"));
+    let partial_path = PathBuf::from(format!("incoming/{partial_digest}.wasm"));
+    let path = destroyed["destroy"]["export"]["path"]
+        .as_str()
+        .ok_or("retained archive path")?;
+    let mut archive = tar::Archive::new(ladyshell::files::open_regular(Path::new(path))?);
+    let mut original_found = false;
+    let mut partial_receipt = None;
+    for entry in archive.entries()? {
+        let entry = entry?;
+        let name = entry.path()?.into_owned();
+        if name != original_path && name != partial_path {
+            continue;
+        }
+        assert!(entry.header().entry_type().is_file());
+        let mut bytes = Vec::new();
+        entry.take(2 * 1024 * 1024 + 1).read_to_end(&mut bytes)?;
+        assert!(bytes.len() <= 2 * 1024 * 1024);
+        if name == original_path {
+            assert!(!original_found);
+            assert_eq!(ladyshell::files::hash(&bytes), original_digest);
+            assert_eq!(json!(bytes.len()), uploaded["bytes"]);
+            original_found = true;
+        } else {
+            assert!(partial_receipt.is_none());
+            assert!(!bytes.is_empty() && bytes.len() < 2 * 1024 * 1024);
+            assert!(bytes.iter().all(|byte| *byte == 37));
+            assert_ne!(ladyshell::files::hash(&bytes), partial_digest);
+            partial_receipt = Some(json!({
+                "path":name, "bytes":bytes.len(), "sha256":ladyshell::files::hash(&bytes)
+            }));
+        }
+    }
+    assert!(original_found);
+    let partial = partial_receipt.ok_or("missing original partial intake in export")?;
+    atomic_json(
+        &root.join("component-export.json"),
+        &json!({"original_component":uploaded,"partial":partial,
+            "attempted_bytes":executed["attempted_bytes"],"verified_after_deletion":true}),
     )?;
     Ok(())
 }
