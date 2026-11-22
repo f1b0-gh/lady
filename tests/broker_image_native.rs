@@ -17,38 +17,51 @@ fn docker(args: &[&str]) -> Result<Vec<u8>> {
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local Docker"]
 fn qualified_fixed_image_builds_from_explicit_locked_artifacts() -> Result<()> {
-    qualify(false, false, None)
+    qualify(false, false, None, false)
 }
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
 fn qualified_broker_provisions_with_original_mounted_caps() -> Result<()> {
-    qualify(true, false, None)
+    qualify(true, false, None, false)
 }
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
 fn qualified_broker_destroy_retains_export_at_full_capacity() -> Result<()> {
-    qualify(true, true, None)
+    qualify(true, true, None, false)
 }
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
 fn qualified_broker_cancellation_after_creation_preserves_original_intent() -> Result<()> {
-    qualify(true, false, Some(cancel::Boundary::Creation))
+    qualify(true, false, Some(cancel::Boundary::Creation), false)
 }
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
 fn qualified_broker_cancellation_after_validation_exports_bound_generation() -> Result<()> {
-    qualify(true, false, Some(cancel::Boundary::Validation))
+    qualify(true, false, Some(cancel::Boundary::Validation), false)
 }
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
 fn qualified_broker_cancellation_exports_sealed_generation_without_initialization_receipt(
 ) -> Result<()> {
-    qualify(true, false, Some(cancel::Boundary::SealedInitialization))
+    qualify(
+        true,
+        false,
+        Some(cancel::Boundary::SealedInitialization),
+        false,
+    )
 }
+#[test]
+#[ignore = "requires reviewed worker ELF, Nix and local OpenShell; this tests transport, not LO admission"]
+fn ordinary_retained_receiver_runs_the_fixed_broker_and_preserves_its_reply() -> Result<()> {
+    qualify(true, true, None, true)
+}
+#[path = "support/broker_receiver.rs"]
+mod receiver;
 fn qualify(
     provision: bool,
     ordinary_destroy: bool,
     interruption: Option<cancel::Boundary>,
+    retained_receiver: bool,
 ) -> Result<()> {
     let base =
         std::env::var_os("LADYSHELL_BROKER_IMAGE_EVIDENCE").ok_or("evidence directory required")?;
@@ -120,6 +133,9 @@ fn qualify(
         result
             .map_err(|error| -> Box<dyn std::error::Error> { Box::new(error) })
             .and_then(|built| {
+                if retained_receiver {
+                    receiver::verify(&root, &state)?;
+                }
                 if ordinary_destroy {
                     verify_sealed_export(&root, &built, Some(&state))?;
                     assert!(app::make_broker_plan(&args).is_err());
