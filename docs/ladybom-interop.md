@@ -61,7 +61,7 @@ never becomes `not_affected`; `resolved` is refused for an affected match. An
 expiry property does not force server revocation: read back applied decisions
 and handle expiry explicitly. The CVE namespace does not imply NVD acquisition.
 
-The [pinned synthetic Dependency-Track recipe](../qualification/dependency-track/README.md)
+The [pinned synthetic Dependency-Track recipe](../resources/dependency-track/README.md)
 provides reproducible tests, not a blanket fidelity guarantee. Verify project,
 version, serial, findings and applied decisions after asynchronous processing.
 Consumers can lose global coverage/composition, merge identities, ignore aliases

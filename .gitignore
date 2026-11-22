@@ -29,6 +29,7 @@ credentials.json
 /docs/validation/
 /docs/superpowers/
 /docs/audits/*-20*/
+/resources/**/results/
 /qualification/**/results/
 /qualification/ladyhost-*/
 /qualification/vxdf/

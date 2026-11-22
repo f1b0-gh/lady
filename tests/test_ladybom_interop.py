@@ -46,7 +46,7 @@ class InteropTests(unittest.TestCase):
             check.validate(document)
 
     def bootstrap_with_transport(self, transport, proxy=True):
-        script = Path(__file__).parents[1] / "qualification" / "dependency-track" / "bootstrap-admin.py"
+        script = Path(__file__).parents[1] / "resources" / "dependency-track" / "bootstrap-admin.py"
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {
             "http_proxy": "http://proxy.example.invalid:8080" if proxy else "", "no_proxy": "",
         }, clear=True), patch.object(urllib.request, "_opener", None), patch.object(

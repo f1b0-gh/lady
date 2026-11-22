@@ -126,7 +126,7 @@ OpenShell deployment, OS image lifecycle, or GitHub App installation.
 
 The 2026-11-22 OSV query covers all 291 crates.io package versions in `Cargo.lock`,
 without platform, feature or dependency-kind filtering. The
-[review record](../sources/dependency-review.json) binds the exact lock, query,
+[review record](../resources/dependency-review.json) binds the exact lock, query,
 response and advisory dates.
 
 `rustix 1.1.6` fixes the reported extended-attribute soundness issue. Upgrading

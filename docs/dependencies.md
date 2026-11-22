@@ -210,7 +210,7 @@ images. These refusals never broaden network policy.
 `nix/network-tools.nix` pins Git 2.56.1 because the locked Nixpkgs Git 2.56.0
 is affected by [GHSA-vp2w-7xxj-jvxr](https://github.com/git/git/security/advisories/GHSA-vp2w-7xxj-jvxr).
 The scoped override retains upstream patches and the minimal Git options.
-The [native dependency review](../sources/nixpkgs-review.json) records exact
+The [native dependency review](../resources/nixpkgs-review.json) records exact
 inputs, reviewed advisory sources and qualification limits separately from the
 workspace Cargo review.
 
