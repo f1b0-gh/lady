@@ -20,6 +20,9 @@ See the [usage guide](https://github.com/f1b0-gh/lady/blob/main/docs/usage.md),
 [audit guide](https://github.com/f1b0-gh/lady/blob/main/docs/audits/usage.md) and
 [development guide](https://github.com/f1b0-gh/lady/blob/main/docs/development.md).
 
+For the optional bounded broker storage primitives and their current integration
+limits, see [bounded storage](https://github.com/f1b0-gh/lady/blob/main/docs/broker-storage.md).
+
 Lady's own code uses [Apache-2.0](LICENSE). The imported
 [audit validator](src/audit/validator/LICENSE-MIT) and
 [audit methods](resources/audit/security-audit/LICENSE) retain their MIT notices.

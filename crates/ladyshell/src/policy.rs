@@ -135,3 +135,57 @@ pub fn review(requests: &Permissions) -> Vec<Value> {
 fn invalid(message: String) -> Error {
     Error::InvalidInput { message }
 }
+
+/// Closed network policy for the fixed WASI broker. Only the three separately
+/// capped storage roots and /dev/null are writable; components get no ambient I/O.
+pub fn broker_policy() -> Value {
+    json!({"version":1,"landlock":{"compatibility":"hard_requirement"},
+        "process":{"run_as_user":"sandbox","run_as_group":"sandbox"},
+        "filesystem_policy":{"include_workdir":false,"read_only":READ_ONLY,
+            "read_write":["/dev/null", "/var/lib/ladyshell/broker/control",
+                "/var/lib/ladyshell/broker/artifacts", "/var/lib/ladyshell/broker/incoming"]},
+        "network_policies":{}})
+}
+
+pub fn validate_broker_effective(actual: &Value) -> Result<()> {
+    let expected = broker_policy();
+    for field in ["version", "landlock", "process"] {
+        ensure!(
+            actual.get(field) == expected.get(field),
+            "Broker policy mismatch: {field}"
+        );
+    }
+    // OpenShell 0.1.4 omits empty BTreeMap fields in effective-policy JSON.
+    // An omitted map and an explicitly empty map both contain no allow rules.
+    ensure!(
+        actual
+            .get("network_policies")
+            .is_none_or(|v| v.as_object().is_some_and(|m| m.is_empty())),
+        "Broker network rules must be empty"
+    );
+    let filesystem = &actual["filesystem_policy"];
+    ensure!(
+        filesystem["include_workdir"] == false
+            && strings(&filesystem["read_write"])?
+                == strings(&expected["filesystem_policy"]["read_write"])?,
+        "Broker writable scope mismatch"
+    );
+    let read = strings(&filesystem["read_only"])?;
+    let required: BTreeSet<_> = READ_ONLY.iter().copied().collect();
+    let allowed: BTreeSet<_> = READ_ONLY
+        .iter()
+        .copied()
+        .chain(["/lib", "/var/log"])
+        .collect();
+    ensure!(
+        required.is_subset(&read) && read.is_subset(&allowed),
+        "Broker readable scope mismatch"
+    );
+    ensure!(
+        actual.get("network_middlewares").is_none_or(|v| v.is_null()
+            || v.as_object().is_some_and(|m| m.is_empty())
+            || v.as_array().is_some_and(|a| a.is_empty())),
+        "Unauthorized broker network middleware"
+    );
+    Ok(())
+}

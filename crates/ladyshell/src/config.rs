@@ -7,6 +7,8 @@ use std::collections::{BTreeMap, BTreeSet};
 #[serde(deny_unknown_fields)]
 pub struct Config {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub storage: Option<crate::storage::Profile>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dependencies: Option<crate::deps::DependencyConfig>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub audit: Option<crate::audit::config::AuditConfig>,
@@ -104,6 +106,8 @@ pub struct Filesystem {
 #[serde(deny_unknown_fields)]
 pub struct ResolvedConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub storage: Option<crate::storage::Profile>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dependencies: Option<crate::deps::DependencyConfig>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub audit: Option<crate::audit::config::AuditConfig>,
@@ -140,6 +144,9 @@ impl Config {
         Ok(config)
     }
     pub fn validate(&self) -> Result<()> {
+        if let Some(storage) = &self.storage {
+            storage.validate()?;
+        }
         if let Some(dependencies) = &self.dependencies {
             dependencies.validate()?;
         }
@@ -308,6 +315,7 @@ impl Config {
             checks.extend(m.checks.iter().cloned());
         }
         Ok(ResolvedConfig {
+            storage: self.storage.clone(),
             dependencies: self.dependencies.clone(),
             audit: self.audit.clone(),
             schema_version: 1,

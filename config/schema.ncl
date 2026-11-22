@@ -5,7 +5,13 @@ let Mission = {
   depends_on | Array String,
   checks | Array (Array String),
 } in
+let StorageLimit = { bytes | Number, inodes | Number } in
 {
+  storage | optional | {
+    control | StorageLimit,
+    artifacts | StorageLimit,
+    incoming | StorageLimit,
+  },
   dependencies | optional | {
     projects | Array String,
     allowed_hosts | Array String,

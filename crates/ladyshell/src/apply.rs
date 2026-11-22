@@ -10,6 +10,31 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::path::Path;
 pub trait Driver {
+    /// Qualify the selected storage backend before any build or provisioning.
+    /// Existing drivers refuse this optional capability until implemented.
+    fn preflight_storage(
+        &mut self,
+        _profile: &crate::storage::Profile,
+        _context: &Value,
+    ) -> Result<()> {
+        Err(invalid("Driver does not support bounded storage".into()))
+    }
+    /// Reconcile the original per-resource journal, retaining each identity
+    /// before proceeding. A missing previously observed volume must be refused.
+    fn prepare_storage(
+        &mut self,
+        _profile: &crate::storage::Profile,
+        _directory: &Path,
+        _owner: &str,
+        _context: &Value,
+    ) -> Result<Value> {
+        Err(invalid("Driver does not support bounded storage".into()))
+    }
+    /// Freshly verify the original backend, volumes, mounted limits and runtime.
+    /// Recorded creation options alone are insufficient evidence.
+    fn verify_storage(&mut self, _name: &str, _evidence: &Value) -> Result<()> {
+        Err(invalid("Driver does not verify mounted storage".into()))
+    }
     fn observe(&mut self, state: Option<&Value>) -> Result<Value>;
     fn sandbox(&mut self, name: &str) -> Result<Option<Value>>;
     fn build(
@@ -55,6 +80,14 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         .map(serde_json::from_value::<Operation>)
         .transpose()?;
     let desired_hash = plan::digest(desired)?;
+    let storage = desired["evaluated"]["config"]
+        .get("storage")
+        .map(|value| serde_json::from_value::<crate::storage::Profile>(value.clone()))
+        .transpose()?;
+    if let Some(profile) = &storage {
+        profile.validate()?;
+        driver.preflight_storage(profile, &desired["context"])?;
+    }
     if let Some(op) = operation.as_ref().filter(|op| op.phase != Phase::Complete) {
         ensure!(
             op.schema_version == 2 && op.desired_hash == desired_hash,
@@ -78,6 +111,7 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
                 text(&result, "sandbox_name")?,
                 text(&result, "codex_binary")?,
             )?;
+            verify_storage(&result, driver)?;
             driver.published(directory)?;
             let mut completed = op.clone();
             completed.phase = Phase::Complete;
@@ -101,6 +135,9 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         let observed = driver.observe(state.as_ref())?;
         plan::verify(&saved, desired, state.as_ref(), &observed)?;
         if saved["actions"].as_array().is_some_and(|a| a.is_empty()) {
+            if let Some(state) = &state {
+                verify_storage(state, driver)?;
+            }
             driver.published(directory)?;
             return state.ok_or_else(|| invalid("State is missing for an empty plan".into()));
         }
@@ -137,6 +174,7 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
     if op.restore_only {
         let state = state.ok_or_else(|| invalid("Missing restoration state".into()))?;
         driver.restore(&state)?;
+        verify_storage(&state, driver)?;
         driver.published(directory)?;
         op.phase = Phase::Complete;
         op.result = Some(state.clone());
@@ -174,10 +212,29 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         op.phase = Phase::Built;
         atomic_json(&path, &op)?;
     }
-    let build = op
+    let mut build = op
         .build
         .clone()
         .ok_or_else(|| invalid("Build is missing from the journal".into()))?;
+    if let Some(profile) = &storage {
+        let evidence = driver.prepare_storage(
+            profile,
+            &directory.join(format!("storage-{}", op.owner)),
+            &op.owner,
+            &desired["context"],
+        )?;
+        ensure!(evidence.is_object(), "Missing storage evidence");
+        if let Some(original) = build.get("storage") {
+            ensure!(*original == evidence, "Original storage evidence changed");
+        } else {
+            build
+                .as_object_mut()
+                .ok_or_else(|| invalid("Build is not an object".into()))?
+                .insert("storage".into(), evidence);
+            op.build = Some(build.clone());
+            atomic_json(&path, &op)?;
+        }
+    }
     if driver.sandbox(&op.sandbox_name)?.is_none() {
         driver.create(
             &op.sandbox_name,
@@ -208,6 +265,9 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         std::thread::sleep(std::time::Duration::from_secs(1));
     };
     let effective = driver.validate(&op.sandbox_name, text(&build, "codex_binary")?)?;
+    if let Some(evidence) = build.get("storage") {
+        driver.verify_storage(&op.sandbox_name, evidence)?;
+    }
     atomic_json(
         &directory.join(format!("policy-{}.json", op.owner)),
         &effective,
@@ -235,6 +295,12 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
     op.phase = Phase::Complete;
     atomic_json(&path, &op)?;
     Ok(result)
+}
+fn verify_storage(state: &Value, driver: &mut impl Driver) -> Result<()> {
+    if let Some(evidence) = state.get("storage") {
+        driver.verify_storage(text(state, "sandbox_name")?, evidence)?;
+    }
+    Ok(())
 }
 pub struct NativeDriver {
     pub backend: Backend,

@@ -27,6 +27,7 @@ pub mod scan;
 pub mod snapshot;
 pub mod sources;
 pub mod state;
+pub mod storage;
 pub mod sync;
 
 pub mod checkout;

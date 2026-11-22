@@ -174,3 +174,19 @@ fn ignores_caches_and_unrelated_links_but_never_imports_through_them(
     assert!(evaluate(&entry, "dev", resources()).is_err());
     Ok(())
 }
+
+#[test]
+fn bounded_storage_survives_nickel_resolution() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let fixture = fs::read_to_string(resources().join("tests/fixtures/nickel/sandbox.ncl"))?;
+    let entry = dir.path().join("sandbox.ncl");
+    fs::write(&entry, format!("({fixture}) & {{ storage = {{ control = {{ bytes = 65536, inodes = 32 }}, artifacts = {{ bytes = 262144, inodes = 64 }}, incoming = {{ bytes = 262144, inodes = 64 }} }} }}"))?;
+    let profile = evaluate(&entry, "dev", resources())?
+        .config
+        .storage
+        .ok_or("storage lost")?;
+    assert_eq!(profile.control.bytes, 65536);
+    assert_eq!(profile.artifacts.inodes, 64);
+    assert_eq!(profile.incoming.bytes, 262144);
+    Ok(())
+}
