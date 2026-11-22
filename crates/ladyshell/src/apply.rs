@@ -1,3 +1,4 @@
+pub(crate) mod broker;
 use crate::{
     environment_lock::atomic_json,
     error::{ensure, Error, Result},
@@ -10,6 +11,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::path::Path;
 pub trait Driver {
+    fn preflight(&mut self, desired: &Value) -> Result<()> {
+        if let Some(value) = desired["evaluated"]["config"].get("storage") {
+            let profile: crate::storage::Profile = serde_json::from_value(value.clone())?;
+            profile.validate()?;
+            self.preflight_storage(&profile, &desired["context"])?;
+        }
+        Ok(())
+    }
     /// Qualify the selected storage backend before any build or provisioning.
     /// Existing drivers refuse this optional capability until implemented.
     fn preflight_storage(
@@ -46,6 +55,28 @@ pub trait Driver {
     fn capture(&mut self, state: &Value, directory: &Path) -> Result<Value>;
     fn create(&mut self, name: &str, build: &Value, owner: &str, provider: &str) -> Result<()>;
     fn validate(&mut self, name: &str, binary: &str) -> Result<Value>;
+    /// Select a supported creation profile without inventing a native provider.
+    fn create_profile(
+        &mut self,
+        name: &str,
+        build: &Value,
+        owner: &str,
+        config: &Value,
+    ) -> Result<()> {
+        ensure!(
+            build["image_profile"] != "openshell-wasi",
+            "Driver does not support broker creation"
+        );
+        self.create(name, build, owner, text(&config["sandbox"], "provider")?)
+    }
+    /// Validate the exact retained profile on initial publication and recovery.
+    fn validate_profile(&mut self, name: &str, build: &Value) -> Result<Value> {
+        ensure!(
+            build["image_profile"] != "openshell-wasi",
+            "Driver does not support broker validation"
+        );
+        self.validate(name, text(build, "codex_binary")?)
+    }
     fn restore(&mut self, state: &Value) -> Result<()>;
     fn published(&mut self, _directory: &Path) -> Result<()> {
         Ok(())
@@ -84,10 +115,7 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         .get("storage")
         .map(|value| serde_json::from_value::<crate::storage::Profile>(value.clone()))
         .transpose()?;
-    if let Some(profile) = &storage {
-        profile.validate()?;
-        driver.preflight_storage(profile, &desired["context"])?;
-    }
+    driver.preflight(desired)?;
     if let Some(op) = operation.as_ref().filter(|op| op.phase != Phase::Complete) {
         ensure!(
             op.schema_version == 2 && op.desired_hash == desired_hash,
@@ -107,10 +135,7 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
                     && observed["phase"] == "Ready",
                 "Publication interrupted and resource mismatch"
             );
-            driver.validate(
-                text(&result, "sandbox_name")?,
-                text(&result, "codex_binary")?,
-            )?;
+            driver.validate_profile(text(&result, "sandbox_name")?, &result)?;
             verify_storage(&result, driver)?;
             driver.published(directory)?;
             let mut completed = op.clone();
@@ -236,11 +261,11 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         }
     }
     if driver.sandbox(&op.sandbox_name)?.is_none() {
-        driver.create(
+        driver.create_profile(
             &op.sandbox_name,
             &build,
             &op.owner,
-            text(&desired["evaluated"]["config"]["sandbox"], "provider")?,
+            &desired["evaluated"]["config"],
         )?;
     }
     let start = std::time::Instant::now();
@@ -264,7 +289,7 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         );
         std::thread::sleep(std::time::Duration::from_secs(1));
     };
-    let effective = driver.validate(&op.sandbox_name, text(&build, "codex_binary")?)?;
+    let effective = driver.validate_profile(&op.sandbox_name, &build)?;
     if let Some(evidence) = build.get("storage") {
         driver.verify_storage(&op.sandbox_name, evidence)?;
     }
@@ -306,6 +331,44 @@ pub struct NativeDriver {
     pub backend: Backend,
 }
 impl Driver for NativeDriver {
+    fn preflight(&mut self, desired: &Value) -> Result<()> {
+        if desired["evaluated"]["config"].get("storage").is_some() {
+            broker::preflight(&self.backend, desired)?;
+        }
+        Ok(())
+    }
+    fn prepare_storage(
+        &mut self,
+        profile: &crate::storage::Profile,
+        directory: &Path,
+        owner: &str,
+        context: &Value,
+    ) -> Result<Value> {
+        broker::prepare(&self.backend, profile, directory, owner, context)
+    }
+    fn verify_storage(&mut self, name: &str, evidence: &Value) -> Result<()> {
+        broker::verify(&self.backend, name, evidence)
+    }
+    fn create_profile(
+        &mut self,
+        name: &str,
+        build: &Value,
+        owner: &str,
+        config: &Value,
+    ) -> Result<()> {
+        if build["image_profile"] == "openshell-wasi" {
+            broker::create(&self.backend, name, build, owner)
+        } else {
+            self.create(name, build, owner, text(&config["sandbox"], "provider")?)
+        }
+    }
+    fn validate_profile(&mut self, name: &str, build: &Value) -> Result<Value> {
+        if build["image_profile"] == "openshell-wasi" {
+            broker::validate(&self.backend, name, build)
+        } else {
+            self.validate(name, text(build, "codex_binary")?)
+        }
+    }
     fn published(&mut self, directory: &Path) -> Result<()> {
         if directory.join("continuous-staging.json").try_exists()? {
             return Ok(());

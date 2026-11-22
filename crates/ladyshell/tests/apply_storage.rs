@@ -87,6 +87,7 @@ struct Supported {
     fail_storage: bool,
     prepared: Option<Value>,
     checks: usize,
+    broker: bool,
 }
 impl Driver for Supported {
     fn preflight_storage(&mut self, _: &ladyshell::storage::Profile, _: &Value) -> Result<()> {
@@ -133,7 +134,33 @@ impl Driver for Supported {
     fn sandbox(&mut self, _: &str) -> Result<Option<Value>> {
         Ok(self.resource.clone())
     }
+    fn create_profile(
+        &mut self,
+        name: &str,
+        build: &Value,
+        owner: &str,
+        config: &Value,
+    ) -> Result<()> {
+        if self.broker {
+            assert!(config["sandbox"].get("provider").is_none());
+            assert!(build.get("codex_binary").is_none());
+        }
+        self.create(name, build, owner, "unused by synthetic driver")
+    }
+    fn validate_profile(&mut self, name: &str, build: &Value) -> Result<Value> {
+        let field = if self.broker {
+            "broker_binary"
+        } else {
+            "codex_binary"
+        };
+        self.validate(name, ladyshell::state::text(build, field)?)
+    }
     fn build(&mut self, _: &Value, _: &Path, _: Option<&Value>) -> Result<Value> {
+        if self.broker {
+            return Ok(
+                json!({"image_profile":"openshell-wasi", "image_id":"image", "broker_binary":"/fake", "project_snapshot":"/fake", "build_dir":"/fake"}),
+            );
+        }
         Ok(
             json!({"image_id":"image","codex_binary":"/fake","project_snapshot":"/fake","build_dir":"/fake"}),
         )
@@ -207,5 +234,35 @@ fn storage_is_retained_before_creation_and_rechecked_after_partial_publication()
     driver.fail_storage = true;
     assert!(apply_with(&desired, root.path(), &mut driver).is_err());
     assert_eq!(driver.checks, 4);
+    Ok(())
+}
+
+#[test]
+fn broker_publication_recovers_without_native_provider_or_codex_fields() -> Result<()> {
+    let root = tempfile::tempdir()?;
+    let mut desired = desired();
+    desired["evaluated"]["config"]["sandbox"] = json!({});
+    desired["evaluated"]["config"]["image"] =
+        serde_json::to_value(ladyshell::config::Image::broker())?;
+    save_plan(root.path(), &desired)?;
+    let mut driver = Supported {
+        broker: true,
+        fail_publication: true,
+        ..Default::default()
+    };
+    let error = apply_with(&desired, root.path(), &mut driver)
+        .err()
+        .ok_or_else(|| Error::InvalidInput {
+            message: "publication failure ignored".into(),
+        })?;
+    assert!(
+        error.to_string().contains("publication interrupted"),
+        "{error}"
+    );
+    driver.fail_publication = false;
+    let result = apply_with(&desired, root.path(), &mut driver)?;
+    assert_eq!(driver.creates, 1);
+    assert!(result.get("codex_binary").is_none());
+    assert_eq!(ladyshell::state::load(root.path())?, Some(result));
     Ok(())
 }

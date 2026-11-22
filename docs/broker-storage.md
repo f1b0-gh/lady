@@ -8,10 +8,13 @@ must never make an uncertain dispatch eligible to run again.
 The `ladyshell::storage` API provides fixed Docker local tmpfs intents, per-volume
 creation/deletion journals, original identity checks, and correlation of fresh
 mount and filesystem observations. This is an optional capability. Ordinary
-`apply` now carries storage capability hooks and retains their evidence, but its
-native driver currently refuses storage requests: native profile construction,
-continuous verification and ordinary `destroy` integration are still required.
-Do not describe these primitives as a complete broker deployment API.
+`app::lock_broker`, `app::make_broker_plan` and `app::apply_broker` accept an
+explicit `BrokerDesired` with independently selected worker and Ladyshell runtime
+ELFs. Native provisioning supports the closed `openshell-wasi` profile on the
+qualified local OpenShell 0.1.4 Docker backend. Ordinary destruction/export and
+the governed retained-receiver bridge are still being integrated; this is not
+yet a complete task lifecycle API. Native `destroy` refuses broker state,
+including `--discard-work`, until the broker export/deletion path is available.
 
 ## Configuration and lifecycle
 
@@ -54,6 +57,44 @@ required work and recovery exports. The Docker driver refuses attached volumes
 and removes only the original identities without force. Partial deletion resumes
 from the retained journal. Keep the journal after cleanup; deleting storage is
 not proof that a task or managed Promise may retire.
+
+## Fixed image and publication
+
+Select `image = { backend = "nix", profile = "openshell-wasi",
+platform = "x86_64-linux" }` and the storage block. Omit the provider; the broker
+profile rejects native tools, mission checks, dependency preparation, audit and
+extra permissions. The existing native profile still requires its provider.
+`BrokerDesired` names both `worker` (the LO `lo-executor-worker` ELF) and `runtime`
+(the Ladyshell CLI ELF); an embedding application is never substituted for either.
+
+The environment lock hashes both artifacts and the five fixed Nix recipes.
+Image construction authenticates copied inputs, freezes the recipes and records
+the archive/image identity before loading. It reads image metadata without
+spawning temporary probe containers. The operation-owned OpenShell sandbox runs
+UID, binary-path, runtime and broker protocol checks before publication.
+
+OpenShell 0.1.4 [validates the working directory before launching the workload](https://github.com/NVIDIA/OpenShell/blob/v0.1.4/crates/openshell-sandbox/src/delegated.rs)
+and [requires a temporary write there](https://github.com/NVIDIA/OpenShell/blob/v0.1.4/crates/openshell-sandbox/src/process.rs).
+The image therefore gives UID 10001 POSIX write access to the project directory;
+Landlock permits only reads there when the workload runs. Source files remain
+read-only. Publication must verify that writes to both the project and `/tmp`
+are denied; an image permission check alone cannot establish this boundary.
+
+Provisioning retains the local Docker endpoint and daemon identity before volume
+effects. Resource commands use that explicit endpoint and recheck the daemon.
+Publication correlates the actual sandbox/image/owner, container start identity,
+volume fingerprints, fixed mounts, effective policy and in-sandbox filesystem
+measurements. It retains the runtime and filesystem identities for recovery;
+changed runtime or mount identity requires a separate deployment. The initial
+carrier requests one CPU and 512 MiB; disk evidence does not certify every native
+resource or process-scope guarantee.
+
+The ignored `broker_image_native` test can build and provision from explicit ELF
+inputs using `LADYSHELL_BROKER_IMAGE_EVIDENCE`, `LADYSHELL_BROKER_WORKER` and
+`LADYSHELL_STORAGE_TEST_GATEWAY`. Select
+`qualified_broker_provisions_with_original_mounted_caps` with `--ignored`.
+It retains source/lock/build/operation journals and removes its original sandbox,
+volumes and image tag. Its fixture cleanup is not the ordinary destruction API.
 
 ## Durability and policy limits
 

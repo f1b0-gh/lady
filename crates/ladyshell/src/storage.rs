@@ -12,9 +12,9 @@ use serde_json::{json, Value};
 mod journal;
 pub use journal::{prepare, remove, Driver};
 mod mounts;
-pub use mounts::{verify_mounts, Filesystem};
+pub use mounts::{probe, verify_mounts, Filesystem};
 mod docker;
-pub use docker::Docker;
+pub use docker::{Docker, PinnedDocker};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

@@ -83,6 +83,8 @@ fn main() {
             Command::Review(args) => review(args).and_then(print_json),
             Command::Stack(args) => stack(args).and_then(print_json),
             Command::Cs(args) => continuous(args).and_then(print_json),
+            Command::BrokerStorageProbe => ladyshell::storage::probe()
+                .and_then(|value| print_json(serde_json::to_value(value)?)),
             Command::CsWorker => continuous_worker().and_then(print_json),
             Command::CsWorkerProfile => print_json(ladyshell::continuous::worker::profile(
                 std::path::Path::new("/sandbox/workspace/project"),

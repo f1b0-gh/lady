@@ -93,3 +93,38 @@ esac
     assert!(receipt["export"].is_null());
     Ok(())
 }
+
+#[test]
+fn native_destroy_cannot_discard_broker_records_without_volume_lifecycle(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = tempfile::tempdir()?;
+    let directory = root.path().join("state");
+    ladyshell::state::create_directory(&directory)?;
+    let current = json!({"schema_version":2,"sandbox_name":"test","sandbox_id":"id","policy_hash":"hash",
+        "image_profile":"openshell-wasi","broker_binary":"/fixed/worker","storage":{},
+        "owner":"owner","desired_hash":"desired","image_id":"image","project_snapshot":root.path(),
+        "build_dir":"build","context":{"gateway":"test","workspace":"default"}});
+    fs::write(directory.join("state.json"), serde_json::to_vec(&current)?)?;
+    let script = root.path().join("openshell");
+    fs::write(
+        &script,
+        "#!/bin/bash\n/bin/touch \"$FIXTURE/called\"\nexit 77\n",
+    )?;
+    fs::set_permissions(&script, fs::Permissions::from_mode(0o700))?;
+    let output = Command::new(env!("CARGO_BIN_EXE_ladyshell"))
+        .args(["destroy", "--discard-work", "--state"])
+        .arg(&directory)
+        .env("PATH", root.path())
+        .env("FIXTURE", root.path())
+        .output()?;
+    assert!(!output.status.success());
+    assert!(
+        !root.path().join("called").exists(),
+        "native deletion must not touch a broker deployment"
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("broker lifecycle"),
+        "{output:?}"
+    );
+    Ok(())
+}

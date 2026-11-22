@@ -118,6 +118,8 @@ pub enum Command {
     #[command(hide = true)]
     CsWorkerProfile,
     #[command(hide = true)]
+    BrokerStorageProbe,
+    #[command(hide = true)]
     SnapshotList(Worker),
     #[command(hide = true)]
     SnapshotPreview(Worker),

@@ -53,3 +53,20 @@ fn empty_network_map_omission_in_effective_policy_still_means_no_rules(
     assert!(validate_broker_effective(&policy).is_err());
     Ok(())
 }
+
+#[test]
+fn broker_inventory_can_read_frozen_sources_without_writable_workspace(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let policy = broker_policy();
+    assert!(policy["filesystem_policy"]["read_only"]
+        .as_array()
+        .ok_or("read paths")?
+        .contains(&json!("/sandbox/workspace/project")));
+    let mut changed = policy.clone();
+    changed["filesystem_policy"]["read_only"]
+        .as_array_mut()
+        .ok_or("read paths")?
+        .retain(|p| p != "/sandbox/workspace/project");
+    assert!(validate_broker_effective(&changed).is_err());
+    Ok(())
+}

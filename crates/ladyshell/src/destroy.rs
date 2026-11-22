@@ -36,6 +36,10 @@ fn run_selected(
     let mut current = state::load(&lock.directory)?.ok_or_else(|| Error::InvalidInput {
         message: "State is missing".into(),
     })?;
+    ensure!(
+        current["image_profile"] != "openshell-wasi",
+        "Use the broker lifecycle to export retained records and remove owned volumes"
+    );
     if let Some(expected) = expected {
         expected.verify(&current)?;
     }

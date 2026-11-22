@@ -141,7 +141,7 @@ fn invalid(message: String) -> Error {
 pub fn broker_policy() -> Value {
     json!({"version":1,"landlock":{"compatibility":"hard_requirement"},
         "process":{"run_as_user":"sandbox","run_as_group":"sandbox"},
-        "filesystem_policy":{"include_workdir":false,"read_only":READ_ONLY,
+        "filesystem_policy":{"include_workdir":false,"read_only":READ_ONLY.iter().copied().chain(["/sandbox/workspace/project"]).collect::<Vec<_>>(),
             "read_write":["/dev/null", "/var/lib/ladyshell/broker/control",
                 "/var/lib/ladyshell/broker/artifacts", "/var/lib/ladyshell/broker/incoming"]},
         "network_policies":{}})
@@ -171,11 +171,15 @@ pub fn validate_broker_effective(actual: &Value) -> Result<()> {
         "Broker writable scope mismatch"
     );
     let read = strings(&filesystem["read_only"])?;
-    let required: BTreeSet<_> = READ_ONLY.iter().copied().collect();
+    let required: BTreeSet<_> = READ_ONLY
+        .iter()
+        .copied()
+        .chain(["/sandbox/workspace/project"])
+        .collect();
     let allowed: BTreeSet<_> = READ_ONLY
         .iter()
         .copied()
-        .chain(["/lib", "/var/log"])
+        .chain(["/lib", "/var/log", "/sandbox/workspace/project"])
         .collect();
     ensure!(
         required.is_subset(&read) && read.is_subset(&allowed),

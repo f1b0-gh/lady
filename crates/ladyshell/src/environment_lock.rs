@@ -56,6 +56,10 @@ pub fn create(
     codex: &Path,
     code_mode: &Path,
 ) -> Result<EnvironmentLock> {
+    ensure!(
+        configuration.config.image == crate::config::Image::default(),
+        "Native Codex artifacts require the native image profile"
+    );
     let artifacts_sha256 = BTreeMap::from([
         ("codex".into(), artifact_hash(codex)?),
         ("codex-code-mode-host".into(), artifact_hash(code_mode)?),
@@ -107,6 +111,44 @@ pub fn create(
         for (path, record) in crate::audit::image::runtime_sources(resources)? {
             recipes_sha256.insert(format!("runtime-source/{path}"), record.sha256);
         }
+    }
+    Ok(EnvironmentLock {
+        schema_version: 1,
+        platform: "x86_64-linux".into(),
+        ladybom_sha256: None,
+        configuration,
+        artifacts_sha256,
+        recipes_sha256,
+    })
+}
+/// Lock the explicitly selected broker and receiver artifacts. No current-exe
+/// inference or Codex artifact substitution is used for an embedding caller.
+pub fn create_broker(
+    configuration: Evaluated,
+    resources: &Path,
+    broker: &Path,
+    runtime: &Path,
+) -> Result<EnvironmentLock> {
+    configuration.config.validate_broker()?;
+    let artifacts_sha256 = BTreeMap::from([
+        ("lo-executor-worker".into(), artifact_hash(broker)?),
+        ("ladyshell".into(), artifact_hash(runtime)?),
+    ]);
+    let mut recipes_sha256 = BTreeMap::new();
+    for name in [
+        "flake.nix",
+        "flake.lock",
+        "broker-build.nix",
+        "broker-image.nix",
+        "openssl.nix",
+    ] {
+        recipes_sha256.insert(
+            name.into(),
+            files::hash(&files::read_limited(
+                &resources.join("nix").join(name),
+                1024 * 1024,
+            )?),
+        );
     }
     Ok(EnvironmentLock {
         schema_version: 1,

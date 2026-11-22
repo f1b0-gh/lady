@@ -212,7 +212,6 @@ pub(crate) fn validate(value: &Value) -> Result<()> {
         "sandbox_name",
         "sandbox_id",
         "policy_hash",
-        "codex_binary",
         "owner",
         "desired_hash",
         "image_id",
@@ -220,6 +219,25 @@ pub(crate) fn validate(value: &Value) -> Result<()> {
         "build_dir",
     ] {
         text(value, field)?;
+    }
+    if value["image_profile"] == "openshell-wasi" {
+        text(value, "broker_binary")?;
+        ensure!(
+            value.get("codex_binary").is_none() && value["storage"].is_object(),
+            "Invalid broker state"
+        );
+        ensure!(
+            value["desired_inputs"]["evaluated"]["config"]["sandbox"]
+                .get("provider")
+                .is_none(),
+            "Broker state contains a provider"
+        );
+    } else {
+        ensure!(
+            value.get("image_profile").is_none(),
+            "Unsupported retained image profile"
+        );
+        text(value, "codex_binary")?;
     }
     ensure!(
         value["context"]["gateway"].is_string() && value["context"]["workspace"].is_string(),
