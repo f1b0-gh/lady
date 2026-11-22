@@ -10,6 +10,162 @@ use crate::{
 };
 use serde_json::{json, Value};
 use std::{fs, os::unix::fs::symlink, path::PathBuf};
+
+fn select_broker_fixture(f: &mut Fixture) -> Result<()> {
+    f.current["image_profile"] = json!("openshell-wasi");
+    f.current["broker_binary"] = json!("/nix/store/synthetic-worker/bin/lo-executor-worker");
+    f.current["storage"] = json!({});
+    f.current
+        .as_object_mut()
+        .ok_or_else(|| invalid("expected object fixture"))?
+        .remove("codex_binary");
+    files::publish_json(&f.state.join("state.json"), &f.current, true)
+}
+
+#[test]
+fn broker_upload_uses_original_environment_and_fixed_bounded_transport() -> Result<()> {
+    let mut f = fixture()?;
+    select_broker_fixture(&mut f)?;
+    let bytes = b"synthetic component input; Stage is a separate operation";
+    let digest = files::hash(bytes);
+    let environment = f.store.catalog().environment.clone();
+    let encoded = serde_json::to_vec(&json!({"Ok":{
+        "component":digest,"bytes":bytes.len()}}))?;
+    let receipt = upload_with(
+        &environment,
+        &digest,
+        bytes,
+        30,
+        &mut f.driver,
+        |command, timeout, limit, input| {
+            let args: Vec<_> = command
+                .get_args()
+                .map(|a| a.to_string_lossy().into_owned())
+                .collect();
+            let last = &args[args.len() - 6..];
+            assert_eq!(
+                last,
+                [
+                    "/usr/local/bin/lo-executor-worker",
+                    "broker-upload",
+                    "/var/lib/ladyshell/broker/control",
+                    "/var/lib/ladyshell/broker/artifacts",
+                    "/var/lib/ladyshell/broker/incoming",
+                    &digest
+                ]
+            );
+            assert_eq!(input, Some(bytes.as_slice()));
+            assert_eq!(timeout, Duration::from_secs(30));
+            assert_eq!(limit, 16384);
+            (
+                ClientResult::Exit { code: 0 },
+                CapturedOutputs {
+                    stdout: CapturedStream {
+                        bytes: encoded,
+                        truncated: false,
+                    },
+                    stderr: CapturedStream::default(),
+                },
+            )
+        },
+    )?;
+    assert_eq!(receipt.component, digest);
+    assert_eq!(receipt.bytes, bytes.len() as u64);
+    Ok(())
+}
+
+#[test]
+fn broker_upload_refuses_changed_runtime_input_or_profile_before_transport() -> Result<()> {
+    let mut f = fixture()?;
+    let environment = f.store.catalog().environment.clone();
+    let bytes = b"input";
+    let digest = files::hash(bytes);
+    let launched = std::cell::Cell::new(false);
+    let no_launch =
+        |_: Command, _: Duration, _: usize, _: Option<&[u8]>| -> (ClientResult, CapturedOutputs) {
+            launched.set(true);
+            (ClientResult::IoFailure, CapturedOutputs::default())
+        };
+    assert!(upload_with(&environment, &digest, bytes, 30, &mut f.driver, no_launch).is_err());
+    select_broker_fixture(&mut f)?;
+    assert!(upload_with(
+        &environment,
+        &digest,
+        b"changed",
+        30,
+        &mut f.driver,
+        no_launch
+    )
+    .is_err());
+    assert!(upload_with(&environment, &digest, bytes, 0, &mut f.driver, no_launch).is_err());
+    let oversize = vec![0; 2 * 1024 * 1024 + 1];
+    assert!(upload_with(
+        &environment,
+        &files::hash(&oversize),
+        &oversize,
+        30,
+        &mut f.driver,
+        no_launch
+    )
+    .is_err());
+    f.driver.generation = "changed-generation".into();
+    assert!(upload_with(&environment, &digest, bytes, 30, &mut f.driver, no_launch).is_err());
+    assert!(
+        !launched.get(),
+        "refused upload must not initiate transport"
+    );
+    Ok(())
+}
+
+#[test]
+fn broker_upload_never_treats_truncated_mismatched_or_lost_output_as_a_receipt() -> Result<()> {
+    let mut f = fixture()?;
+    select_broker_fixture(&mut f)?;
+    let environment = f.store.catalog().environment.clone();
+    let bytes = b"input";
+    let digest = files::hash(bytes);
+    for kind in ["truncated", "changed", "lost", "operation_error", "extra"] {
+        let mut reply = json!({"Ok":{"component":digest,"bytes":bytes.len()}});
+        if kind == "changed" {
+            reply["Ok"]["component"] = json!("a".repeat(64));
+        }
+        if kind == "operation_error" {
+            reply = json!({"Err":"No space left on device"});
+        }
+        if kind == "extra" {
+            reply["Ok"]["unbound"] = json!(true);
+        }
+        let encoded = serde_json::to_vec(&reply)?;
+        let launched = std::cell::Cell::new(false);
+        let result = upload_with(
+            &environment,
+            &digest,
+            bytes,
+            30,
+            &mut f.driver,
+            |_, _, _, _| {
+                launched.set(true);
+                (
+                    if kind == "lost" {
+                        ClientResult::IoFailure
+                    } else {
+                        ClientResult::Exit { code: 0 }
+                    },
+                    CapturedOutputs {
+                        stdout: CapturedStream {
+                            bytes: encoded,
+                            truncated: kind == "truncated",
+                        },
+                        stderr: CapturedStream::default(),
+                    },
+                )
+            },
+        );
+        assert!(launched.get(), "{kind} must exercise transport output");
+        assert!(result.is_err(), "{kind} must remain unresolved");
+    }
+    Ok(())
+}
 struct Observed {
     generation: String,
     phase: String,

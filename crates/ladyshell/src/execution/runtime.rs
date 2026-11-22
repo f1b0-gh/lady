@@ -16,7 +16,7 @@ use crate::{
     state::{self, SessionLock, StateLock},
     sync,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
     fs::File,
@@ -182,7 +182,25 @@ struct Prepared {
     input: Option<Vec<u8>>,
 }
 fn preflight(store: &Store, driver: &mut impl Driver, record: &Record) -> Result<Prepared> {
-    let env = &record.environment;
+    let (lock, lease, current) = preflight_environment(&record.environment, driver)?;
+    let task = store.definition(&record.invocation.task)?;
+    let cmd = run::sandbox_command(
+        &Backend::new(&current["context"])?,
+        &current,
+        &task.argv,
+        task.timeout_seconds,
+    )?;
+    Ok(Prepared {
+        lock,
+        lease,
+        command: cmd,
+        input: task.stdin_bytes(&record.invocation.intent)?,
+    })
+}
+fn preflight_environment(
+    env: &EnvironmentPin,
+    driver: &mut impl Driver,
+) -> Result<(StateLock, SessionLock, Value)> {
     let lock = StateLock::acquire_existing(&env.state)?;
     let lease = SessionLock::acquire(&lock.directory, true)?;
     check_directory(lease.directory_file(), env)?;
@@ -202,19 +220,98 @@ fn preflight(store: &Store, driver: &mut impl Driver, record: &Record) -> Result
         source == env.source_sha256,
         "Retained working tree differs from installation"
     );
-    let task = store.definition(&record.invocation.task)?;
-    let cmd = run::sandbox_command(
+    Ok((lock, lease, current))
+}
+
+/// Correlated incoming storage receipt. This neither installs a component nor
+/// authorizes execution, proves termination, or retires a task/Promise scope.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct UploadedComponent {
+    pub component: String,
+    pub bytes: u64,
+}
+
+/// Transfer an independently admitted component to the original fixed broker.
+/// Supply the independently retained installation pin, never a guest assertion.
+/// The host must retain its exact operation before invoking this blocking I/O
+/// primitive outside LO guards, for example in an already initiated lifecycle
+/// process. Errors remain unresolved: do not automatically repeat an upload.
+/// The broker preserves an existing partial or complete file without replacement.
+pub fn upload(
+    environment: &EnvironmentPin,
+    component: &str,
+    bytes: &[u8],
+    timeout_seconds: u32,
+) -> Result<UploadedComponent> {
+    upload_with(
+        environment,
+        component,
+        bytes,
+        timeout_seconds,
+        &mut Native,
+        capture::run_with_input,
+    )
+}
+fn upload_with(
+    environment: &EnvironmentPin,
+    component: &str,
+    bytes: &[u8],
+    timeout_seconds: u32,
+    driver: &mut impl Driver,
+    transfer: impl FnOnce(Command, Duration, usize, Option<&[u8]>) -> (ClientResult, CapturedOutputs),
+) -> Result<UploadedComponent> {
+    ensure!(
+        !bytes.is_empty()
+            && bytes.len() <= 2 * 1024 * 1024
+            && files::hash(bytes) == component
+            && (1..=86400).contains(&timeout_seconds),
+        "Invalid bounded component upload"
+    );
+    let (lock, _lease, current) = preflight_environment(environment, driver)?;
+    ensure!(
+        current["image_profile"] == "openshell-wasi",
+        "Component upload requires the fixed broker profile"
+    );
+    let command = run::sandbox_command(
         &Backend::new(&current["context"])?,
         &current,
-        &task.argv,
-        task.timeout_seconds,
+        &[
+            "/usr/local/bin/lo-executor-worker",
+            "broker-upload",
+            "/var/lib/ladyshell/broker/control",
+            "/var/lib/ladyshell/broker/artifacts",
+            "/var/lib/ladyshell/broker/incoming",
+            component,
+        ],
+        timeout_seconds,
     )?;
-    Ok(Prepared {
-        lock,
-        lease,
-        command: cmd,
-        input: task.stdin_bytes(&record.invocation.intent)?,
-    })
+    // Keep the original session lease through transport. Seal in the broker
+    // separately fences its actual writes, including after host/client death.
+    drop(lock);
+    let (result, output) = transfer(
+        command,
+        Duration::from_secs(u64::from(timeout_seconds)),
+        16384,
+        Some(bytes),
+    );
+    ensure!(
+        result == (ClientResult::Exit { code: 0 })
+            && !output.stdout.truncated
+            && !output.stderr.truncated
+            && output.stdout.bytes.len() <= 16384
+            && output.stderr.bytes.len() <= 16384,
+        "Component upload transport is unresolved; preserve original intake"
+    );
+    let reply: std::result::Result<UploadedComponent, String> =
+        serde_json::from_value(crate::json::parse(&output.stdout.bytes)?)?;
+    let receipt =
+        reply.map_err(|_| invalid("Component upload not confirmed; inspect original intake"))?;
+    ensure!(
+        receipt.component == component && receipt.bytes == bytes.len() as u64,
+        "Component upload reply differs from original bytes"
+    );
+    Ok(receipt)
 }
 /// Run only an already accepted invocation under its independent worker lease.
 pub fn worker(store: &Store, key: &Key) -> Result<Record> {

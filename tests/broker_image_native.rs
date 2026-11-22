@@ -17,27 +17,27 @@ fn docker(args: &[&str]) -> Result<Vec<u8>> {
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local Docker"]
 fn qualified_fixed_image_builds_from_explicit_locked_artifacts() -> Result<()> {
-    qualify(false, false, None, false)
+    qualify(false, false, None, None)
 }
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
 fn qualified_broker_provisions_with_original_mounted_caps() -> Result<()> {
-    qualify(true, false, None, false)
+    qualify(true, false, None, None)
 }
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
 fn qualified_broker_destroy_retains_export_at_full_capacity() -> Result<()> {
-    qualify(true, true, None, false)
+    qualify(true, true, None, None)
 }
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
 fn qualified_broker_cancellation_after_creation_preserves_original_intent() -> Result<()> {
-    qualify(true, false, Some(cancel::Boundary::Creation), false)
+    qualify(true, false, Some(cancel::Boundary::Creation), None)
 }
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
 fn qualified_broker_cancellation_after_validation_exports_bound_generation() -> Result<()> {
-    qualify(true, false, Some(cancel::Boundary::Validation), false)
+    qualify(true, false, Some(cancel::Boundary::Validation), None)
 }
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
@@ -47,13 +47,18 @@ fn qualified_broker_cancellation_exports_sealed_generation_without_initializatio
         true,
         false,
         Some(cancel::Boundary::SealedInitialization),
-        false,
+        None,
     )
 }
 #[test]
 #[ignore = "requires reviewed worker ELF, Nix and local OpenShell; this tests transport, not LO admission"]
 fn ordinary_retained_receiver_runs_the_fixed_broker_and_preserves_its_reply() -> Result<()> {
-    qualify(true, true, None, true)
+    qualify(true, true, None, Some(receiver::Case::Transport))
+}
+#[test]
+#[ignore = "requires a reviewed upload-capable worker, summary package fixture, Nix and local OpenShell"]
+fn native_component_upload_staging_execution_and_full_intake_export() -> Result<()> {
+    qualify(true, true, None, Some(receiver::Case::Components))
 }
 #[path = "support/broker_receiver.rs"]
 mod receiver;
@@ -61,7 +66,7 @@ fn qualify(
     provision: bool,
     ordinary_destroy: bool,
     interruption: Option<cancel::Boundary>,
-    retained_receiver: bool,
+    retained_receiver: Option<receiver::Case>,
 ) -> Result<()> {
     let base =
         std::env::var_os("LADYSHELL_BROKER_IMAGE_EVIDENCE").ok_or("evidence directory required")?;
@@ -133,8 +138,8 @@ fn qualify(
         result
             .map_err(|error| -> Box<dyn std::error::Error> { Box::new(error) })
             .and_then(|built| {
-                if retained_receiver {
-                    receiver::verify(&root, &state)?;
+                if let Some(case) = retained_receiver {
+                    receiver::verify(&root, &state, case)?;
                 }
                 if ordinary_destroy {
                     verify_sealed_export(&root, &built, Some(&state))?;

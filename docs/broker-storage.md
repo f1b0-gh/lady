@@ -191,8 +191,8 @@ the bytes. It bounds stderr and stdout independently and refuses incomplete pipe
 held by client descendants. Partial output remains on failure. Local filesystem
 I/O is still subject to host scheduling. The caller must authenticate and recheck
 the runtime, publish the copy and receipt durably, and retain the lifecycle lease.
-These primitives do not yet implement that publication or ordinary broker
-deletion. The native destroy guard continues to refuse broker states. No export
+The ordinary destruction path below performs that publication and retains its
+journal before deletion. Calling the export primitives alone does not. No export
 receipt grants lifecycle authority, establishes LO task retirement or permits a
 sealed generation to resume execution.
 
@@ -329,3 +329,42 @@ idempotent retry. Run them with the same evidence, worker and gateway variables:
 cargo test --locked -p ladyshell-cli --test broker_image_native \
   qualified_broker_cancellation -- --ignored --nocapture --test-threads=1
 ```
+
+## Bounded component intake
+
+`execution::upload(&environment, &component_sha256, &bytes, timeout_seconds)`
+transfers one component to the original environment's incoming volume. The host
+selects the retained `EnvironmentPin` independently of task input. The method
+verifies that environment, its current runtime and fixed broker profile, then
+holds its original session lease through the bounded transport. It accepts
+nonempty input of at most 2 MiB whose SHA-256 matches the supplied lowercase hex
+digest; timeouts range from 1 to 86,400 seconds.
+
+The command is fixed: `lo-executor-worker broker-upload` with the three broker
+roots and component digest. Binary bytes travel through stdin. A successful
+`UploadedComponent` requires a successful exit, bounded untruncated output and
+an exact digest/length receipt. No task field can select paths or native argv.
+This requires an LO worker implementing `broker-upload`; the initial
+Initialize/Seal capability check alone does not establish intake support. Lock
+and qualify matching worker, Ladyshell library and runtime versions together.
+
+The broker uses create-only files and the same mutation/seal lock as Stage and
+Execute. Disk exhaustion can leave an occupied partial incoming file. A repeat
+upload refuses that name even if space later becomes available; it never replaces
+or repairs partial or complete bytes automatically. Timeout, lost output or a
+bad receipt remains unresolved. Preserve the original intent and environment
+for observation and sealed export before deletion.
+
+This blocking host primitive grants no policy authority and performs no Stage,
+activation or task admission. Initiate the owning lifecycle operation under the
+orchestrator's live policy guard, then perform blocking transport outside that
+guard. A serialized pin or successful upload is not evidence of task retirement.
+
+The ignored `native_component_upload_staging_execution_and_full_intake_export`
+qualification uses the same evidence/worker/gateway variables as the native
+destroy test, plus `LADYSHELL_BROKER_TEST_PACKAGE` naming an explicit maintained
+LO summary package directory (`artifact.json` and `components/<digest>.wasm`).
+It uploads and stages through the ordinary retained receiver, executes the
+summary component, exhausts the incoming byte cap and refuses a partial retry,
+then exports before ordinary deletion. Its host admissions are synthetic; it
+does not qualify LO policy or Promise integration.
