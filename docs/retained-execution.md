@@ -180,6 +180,28 @@ ladyshell execution reconcile --receiver "$RECEIVER" --receiver-id "$RECEIVER_ID
 Use `ladyshell help execution COMMAND` for details. Help runs without
 configuration, credentials or state.
 
+## Protected host acceptance
+
+Rust integrations holding a live authority guard can use
+`Store::accept_protected_with_clock`. It validates the current owner, exact claim
+and fresh exclusive deadline under the receiver ledger lock before returning even
+an exact duplicate. It refuses a busy lock immediately. The clock runs once under
+that lock and must not reenter this receiver or a policy store. Local filesystem
+I/O remains subject to host scheduling; this is not a real-time latency guarantee.
+
+The host must authenticate admission and ownership advancement independently.
+Serialized admission metadata grants no authority. Keep the original authority
+guard live through acceptance, then perform remote dispatch separately through
+the retained worker. This path uses the same catalogue, journal and invocation
+format for native programs and fixed WASI brokers.
+
+A duplicate returns its unchanged original record. It does not update that
+record's deadline or owner, readmit execution, or launch another worker. Observe
+that original record after uncertainty. Ordinary `accept`, `accept_with_clock`
+and CLI submission retain their existing recovery behavior: exact original
+invocations can be looked up without supplying fresh admission. A complete
+LO computation Recipient adapter still requires separate integration and tests.
+
 ## External lo-tasks provider
 
 An external `lo_tasks::domain_task::Provider` can use the native host API or

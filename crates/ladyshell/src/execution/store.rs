@@ -112,8 +112,16 @@ impl Store {
     }
 
     fn locked<T>(&self, writing: bool, f: impl FnOnce(&mut Ledger) -> Result<T>) -> Result<T> {
+        self.locked_mode(writing, false, f)
+    }
+    fn locked_mode<T>(
+        &self,
+        writing: bool,
+        nonblocking: bool,
+        f: impl FnOnce(&mut Ledger) -> Result<T>,
+    ) -> Result<T> {
         let lock = self.root.verify()?;
-        fs::lock(&lock, false)?;
+        ensure!(fs::lock(&lock, nonblocking)?, "Retained receiver is busy");
         self.root.verify()?;
         ensure!(
             !writing || !self.poisoned.load(Ordering::Acquire),
@@ -367,13 +375,40 @@ impl Store {
         admission: &Admission,
         clock: impl FnOnce() -> Result<u64>,
     ) -> Result<Acceptance> {
+        self.accept_inner(invocation, admission, clock, false)
+    }
+    /// Acceptance under a live host authority guard. Check the current owner,
+    /// claim and fresh deadline under the same ledger lock before returning even
+    /// an exact duplicate. A busy lock refuses immediately. The caller must
+    /// authenticate admission and scope ownership independently; JSON is not a grant.
+    ///
+    /// Duplicate recovery returns the unchanged original record: it neither
+    /// renews its admission nor authorizes another dispatch. Clock runs once,
+    /// under the lock, and must not reenter this store or other policy stores.
+    pub fn accept_protected_with_clock(
+        &self,
+        invocation: &Invocation,
+        admission: &Admission,
+        clock: impl FnOnce() -> Result<u64>,
+    ) -> Result<Acceptance> {
+        self.accept_inner(invocation, admission, clock, true)
+    }
+    fn accept_inner(
+        &self,
+        invocation: &Invocation,
+        admission: &Admission,
+        clock: impl FnOnce() -> Result<u64>,
+        protected: bool,
+    ) -> Result<Acceptance> {
         invocation.validate()?;
-        self.locked(true, |l| {
-            if let Some(record) = self.matching(l, invocation)? {
-                return Ok(Acceptance {
-                    record,
-                    is_new: false,
-                });
+        self.locked_mode(true, protected, |l| {
+            if !protected {
+                if let Some(record) = self.matching(l, invocation)? {
+                    return Ok(Acceptance {
+                        record,
+                        is_new: false,
+                    });
+                }
             }
             admission.validate()?;
             l.authorize(&invocation.scope, admission)?;
@@ -386,6 +421,14 @@ impl Store {
             let now = clock()?;
             self.clock(l, now)?;
             ensure!(now < admission.admit_before, "Retained admission expired");
+            if protected {
+                if let Some(record) = self.matching(l, invocation)? {
+                    return Ok(Acceptance {
+                        record,
+                        is_new: false,
+                    });
+                }
+            }
             ensure!(
                 l.entries.len() < COUNT_LIMIT,
                 "Retained invocation capacity exhausted"

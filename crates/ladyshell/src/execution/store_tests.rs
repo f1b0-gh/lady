@@ -1105,3 +1105,100 @@ fn masked_unindexed_directories_still_require_private_ownership_and_bounded_cont
     }
     Ok(())
 }
+
+#[test]
+fn protected_acceptance_checks_current_owner_claim_and_deadline_before_duplicate_recovery(
+) -> Result<()> {
+    let f = fixture()?;
+    let first = f.s.accept_protected_with_clock(&f.i, &f.a, || Ok(10))?;
+    assert!(first.is_new);
+    assert!(f
+        .s
+        .accept_protected_with_clock(&f.i, &f.a, || Ok(20))
+        .is_err());
+    let mut current = f.a.clone();
+    current.admit_before = 50;
+    f.s.advance_claim(&f.i.scope, None, 2)?;
+    assert!(f
+        .s
+        .accept_protected_with_clock(&f.i, &current, || Ok(21))
+        .is_err());
+    current.claim = 2;
+    let duplicate = f.s.accept_protected_with_clock(&f.i, &current, || Ok(22))?;
+    assert!(!duplicate.is_new);
+    assert_eq!(duplicate.record, first.record);
+    let next = owner(1);
+    f.s.bind_owner(&f.i.scope, Some(&next))?;
+    f.s.advance_claim(&f.i.scope, Some(&next), 1)?;
+    assert!(f
+        .s
+        .accept_protected_with_clock(&f.i, &current, || Ok(23))
+        .is_err());
+    current.owner = Some(next);
+    current.claim = 1;
+    let duplicate = f.s.accept_protected_with_clock(&f.i, &current, || Ok(24))?;
+    assert!(!duplicate.is_new);
+    assert_eq!(duplicate.record, first.record);
+    // Protected observation never updates the original admission or grants a
+    // new execution. Legacy recovery remains available without fresh admission.
+    assert_eq!(f.s.accept(&f.i, &f.a, 500)?.record, first.record);
+    assert_eq!(f.s.inspect(&f.i.key())?, first.record);
+    Ok(())
+}
+#[test]
+fn protected_duplicate_samples_clock_once_and_rejects_changed_intent() -> Result<()> {
+    let f = fixture()?;
+    let first = f.s.accept_protected_with_clock(&f.i, &f.a, || Ok(10))?;
+    let mut calls = 0;
+    let duplicate = f.s.accept_protected_with_clock(&f.i, &f.a, || {
+        calls += 1;
+        Ok(11)
+    })?;
+    assert_eq!(calls, 1);
+    assert_eq!(duplicate.record, first.record);
+    let mut changed = f.i.clone();
+    changed.intent = json!({"substituted":true});
+    assert!(f
+        .s
+        .accept_protected_with_clock(&changed, &f.a, || Ok(12))
+        .is_err());
+    assert_eq!(f.s.inspect(&f.i.key())?, first.record);
+    Ok(())
+}
+
+#[test]
+fn protected_acceptance_refuses_busy_receiver_without_waiting_for_another_writer() -> Result<()> {
+    use std::{os::fd::AsRawFd, sync::mpsc, time::Duration};
+    let f = fixture()?;
+    let directory = files::open_directory(&f.path)?;
+    // SAFETY: the independently opened directory descriptor remains owned here.
+    assert_eq!(
+        unsafe { libc::flock(directory.as_raw_fd(), libc::LOCK_EX) },
+        0
+    );
+    let refused = thread::scope(|threads| -> Result<bool> {
+        let (tx, rx) = mpsc::channel();
+        let fixture = &f;
+        let worker = threads.spawn(move || {
+            let result = fixture
+                .s
+                .accept_protected_with_clock(&fixture.i, &fixture.a, || Ok(10));
+            let _ = tx.send(result.is_err());
+        });
+        let response = rx.recv_timeout(Duration::from_secs(5));
+        // Release before joining even on failure, so a blocking regression cannot
+        // strand the test process or retain a lock for the rest of the suite.
+        // SAFETY: this thread still owns the live locked directory descriptor.
+        assert_eq!(
+            unsafe { libc::flock(directory.as_raw_fd(), libc::LOCK_UN) },
+            0
+        );
+        worker
+            .join()
+            .map_err(|_| invalid("acceptance worker panicked"))?;
+        Ok(response == Ok(true))
+    })?;
+    assert!(refused, "protected admission waited for a receiver lock");
+    assert!(f.s.lookup(&f.i)?.is_none());
+    Ok(())
+}
