@@ -40,9 +40,9 @@ fd = os.open('/tmp/ladybom-interop.env', os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0
 with os.fdopen(fd, 'w') as stream:
     stream.write('LADYBOM_DTRACK_DATABASE_PASSWORD=' + secrets.token_hex(24) + '\n')
 PY
-docker compose --env-file /tmp/ladybom-interop.env -f qualification/dependency-track/compose.yaml config --quiet
-docker compose --env-file /tmp/ladybom-interop.env -f qualification/dependency-track/compose.yaml pull
-docker compose --env-file /tmp/ladybom-interop.env -f qualification/dependency-track/compose.yaml up -d --no-recreate
+docker compose --env-file /tmp/ladybom-interop.env -f resources/dependency-track/compose.yaml config --quiet
+docker compose --env-file /tmp/ladybom-interop.env -f resources/dependency-track/compose.yaml pull
+docker compose --env-file /tmp/ladybom-interop.env -f resources/dependency-track/compose.yaml up -d --no-recreate
 ```
 
 The API is limited to 2 GiB of RAM and PostgreSQL to 512 MiB, suitable only for
@@ -74,7 +74,7 @@ Disabled scheduling and failed mirrors do not establish advisory completeness.
 ```sh
 curl -fsSL http://127.0.0.1:19081/health/ready
 curl -fsSL http://127.0.0.1:18081/api/version
-python3 qualification/dependency-track/bootstrap-admin.py --credentials /tmp/ladybom-interop-admin.json
+python3 resources/dependency-track/bootstrap-admin.py --credentials /tmp/ladybom-interop-admin.json
 ```
 
 Wait for `status: UP` and check the version before initialization. The script
@@ -107,7 +107,7 @@ with the observed image/version, including merged contexts and coverage losses.
 ## Stop and retain state
 
 ```sh
-docker compose --env-file /tmp/ladybom-interop.env -f qualification/dependency-track/compose.yaml stop
+docker compose --env-file /tmp/ladybom-interop.env -f resources/dependency-track/compose.yaml stop
 ```
 
 Stopping retains containers, volumes and credentials. This recipe performs no
