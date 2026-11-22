@@ -13,9 +13,9 @@ explicit `BrokerDesired` with independently selected worker and Ladyshell runtim
 ELFs. Native provisioning supports the closed `openshell-wasi` profile on the
 qualified local OpenShell 0.1.4 Docker backend. Ordinary `destroy` seals the broker,
 retains a verified storage archive and removes the original sandbox and volumes.
-`--discard-work` refuses broker state. The governed retained-receiver bridge and
-cleanup of incomplete provisioning are still being integrated; this is not yet
-a complete task lifecycle API.
+`--discard-work` refuses broker state. `destroy::cancel_broker` handles interrupted
+provisioning against the original operation. The governed retained-receiver bridge
+is still being integrated; this is not yet a complete task lifecycle API.
 
 ## Configuration and lifecycle
 
@@ -261,7 +261,7 @@ even when the sandbox is already absent.
 These records do not close LO task scopes or release Promise occupancy. Host
 lifecycle policy admission belongs to the embedding orchestrator. A changed or
 lost original runtime is not silently readmitted for export. Incomplete apply
-operations still require their separate provisioning recovery path.
+operations use the separate cancellation path below.
 
 The explicit native qualification exercises ordinary provisioning, simultaneous
 byte and inode exhaustion, ordinary destroy, archive verification after deletion,
@@ -279,3 +279,53 @@ The test retains `full-storage.json`, `ordinary-destroy.json`, lifecycle and
 volume journals, the verified tar and its receipt. The fixture removes only its
 owned image tag after the lifecycle assertions; test panics still run the
 fixture's separately bounded cleanup.
+
+
+## Interrupted provisioning
+
+Use `ladyshell cancel-broker --state /absolute/path/to/state`, or
+`destroy::cancel_broker(&Existing)`, for an incomplete broker apply operation.
+The original desired inputs are retained in the apply journal before effects.
+Cancellation checks their digest, owner, name, phase and the unchanged predecessor
+or partially published state. It does not reload source files, configuration or
+runtime artifacts that may have changed since provisioning. Legacy operations
+without retained inputs require resuming their original apply, then using ordinary
+`destroy` on the completed state.
+
+A persistent `broker-cancel.json` fence prevents provisioning and managed
+execution from resuming while cancellation is pending or complete. The original
+operation and state files remain intact. Cancellation of a pending replacement
+targets only that operation's new resources; predecessor resources remain intact,
+and the state remains fenced. Images and host build inputs remain available for
+inspection or separately scoped reclamation.
+
+Before runtime validation, cancellation records the observed original sandbox
+identity, confirms deletion on the original backend, then removes partially
+created volumes against their exact planned owner, workspace and limits.
+`storage::remove_planned` checks those intents before adopting any lost creation
+acknowledgement. Retained receipts still require the same volume identities.
+Missing or substituted resources never cause the controller to create replacements.
+
+Runtime validation has its own retained intent. A missing binding after that
+intent is a recovery gap, not evidence that no generation existed. Once the
+original binding or publication result exists, cancellation uses the same sealed,
+verified export-before-delete path as ordinary destruction. If initialization was
+interrupted, it may finish only against the original qualified runtime, without
+publishing it for tasks. An already sealed generation may acquire a cleanup-only
+initialization receipt: ordinary execution verification rejects that receipt,
+while export and deletion can proceed. The generation is never reopened.
+A failed qualification, lost generation or failed export
+never falls back to deleting unpublished resources. Reconcile the original binding
+from retained evidence before retrying cancellation; keep its data meanwhile.
+A cancellation fence does not permit resuming apply or admitting new work.
+
+The explicit native cancellation qualifications interrupt real native provisioning
+immediately after sandbox creation, immediately after runtime validation, and
+with a sealed generation missing its initialization receipt. They exercise cancellation, archive retention for the bound generation, original
+volume absence, refusal to resume apply, unchanged operation evidence and
+idempotent retry. Run them with the same evidence, worker and gateway variables:
+
+```sh
+cargo test --locked -p ladyshell-cli --test broker_image_native \
+  qualified_broker_cancellation -- --ignored --nocapture --test-threads=1
+```

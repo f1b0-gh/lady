@@ -72,13 +72,14 @@ fn invalid(message: impl Into<String>) -> Error {
 
 /// Any retained fence, including a corrupt or dangling entry, blocks managed work.
 pub(crate) fn ensure_available(directory: &Path) -> Result<()> {
-    match std::fs::symlink_metadata(directory.join(JOURNAL)) {
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error.into()),
-        Ok(_) => Err(invalid(
-            "Broker deletion is pending or complete; preserve this state and resume destroy",
-        )),
+    for name in [JOURNAL, "broker-cancel.json"] {
+        match std::fs::symlink_metadata(directory.join(name)) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+            Err(error) => return Err(error.into()),
+            Ok(_) => return Err(invalid("Broker deletion or cancellation is pending or complete; preserve this state and resume its lifecycle operation")),
+        }
     }
+    Ok(())
 }
 
 /// Caller holds the original environment StateLock and exclusive SessionLock.

@@ -154,7 +154,7 @@ pub fn prepare(
 /// absent and required exports are retained. This does not attest task retirement.
 /// A partially provisioned operation is also eligible for explicit cleanup.
 pub fn remove(directory: &Path, driver: &mut impl Driver) -> Result<()> {
-    remove_checked(directory, None, driver)
+    remove_checked(directory, None, None, driver)
 }
 
 /// Remove a published deployment's volumes only when the complete receipt set
@@ -164,11 +164,28 @@ pub fn remove_original(
     original: &[Receipt],
     driver: &mut impl Driver,
 ) -> Result<()> {
-    remove_checked(directory, Some(original), driver)
+    remove_checked(directory, Some(original), None, driver)
+}
+/// Cancel partially created storage only against the original planned profile,
+/// owner and workspace. Already retained receipts still bind exact identities.
+pub fn remove_planned(
+    directory: &Path,
+    profile: &Profile,
+    owner: &str,
+    workspace: &str,
+    driver: &mut impl Driver,
+) -> Result<()> {
+    remove_checked(
+        directory,
+        None,
+        Some(&profile.intents(owner, workspace)?),
+        driver,
+    )
 }
 fn remove_checked(
     directory: &Path,
     original: Option<&[Receipt]>,
+    intents: Option<&[Intent]>,
     driver: &mut impl Driver,
 ) -> Result<()> {
     let lock = state::StateLock::acquire_existing(directory)?;
@@ -182,6 +199,12 @@ fn remove_checked(
                     .zip(original)
                     .all(|(entry, receipt)| entry.receipt.as_ref() == Some(receipt)),
             "Storage journal differs from original deployment receipts"
+        );
+    }
+    if let Some(intents) = intents {
+        ensure!(
+            journal.entries.iter().map(|e| &e.intent).eq(intents.iter()),
+            "Storage journal differs from original provisioning intents"
         );
     }
     if !journal.deleting {

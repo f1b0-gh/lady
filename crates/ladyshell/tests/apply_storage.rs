@@ -109,7 +109,11 @@ impl Driver for Supported {
                 .join("operation.json"),
         )?)?;
         assert_eq!(operation["owner"], owner);
-        assert_eq!(operation["phase"], "built");
+        assert!(
+            operation["phase"] == "built"
+                || (self.broker
+                    && (operation["phase"] == "validating" || operation["phase"] == "publishing"))
+        );
         let evidence =
             json!({"profile":profile,"owner":owner,"context":context,"directory":directory});
         if let Some(original) = &self.prepared {
@@ -264,5 +268,72 @@ fn broker_publication_recovers_without_native_provider_or_codex_fields() -> Resu
     assert_eq!(driver.creates, 1);
     assert!(result.get("codex_binary").is_none());
     assert_eq!(ladyshell::state::load(root.path())?, Some(result));
+    Ok(())
+}
+
+#[test]
+fn broker_original_inputs_survive_failed_validation_before_state_publication() -> Result<()> {
+    let root = tempfile::tempdir()?;
+    let mut desired = desired();
+    desired["evaluated"]["config"]["sandbox"] = json!({});
+    desired["evaluated"]["config"]["image"] =
+        serde_json::to_value(ladyshell::config::Image::broker())?;
+    save_plan(root.path(), &desired)?;
+    let mut driver = Supported {
+        broker: true,
+        fail_validation: true,
+        ..Default::default()
+    };
+    assert!(apply_with(&desired, root.path(), &mut driver).is_err());
+    assert!(ladyshell::state::load(root.path())?.is_none());
+    let operation =
+        ladyshell::state::read(&root.path().join("operation.json"))?.ok_or_else(|| {
+            Error::InvalidInput {
+                message: "missing operation".into(),
+            }
+        })?;
+    assert_eq!(
+        operation["phase"], "validating",
+        "retain validation intent before any possible runtime binding"
+    );
+    assert_eq!(operation["desired_inputs"], desired);
+    assert_eq!(operation["desired_hash"], plan::digest(&desired)?);
+    Ok(())
+}
+
+#[test]
+fn interrupted_publication_keeps_original_result_when_revalidation_fails() -> Result<()> {
+    let root = tempfile::tempdir()?;
+    let mut desired = desired();
+    desired["evaluated"]["config"]["sandbox"] = json!({});
+    desired["evaluated"]["config"]["image"] =
+        serde_json::to_value(ladyshell::config::Image::broker())?;
+    save_plan(root.path(), &desired)?;
+    let mut driver = Supported {
+        broker: true,
+        fail_publication: true,
+        ..Default::default()
+    };
+    assert!(apply_with(&desired, root.path(), &mut driver).is_err());
+    let original =
+        ladyshell::state::read(&root.path().join("operation.json"))?.ok_or_else(|| {
+            Error::InvalidInput {
+                message: "operation".into(),
+            }
+        })?;
+    assert_eq!(original["phase"], "publishing");
+    // Model death after retaining the result but before atomic state publication.
+    std::fs::remove_file(root.path().join("state.json"))?;
+    driver.fail_publication = false;
+    driver.fail_validation = true;
+    assert!(apply_with(&desired, root.path(), &mut driver).is_err());
+    let retained =
+        ladyshell::state::read(&root.path().join("operation.json"))?.ok_or_else(|| {
+            Error::InvalidInput {
+                message: "operation".into(),
+            }
+        })?;
+    assert_eq!(retained["phase"], "publishing");
+    assert_eq!(retained["result"], original["result"]);
     Ok(())
 }

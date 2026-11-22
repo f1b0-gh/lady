@@ -32,6 +32,12 @@ fn main() {
             Command::Manage(args) => {
                 ladyshell_cli::management_cli::run(args).map(|code| exit_status = code)
             }
+            Command::CancelBroker(args) => {
+                ladyshell::destroy::cancel_broker(&ladyshell::request::Existing {
+                    state: args.state,
+                })
+                .and_then(print_json)
+            }
             Command::Destroy(args) => {
                 if args.all {
                     ladyshell::destroy::all(&ladyshell::request::DestroyAll {

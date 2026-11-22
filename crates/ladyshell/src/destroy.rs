@@ -9,7 +9,9 @@ use crate::{
 use serde_json::{json, Value};
 mod batch;
 pub(crate) mod broker;
+mod cancel;
 pub use batch::{all, all_at};
+pub use cancel::cancel_broker;
 
 pub fn run(args: &Destroy) -> Result<Value> {
     run_selected(args, None)

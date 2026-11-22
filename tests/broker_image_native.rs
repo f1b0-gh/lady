@@ -2,6 +2,8 @@
 use ladyshell::{app, environment_lock::atomic_json, image, request::BrokerDesired};
 use serde_json::{json, Value};
 use std::{fs, path::Path, process::Command, time::Duration};
+#[path = "support/broker_cancel.rs"]
+mod cancel;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 fn docker(args: &[&str]) -> Result<Vec<u8>> {
     let mut command = Command::new("docker");
@@ -15,19 +17,39 @@ fn docker(args: &[&str]) -> Result<Vec<u8>> {
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local Docker"]
 fn qualified_fixed_image_builds_from_explicit_locked_artifacts() -> Result<()> {
-    qualify(false, false)
+    qualify(false, false, None)
 }
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
 fn qualified_broker_provisions_with_original_mounted_caps() -> Result<()> {
-    qualify(true, false)
+    qualify(true, false, None)
 }
 #[test]
 #[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
 fn qualified_broker_destroy_retains_export_at_full_capacity() -> Result<()> {
-    qualify(true, true)
+    qualify(true, true, None)
 }
-fn qualify(provision: bool, ordinary_destroy: bool) -> Result<()> {
+#[test]
+#[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
+fn qualified_broker_cancellation_after_creation_preserves_original_intent() -> Result<()> {
+    qualify(true, false, Some(cancel::Boundary::Creation))
+}
+#[test]
+#[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
+fn qualified_broker_cancellation_after_validation_exports_bound_generation() -> Result<()> {
+    qualify(true, false, Some(cancel::Boundary::Validation))
+}
+#[test]
+#[ignore = "requires explicit evidence root, reviewed worker ELF, Nix and local OpenShell"]
+fn qualified_broker_cancellation_exports_sealed_generation_without_initialization_receipt(
+) -> Result<()> {
+    qualify(true, false, Some(cancel::Boundary::SealedInitialization))
+}
+fn qualify(
+    provision: bool,
+    ordinary_destroy: bool,
+    interruption: Option<cancel::Boundary>,
+) -> Result<()> {
     let base =
         std::env::var_os("LADYSHELL_BROKER_IMAGE_EVIDENCE").ok_or("evidence directory required")?;
     let worker =
@@ -88,7 +110,9 @@ fn qualify(provision: bool, ordinary_destroy: bool) -> Result<()> {
         return Err("qualification tag already exists".into());
     }
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let result = if provision {
+        let result = if let Some(boundary) = interruption {
+            app::make_broker_plan(&args).and_then(|_| cancel::apply(&desired, &state, boundary))
+        } else if provision {
             app::make_broker_plan(&args).and_then(|_| app::apply_broker(&args))
         } else {
             image::build(&desired, &state, None)
@@ -100,7 +124,7 @@ fn qualify(provision: bool, ordinary_destroy: bool) -> Result<()> {
                     verify_sealed_export(&root, &built, Some(&state))?;
                     assert!(app::make_broker_plan(&args).is_err());
                     assert!(app::apply_broker(&args).is_err());
-                } else if provision {
+                } else if provision && interruption.is_none() {
                     verify_recovery(&args, &root, &built)?;
                 }
                 Ok(built)

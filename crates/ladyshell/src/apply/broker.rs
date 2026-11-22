@@ -26,6 +26,21 @@ fn initialized_reply(reply: &Value, token: &str) -> Result<()> {
     );
     Ok(())
 }
+fn lifecycle_reply(reply: &Value, token: &str, cleanup: bool) -> Result<()> {
+    if cleanup && *reply == json!({"Ok":{"token":token,"accepting":false}}) {
+        return Ok(());
+    }
+    initialized_reply(reply, token)
+}
+fn verify_protocol(original: &Value, expected: &Value, cleanup: bool) -> Result<()> {
+    let mut sealed = expected.clone();
+    sealed["reply"]["Ok"]["accepting"] = json!(false);
+    ensure!(
+        original == expected || (cleanup && *original == sealed),
+        "Original broker lifecycle capability changed"
+    );
+    Ok(())
+}
 fn protocol(evidence: &Value, binding: &Value) -> Result<Value> {
     let token = crate::plan::digest(&json!({"format":1,"binding":binding,"storage":evidence}))?;
     Ok(
@@ -211,7 +226,13 @@ fn exec(backend: &Backend, name: &str, args: &[&str], input: &[u8]) -> Result<Ve
         .args(args);
     process::capture_input(command, input, Duration::from_secs(30), 16384)
 }
-pub(super) fn validate(backend: &Backend, name: &str, build: &Value) -> Result<Value> {
+pub(crate) fn validate(backend: &Backend, name: &str, build: &Value) -> Result<Value> {
+    validate_inner(backend, name, build, false)
+}
+pub(crate) fn validate_for_cleanup(backend: &Backend, name: &str, build: &Value) -> Result<Value> {
+    validate_inner(backend, name, build, true)
+}
+fn validate_inner(backend: &Backend, name: &str, build: &Value, cleanup: bool) -> Result<Value> {
     let evidence = &build["storage"];
     bound(backend, evidence)?;
     let observed = backend
@@ -279,10 +300,11 @@ pub(super) fn validate(backend: &Backend, name: &str, build: &Value) -> Result<V
     } else {
         atomic_json(&path, &measured)?;
     }
-    let expected = protocol(evidence, &binding)?;
+    let mut expected = protocol(evidence, &binding)?;
     let path = directory.join("protocol.json");
-    if let Some(original) = state::read(&path)? {
-        unchanged(&original, &expected)?;
+    let original = state::read(&path)?;
+    if let Some(original) = &original {
+        verify_protocol(original, &expected, cleanup)?;
     }
     let reply = crate::json::parse(&exec(
         backend,
@@ -290,13 +312,18 @@ pub(super) fn validate(backend: &Backend, name: &str, build: &Value) -> Result<V
         &BROKER_ARGS,
         &serde_json::to_vec(&expected["request"])?,
     )?)?;
-    initialized_reply(&reply, text(&expected["request"]["operation"], "token")?)?;
+    lifecycle_reply(
+        &reply,
+        text(&expected["request"]["operation"], "token")?,
+        cleanup,
+    )?;
+    expected["reply"] = reply;
     unchanged(
         &binding["runtime"],
         &serde_json::to_value(Native.observe(&current)?)?,
     )?;
     lock.verify_directory()?;
-    atomic_json(&path, &expected)?;
+    atomic_json(&path, original.as_ref().unwrap_or(&expected))?;
     Ok(effective)
 }
 fn measure(backend: &Backend, evidence: &Value, binding: &Value) -> Result<Value> {
@@ -360,6 +387,9 @@ fn measure(backend: &Backend, evidence: &Value, binding: &Value) -> Result<Value
         .collect::<Vec<_>>()))
 }
 pub(crate) fn verify(backend: &Backend, name: &str, evidence: &Value) -> Result<()> {
+    verify_inner(backend, name, evidence, false)
+}
+fn verify_inner(backend: &Backend, name: &str, evidence: &Value, cleanup: bool) -> Result<()> {
     let directory = Path::new(text(evidence, "directory")?);
     let lock = state::StateLock::acquire_existing(directory)?;
     let binding = state::read(&directory.join("binding.json"))?
@@ -370,13 +400,19 @@ pub(crate) fn verify(backend: &Backend, name: &str, evidence: &Value) -> Result<
     );
     let original_protocol = state::read(&directory.join("protocol.json"))?
         .ok_or_else(|| invalid("Missing original broker lifecycle capability".into()))?;
-    unchanged(&original_protocol, &protocol(evidence, &binding)?)?;
+    verify_protocol(&original_protocol, &protocol(evidence, &binding)?, cleanup)?;
     let original = state::read(&directory.join("mounts.json"))?
         .ok_or_else(|| invalid("Missing original mounted caps".into()))?;
     unchanged(&original, &measure(backend, evidence, &binding)?)?;
     lock.verify_directory()
 }
 pub(crate) fn verify_state(backend: &Backend, current: &Value) -> Result<()> {
+    verify_state_inner(backend, current, false)
+}
+pub(crate) fn verify_state_for_cleanup(backend: &Backend, current: &Value) -> Result<()> {
+    verify_state_inner(backend, current, true)
+}
+fn verify_state_inner(backend: &Backend, current: &Value, cleanup: bool) -> Result<()> {
     let evidence = &current["storage"];
     let directory = Path::new(text(evidence, "directory")?);
     let binding = state::read(&directory.join("binding.json"))?
@@ -394,7 +430,7 @@ pub(crate) fn verify_state(backend: &Backend, current: &Value) -> Result<()> {
             "Broker state differs from original runtime: {field}"
         );
     }
-    verify(backend, text(current, "sandbox_name")?, evidence)
+    verify_inner(backend, text(current, "sandbox_name")?, evidence, cleanup)
 }
 
 #[cfg(test)]
@@ -413,6 +449,30 @@ mod tests {
         ] {
             assert!(initialized_reply(&reply, &token).is_err());
         }
+    }
+    #[test]
+    fn sealed_initialization_is_eligible_only_for_cleanup() -> Result<()> {
+        let token = "a".repeat(64);
+        let sealed = json!({"Ok":{"token":token,"accepting":false}});
+        assert!(lifecycle_reply(&sealed, &token, false).is_err());
+        lifecycle_reply(&sealed, &token, true)?;
+        for reply in [
+            json!({"Ok":{"token":"b".repeat(64),"accepting":false}}),
+            json!({"Ok":{"token":token,"accepting":false,"retired":true}}),
+        ] {
+            assert!(lifecycle_reply(&reply, &token, true).is_err());
+        }
+        let expected = protocol(
+            &json!({"volumes":"original"}),
+            &json!({"runtime":"original"}),
+        )?;
+        let mut retained = expected.clone();
+        retained["reply"]["Ok"]["accepting"] = json!(false);
+        assert!(verify_protocol(&retained, &expected, false).is_err());
+        verify_protocol(&retained, &expected, true)?;
+        retained["request"]["operation"]["token"] = json!("b".repeat(64));
+        assert!(verify_protocol(&retained, &expected, true).is_err());
+        Ok(())
     }
     #[test]
     fn backend_selection_refuses_unqualified_versions_and_remote_gateways() {

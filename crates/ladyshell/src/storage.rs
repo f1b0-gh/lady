@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 pub mod export;
 mod journal;
-pub use journal::{prepare, remove, remove_original, Driver};
+pub use journal::{prepare, remove, remove_original, remove_planned, Driver};
 mod mounts;
 pub use mounts::{probe, verify_mounts, Filesystem};
 mod docker;

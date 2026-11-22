@@ -221,3 +221,33 @@ fn published_cleanup_requires_the_original_complete_receipt_set(
     assert_eq!(driver.deleted, 3);
     Ok(())
 }
+
+#[test]
+fn partial_cleanup_checks_original_intents_before_adopting_lost_create_reply(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = tempfile::tempdir()?;
+    let directory = root.path().join("storage");
+    let owner = "a".repeat(32);
+    let mut driver = Volumes {
+        lose_create_reply: true,
+        ..Default::default()
+    };
+    assert!(
+        ladyshell::storage::prepare(&directory, &profile(), &owner, "default", &mut driver)
+            .is_err()
+    );
+    assert!(ladyshell::storage::remove_planned(
+        &directory,
+        &profile(),
+        &"b".repeat(32),
+        "default",
+        &mut driver
+    )
+    .is_err());
+    assert_eq!(driver.deleted, 0);
+    ladyshell::storage::remove_planned(&directory, &profile(), &owner, "default", &mut driver)?;
+    assert_eq!(driver.created, 1);
+    assert_eq!(driver.deleted, 1);
+    assert!(driver.volumes.is_empty());
+    Ok(())
+}

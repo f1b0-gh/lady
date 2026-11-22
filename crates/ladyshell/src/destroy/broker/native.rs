@@ -36,7 +36,7 @@ impl Native {
 }
 impl Driver for Native {
     fn verify(&mut self, current: &Value) -> Result<()> {
-        broker::verify_state(&self.backend, current)
+        broker::verify_state_for_cleanup(&self.backend, current)
     }
     fn present(&mut self, current: &Value) -> Result<bool> {
         let docker = broker::bound(&self.backend, &current["storage"])?;

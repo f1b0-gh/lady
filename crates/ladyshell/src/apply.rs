@@ -1,3 +1,5 @@
+mod pending;
+pub(crate) use pending::broker as interrupted_broker;
 pub(crate) mod broker;
 use crate::{
     environment_lock::atomic_json,
@@ -87,6 +89,7 @@ pub trait Driver {
 enum Phase {
     Planned,
     Built,
+    Validating,
     Publishing,
     Complete,
 }
@@ -95,6 +98,8 @@ enum Phase {
 struct Operation {
     schema_version: u32,
     desired_hash: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    desired_inputs: Option<Value>,
     state_before: Option<Value>,
     observed_before: Value,
     phase: Phase,
@@ -184,6 +189,9 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         let op = Operation {
             schema_version: 2,
             desired_hash: desired_hash.clone(),
+            desired_inputs: (desired["evaluated"]["config"]["image"]["profile"]
+                == "openshell-wasi")
+                .then(|| desired.clone()),
             state_before: state.clone(),
             observed_before: observed,
             phase: Phase::Planned,
@@ -290,6 +298,12 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         );
         std::thread::sleep(std::time::Duration::from_secs(1));
     };
+    if build["image_profile"] == "openshell-wasi" && op.phase == Phase::Built {
+        // Persist before validation can create an original runtime binding. A
+        // missing binding after this point is not evidence of no prior runtime.
+        op.phase = Phase::Validating;
+        atomic_json(&path, &op)?;
+    }
     let effective = driver.validate_profile(&op.sandbox_name, &build)?;
     if let Some(evidence) = build.get("storage") {
         driver.verify_storage(&op.sandbox_name, evidence)?;
