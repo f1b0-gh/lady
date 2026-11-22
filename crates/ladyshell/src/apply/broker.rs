@@ -12,6 +12,27 @@ use crate::{
 use serde_json::{json, Value};
 use std::{path::Path, time::Duration};
 
+const BROKER_ARGS: [&str; 5] = [
+    "/usr/local/bin/lo-executor-worker",
+    "broker",
+    "/var/lib/ladyshell/broker/control",
+    "/var/lib/ladyshell/broker/artifacts",
+    "/var/lib/ladyshell/broker/incoming",
+];
+fn initialized_reply(reply: &Value, token: &str) -> Result<()> {
+    ensure!(
+        *reply == json!({"Ok":{"token":token,"accepting":true}}),
+        "Broker lifecycle initialization refused or capability changed"
+    );
+    Ok(())
+}
+fn protocol(evidence: &Value, binding: &Value) -> Result<Value> {
+    let token = crate::plan::digest(&json!({"format":1,"binding":binding,"storage":evidence}))?;
+    Ok(
+        json!({"format":1, "request":{"format":1,"operation":{"kind":"initialize","token":token}},
+        "reply":{"Ok":{"token":token,"accepting":true}}}),
+    )
+}
 fn qualified_gateway(value: &Value) -> Result<()> {
     let server = url::Url::parse(text(value, "server")?)
         .map_err(|_| invalid("Invalid gateway URL".into()))?;
@@ -242,13 +263,7 @@ pub(super) fn validate(backend: &Backend, name: &str, build: &Value) -> Result<V
     let reply = exec(
         backend,
         name,
-        &[
-            "/usr/local/bin/lo-executor-worker",
-            "broker",
-            "/var/lib/ladyshell/broker/control",
-            "/var/lib/ladyshell/broker/artifacts",
-            "/var/lib/ladyshell/broker/incoming",
-        ],
+        &BROKER_ARGS,
         &serde_json::to_vec(
             &json!({"format":0,"operation":{"kind":"inspect","pin":"0".repeat(64)}}),
         )?,
@@ -264,7 +279,24 @@ pub(super) fn validate(backend: &Backend, name: &str, build: &Value) -> Result<V
     } else {
         atomic_json(&path, &measured)?;
     }
+    let expected = protocol(evidence, &binding)?;
+    let path = directory.join("protocol.json");
+    if let Some(original) = state::read(&path)? {
+        unchanged(&original, &expected)?;
+    }
+    let reply = crate::json::parse(&exec(
+        backend,
+        name,
+        &BROKER_ARGS,
+        &serde_json::to_vec(&expected["request"])?,
+    )?)?;
+    initialized_reply(&reply, text(&expected["request"]["operation"], "token")?)?;
+    unchanged(
+        &binding["runtime"],
+        &serde_json::to_value(Native.observe(&current)?)?,
+    )?;
     lock.verify_directory()?;
+    atomic_json(&path, &expected)?;
     Ok(effective)
 }
 fn measure(backend: &Backend, evidence: &Value, binding: &Value) -> Result<Value> {
@@ -336,6 +368,9 @@ pub(crate) fn verify(backend: &Backend, name: &str, evidence: &Value) -> Result<
         binding["current"]["sandbox_name"] == name,
         "Broker deployment name changed"
     );
+    let original_protocol = state::read(&directory.join("protocol.json"))?
+        .ok_or_else(|| invalid("Missing original broker lifecycle capability".into()))?;
+    unchanged(&original_protocol, &protocol(evidence, &binding)?)?;
     let original = state::read(&directory.join("mounts.json"))?
         .ok_or_else(|| invalid("Missing original mounted caps".into()))?;
     unchanged(&original, &measure(backend, evidence, &binding)?)?;
@@ -366,6 +401,19 @@ pub(crate) fn verify_state(backend: &Backend, current: &Value) -> Result<()> {
 mod tests {
     use super::*;
     use serde_json::json;
+    #[test]
+    fn broker_initialization_requires_original_correlation_and_open_generation() {
+        let token = "a".repeat(64);
+        assert!(initialized_reply(&json!({"Ok":{"token":token,"accepting":true}}), &token).is_ok());
+        for reply in [
+            json!({"Ok":{"token":token,"accepting":false}}),
+            json!({"Ok":{"token":"b".repeat(64),"accepting":true}}),
+            json!({"Ok":{"token":token,"accepting":true,"retired":true}}),
+            json!({"Err":"unsupported"}),
+        ] {
+            assert!(initialized_reply(&reply, &token).is_err());
+        }
+    }
     #[test]
     fn backend_selection_refuses_unqualified_versions_and_remote_gateways() {
         let original = json!({"status":"healthy","version":"0.1.4","server":"https://127.0.0.1:17670",

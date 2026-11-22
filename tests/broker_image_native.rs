@@ -82,22 +82,176 @@ fn qualify(provision: bool) -> Result<()> {
     if !docker(&["image", "ls", "--format", "{{.Repository}}:{{.Tag}}", &tag])?.is_empty() {
         return Err("qualification tag already exists".into());
     }
-    let result = if provision {
-        app::make_broker_plan(&args).and_then(|_| app::apply_broker(&args))
-    } else {
-        image::build(&desired, &state, None)
-    };
-    let result = result
-        .map_err(|error| -> Box<dyn std::error::Error> { Box::new(error) })
-        .and_then(|built| {
-            if provision {
-                verify_recovery(&args, &root, &built)?;
-            }
-            Ok(built)
-        });
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let result = if provision {
+            app::make_broker_plan(&args).and_then(|_| app::apply_broker(&args))
+        } else {
+            image::build(&desired, &state, None)
+        };
+        result
+            .map_err(|error| -> Box<dyn std::error::Error> { Box::new(error) })
+            .and_then(|built| {
+                if provision {
+                    verify_recovery(&args, &root, &built)?;
+                }
+                Ok(built)
+            })
+    }))
+    .unwrap_or_else(|_| {
+        Err("qualification panicked; original journals retained for cleanup".into())
+    });
     if let Err(error) = &result {
         eprintln!("Broker qualification failed: {error}");
     }
+    cleanup(&root, &state, &desired, &tag, provision)?;
+    let built = result?;
+    assert_eq!(built["image_profile"], "openshell-wasi");
+    assert!(built.get("codex_binary").is_none());
+    assert!(built["broker_binary"]
+        .as_str()
+        .ok_or("binary")?
+        .ends_with("-ladyshell-lo-executor/bin/lo-executor-worker"));
+    atomic_json(&root.join("result.json"), &built)?;
+    Ok(())
+}
+
+fn verify_recovery(args: &BrokerDesired, root: &Path, current: &Value) -> Result<()> {
+    use ladyshell::continuous::host::Driver;
+    let backend = ladyshell::openshell::Backend::new(&current["context"])?;
+    backend.verify_execution(current)?;
+    let inventory = ladyshell::continuous::native::Native.inventory(current)?;
+    atomic_json(&root.join("inventory.json"), &inventory)?;
+    let planned = app::make_broker_plan(args)?;
+    assert_eq!(planned["actions"], json!([]));
+    assert_eq!(app::apply_broker(args)?, *current);
+    verify_sealed_export(root, current)?;
+    let name = ladyshell::state::text(current, "sandbox_name")?;
+    let before = serde_json::to_value(ladyshell::continuous::native::Native.observe(current)?)?;
+    backend.call(&["sandbox", "stop", name])?;
+    backend.call(&["sandbox", "start", name])?;
+    let deadline = std::time::Instant::now() + Duration::from_secs(60);
+    loop {
+        let observed = backend
+            .sandbox_identity(name)?
+            .ok_or("restarted sandbox missing")?;
+        if observed["phase"] == "Ready" {
+            break;
+        }
+        if observed["phase"] == "Error" || std::time::Instant::now() >= deadline {
+            return Err("restarted sandbox did not become ready".into());
+        }
+        std::thread::sleep(Duration::from_millis(250));
+    }
+    let after = serde_json::to_value(ladyshell::continuous::native::Native.observe(current)?)?;
+    assert_ne!(before["runtime"], after["runtime"]);
+    let error = backend
+        .verify_execution(current)
+        .err()
+        .ok_or("lost volatile runtime was silently readmitted")?;
+    assert!(
+        error
+            .to_string()
+            .contains("Original broker deployment identity changed"),
+        "{error}"
+    );
+    atomic_json(
+        &root.join("recovery.json"),
+        &json!({"initial_verification":true,"empty_plan_rechecked":true,
+        "before":before,"after":after,"old_incarnation_refused":true}),
+    )?;
+    Ok(())
+}
+
+fn verify_sealed_export(root: &Path, current: &Value) -> Result<()> {
+    let backend = ladyshell::openshell::Backend::new(&current["context"])?;
+    let name = ladyshell::state::text(current, "sandbox_name")?;
+    let protocol = ladyshell::state::read(
+        &Path::new(ladyshell::state::text(&current["storage"], "directory")?).join("protocol.json"),
+    )?
+    .ok_or("ordinary provisioning did not retain broker initialization")?;
+    assert_eq!(protocol["reply"]["Ok"]["accepting"], true);
+    let command = |args: &[&str]| {
+        let mut command = backend.command();
+        command
+            .args([
+                "sandbox",
+                "exec",
+                "--no-tty",
+                "--no-login-shell",
+                name,
+                "--",
+            ])
+            .args(args);
+        command
+    };
+    let error = ladyshell::process::capture(command(&["/bin/bash", "-c",
+        "export LC_ALL=C; for i in {1..32}; do printf '%4096s' '' || exit; done > /var/lib/ladyshell/broker/control/fill"]),
+        Duration::from_secs(30), 16384).err().ok_or("control byte cap not enforced")?;
+    assert!(
+        error.to_string().contains("No space left on device"),
+        "{error}"
+    );
+    let byte_failure = error.to_string();
+    let error = ladyshell::process::capture(command(&["/bin/bash", "-c",
+        "export LC_ALL=C; for i in $(/bin/seq 1 64); do /bin/touch /var/lib/ladyshell/broker/control/fill-$i || exit 83; done"]),
+        Duration::from_secs(30), 16384).err().ok_or("control inode cap not enforced")?;
+    assert!(
+        error.to_string().contains("No space left on device"),
+        "{error}"
+    );
+    let inode_failure = error.to_string();
+    let full: Vec<ladyshell::storage::Filesystem> =
+        serde_json::from_slice(&ladyshell::process::capture(
+            command(&["/usr/local/bin/ladyshell", "broker-storage-probe"]),
+            Duration::from_secs(30),
+            16384,
+        )?)?;
+    assert_eq!(full[0].available_bytes, 0);
+    assert_eq!(full[0].available_inodes, 0);
+    let token = "f".repeat(64);
+    let sealed = ladyshell::process::capture_input(
+        command(&[
+            "/usr/local/bin/lo-executor-worker",
+            "broker",
+            "/var/lib/ladyshell/broker/control",
+            "/var/lib/ladyshell/broker/artifacts",
+            "/var/lib/ladyshell/broker/incoming",
+        ]),
+        &serde_json::to_vec(&json!({"format":1,"operation":{"kind":"seal","token":token}}))?,
+        Duration::from_secs(30),
+        16384,
+    )?;
+    assert_eq!(
+        ladyshell::json::parse(&sealed)?,
+        json!({"Ok":{"token":token,"accepting":false}})
+    );
+    let request = ladyshell::storage::export::Request {
+        format: 1,
+        token,
+        profile: serde_json::from_value(
+            current["desired_inputs"]["evaluated"]["config"]["storage"].clone(),
+        )?,
+    };
+    let mut archive = tempfile::NamedTempFile::new_in(root)?;
+    let receipt = ladyshell::storage::export::capture(
+        &request,
+        command(&["/usr/local/bin/ladyshell", "broker-export"]),
+        archive.as_file_mut(),
+        Duration::from_secs(30),
+    )?;
+    backend.verify_execution(current)?;
+    let archive_path = root.join("sealed-broker.tar");
+    archive.persist_noclobber(&archive_path)?;
+    ladyshell::files::open_directory(root)?.sync_all()?;
+    atomic_json(
+        &root.join("sealed-export.json"),
+        &json!({"full":full,"byte_failure":byte_failure,
+        "inode_failure":inode_failure,"sealed_at_full_capacity":true,"archive":archive_path,"receipt":receipt}),
+    )?;
+    Ok(())
+}
+
+fn cleanup(root: &Path, state: &Path, desired: &Value, tag: &str, provision: bool) -> Result<()> {
     // Even interrupted publication retains the original creation intent.
     if provision {
         if let Some(op) = ladyshell::state::read(&state.join("operation.json"))? {
@@ -137,91 +291,64 @@ fn qualify(provision: bool) -> Result<()> {
 
     // Build records are written before image loading, including validation failure.
     let mut owned = Vec::new();
-    for entry in fs::read_dir(&state)? {
+    for entry in fs::read_dir(state)? {
         let path = entry?.path().join("broker-build.json");
         if !path.exists() {
             continue;
         }
         let receipt: Value =
             serde_json::from_slice(&ladyshell::files::read_limited(&path, 65536)?)?;
-        if receipt["desired_hash"] != ladyshell::plan::digest(&desired)? {
+        if receipt["desired_hash"] != ladyshell::plan::digest(desired)? {
             return Err("build receipt differs from original desired inputs".into());
         }
         if let Some(id) = receipt["image_id"].as_str() {
-            let present = docker(&["image", "ls", "--format", "{{.ID}}", &tag])?;
+            let present = docker(&["image", "ls", "--format", "{{.ID}}", tag])?;
             if !present.is_empty() {
-                let bytes = docker(&["image", "inspect", &tag, "--format", "{{.Id}}"])?;
+                let bytes = docker(&["image", "inspect", tag, "--format", "{{.Id}}"])?;
                 if String::from_utf8(bytes)?.trim() != id {
                     return Err("image tag replaced".into());
                 }
-                docker(&["image", "rm", &tag])?;
-                if !docker(&["image", "ls", "--format", "{{.ID}}", &tag])?.is_empty() {
+                docker(&["image", "rm", tag])?;
+                if !docker(&["image", "ls", "--format", "{{.ID}}", tag])?.is_empty() {
                     return Err("owned image tag deletion unconfirmed".into());
                 }
             }
         }
         owned.push(receipt);
     }
-    if !docker(&["image", "ls", "--format", "{{.ID}}", &tag])?.is_empty() {
+    if !docker(&["image", "ls", "--format", "{{.ID}}", tag])?.is_empty() {
         return Err("unreconciled image tag; retain original build evidence".into());
     }
     atomic_json(
         &root.join("cleanup.json"),
         &json!({"owned_image_tag":tag,"removed":true,"builds":owned}),
     )?;
-    let built = result?;
-    assert_eq!(built["image_profile"], "openshell-wasi");
-    assert!(built.get("codex_binary").is_none());
-    assert!(built["broker_binary"]
-        .as_str()
-        .ok_or("binary")?
-        .ends_with("-ladyshell-lo-executor/bin/lo-executor-worker"));
-    atomic_json(&root.join("result.json"), &built)?;
     Ok(())
 }
 
-fn verify_recovery(args: &BrokerDesired, root: &Path, current: &Value) -> Result<()> {
-    use ladyshell::continuous::host::Driver;
-    let backend = ladyshell::openshell::Backend::new(&current["context"])?;
-    backend.verify_execution(current)?;
-    let inventory = ladyshell::continuous::native::Native.inventory(current)?;
-    atomic_json(&root.join("inventory.json"), &inventory)?;
-    let planned = app::make_broker_plan(args)?;
-    assert_eq!(planned["actions"], json!([]));
-    assert_eq!(app::apply_broker(args)?, *current);
-    let name = ladyshell::state::text(current, "sandbox_name")?;
-    let before = serde_json::to_value(ladyshell::continuous::native::Native.observe(current)?)?;
-    backend.call(&["sandbox", "stop", name])?;
-    backend.call(&["sandbox", "start", name])?;
-    let deadline = std::time::Instant::now() + Duration::from_secs(60);
-    loop {
-        let observed = backend
-            .sandbox_identity(name)?
-            .ok_or("restarted sandbox missing")?;
-        if observed["phase"] == "Ready" {
-            break;
-        }
-        if observed["phase"] == "Error" || std::time::Instant::now() >= deadline {
-            return Err("restarted sandbox did not become ready".into());
-        }
-        std::thread::sleep(Duration::from_millis(250));
-    }
-    let after = serde_json::to_value(ladyshell::continuous::native::Native.observe(current)?)?;
-    assert_ne!(before["runtime"], after["runtime"]);
-    let error = backend
-        .verify_execution(current)
-        .err()
-        .ok_or("lost volatile runtime was silently readmitted")?;
-    assert!(
-        error
-            .to_string()
-            .contains("Original broker deployment identity changed"),
-        "{error}"
+#[test]
+#[ignore = "requires explicit retained fixture evidence; deletes only original owned fixture resources"]
+fn cleanup_retained_broker_qualification() -> Result<()> {
+    let root = std::path::PathBuf::from(
+        std::env::var_os("LADYSHELL_BROKER_CLEANUP_EVIDENCE")
+            .ok_or("retained fixture evidence required")?,
     );
-    atomic_json(
-        &root.join("recovery.json"),
-        &json!({"initial_verification":true,"empty_plan_rechecked":true,
-        "before":before,"after":after,"old_incarnation_refused":true}),
-    )?;
-    Ok(())
+    let desired = ladyshell::state::read(&root.join("desired.json"))?
+        .ok_or("original desired inputs missing")?;
+    let config = &desired["evaluated"]["config"];
+    if config["image"]["profile"] != "openshell-wasi" {
+        return Err("not a broker fixture".into());
+    }
+    let tag = format!(
+        "ladyshell-{}-broker:nix",
+        ladyshell::state::text(config, "name")?
+    );
+    let state = root.join("state");
+    cleanup(
+        &root,
+        &state,
+        &desired,
+        &tag,
+        state.join("operation.json").exists(),
+    )
 }

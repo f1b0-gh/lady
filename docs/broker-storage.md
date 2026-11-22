@@ -194,3 +194,31 @@ These primitives do not yet implement that publication or ordinary broker
 deletion. The native destroy guard continues to refuse broker states. No export
 receipt grants lifecycle authority, establishes LO task retirement or permits a
 sealed generation to resume execution.
+
+Ordinary fixed-broker provisioning now initializes the LO lifecycle only after
+verifying the original runtime, mandatory policy and all mounted caps. The host
+retains `protocol.json` alongside `binding.json` and `mounts.json` before publishing
+the deployment. Unsupported workers, mismatched replies and sealed generations
+refuse publication; recovery never reopens a sealed generation. Later verification
+requires the original capability record. This is a record of initial capability,
+not a fresh assertion that a subsequently sealed broker still accepts mutations.
+
+The ignored `qualified_broker_provisions_with_original_mounted_caps` test builds
+from locked explicit artifacts, exercises ordinary provisioning and empty-plan
+revalidation, then fills the 64 KiB / 32-inode control filesystem until both
+available counters are zero. It requires ENOSPC for both attempts, seals at full
+capacity and retains a verified host archive before stop/start. It then requires
+refusal of the old runtime binding and removes its original sandbox, volumes and
+image tag. This qualifies storage/export and runtime recovery, not LO admission
+or ordinary broker destroy. Assertions are caught so fixture cleanup also runs
+after a test panic; abrupt test-process death retains journals for explicit cleanup:
+
+```sh
+LADYSHELL_BROKER_CLEANUP_EVIDENCE=/absolute/retained/image-fixture \
+  cargo test --locked -p ladyshell-cli --test broker_image_native \
+  cleanup_retained_broker_qualification -- --ignored --nocapture
+```
+
+That cleanup helper accepts only the original retained fixture identities. Keep
+its source, locks, compact evidence and exports; generated executable copies can
+be reclaimed after the fixture and every consumer have settled.
