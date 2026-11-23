@@ -51,13 +51,13 @@ fn qualified_broker_cancellation_exports_sealed_generation_without_initializatio
     )
 }
 #[test]
-#[ignore = "requires reviewed worker ELF, Nix and local OpenShell; this tests transport, not LO admission"]
+#[ignore = "requires reviewed worker ELF, Nix and local OpenShell; this tests transport, not application policy admission"]
 fn ordinary_retained_receiver_runs_the_fixed_broker_and_preserves_its_reply() -> Result<()> {
     qualify(true, true, None, Some(receiver::Case::Transport))
 }
 #[test]
-#[ignore = "requires a reviewed upload-capable worker, summary package fixture, Nix and local OpenShell"]
-fn native_component_upload_staging_execution_and_full_intake_export() -> Result<()> {
+#[ignore = "requires the independent fixture worker, Nix and local OpenShell"]
+fn independent_worker_upload_execution_and_full_intake_export() -> Result<()> {
     qualify(true, true, None, Some(receiver::Case::Components))
 }
 #[path = "support/broker_receiver.rs"]
@@ -101,7 +101,7 @@ fn qualify(
         &config,
         format!(
             r#"{{schema_version = 1, name = "{name}",
-        image = {{backend = "nix", profile = "openshell-wasi", platform = "x86_64-linux"}},
+        image = {{backend = "nix", profile = "openshell-worker-v1", platform = "x86_64-linux"}},
         sources = {{include = ["README.md"], exclude = []}}, tools = {{}},
         missions = {{dev = {{tools = [], include = [], depends_on = [], checks = []}}}},
         sandbox = {{gateway = "{gateway}", workspace = "default"}},
@@ -159,12 +159,12 @@ fn qualify(
     }
     cleanup(&root, &state, &desired, &tag, provision)?;
     let built = result?;
-    assert_eq!(built["image_profile"], "openshell-wasi");
+    assert_eq!(built["image_profile"], "openshell-worker-v1");
     assert!(built.get("codex_binary").is_none());
     assert!(built["broker_binary"]
         .as_str()
         .ok_or("binary")?
-        .ends_with("-ladyshell-lo-executor/bin/lo-executor-worker"));
+        .ends_with("-ladyshell-sandbox-worker/bin/sandbox-worker"));
     atomic_json(&root.join("result.json"), &built)?;
     Ok(())
 }
@@ -223,7 +223,7 @@ fn verify_sealed_export(root: &Path, current: &Value, destroy_state: Option<&Pat
         &Path::new(ladyshell::state::text(&current["storage"], "directory")?).join("protocol.json"),
     )?
     .ok_or("ordinary provisioning did not retain broker initialization")?;
-    assert_eq!(protocol["reply"]["Ok"]["accepting"], true);
+    assert_eq!(protocol["reply"]["accepting"], true);
     let command = |args: &[&str]| {
         let mut command = backend.command();
         command
@@ -301,19 +301,19 @@ fn verify_sealed_export(root: &Path, current: &Value, destroy_state: Option<&Pat
     let token = "f".repeat(64);
     let sealed = ladyshell::process::capture_input(
         command(&[
-            "/usr/local/bin/lo-executor-worker",
-            "broker",
+            "/usr/local/bin/sandbox-worker",
+            "sandbox-control",
             "/var/lib/ladyshell/broker/control",
             "/var/lib/ladyshell/broker/artifacts",
             "/var/lib/ladyshell/broker/incoming",
         ]),
-        &serde_json::to_vec(&json!({"format":1,"operation":{"kind":"seal","token":token}}))?,
+        &serde_json::to_vec(&json!({"format":1,"action":"seal","token":token}))?,
         Duration::from_secs(30),
         16384,
     )?;
     assert_eq!(
         ladyshell::json::parse(&sealed)?,
-        json!({"Ok":{"token":token,"accepting":false}})
+        json!({"format":1,"token":token,"accepting":false})
     );
     let request = ladyshell::storage::export::Request {
         format: 1,
@@ -426,7 +426,7 @@ fn cleanup_retained_broker_qualification() -> Result<()> {
     let desired = ladyshell::state::read(&root.join("desired.json"))?
         .ok_or("original desired inputs missing")?;
     let config = &desired["evaluated"]["config"];
-    if config["image"]["profile"] != "openshell-wasi" {
+    if config["image"]["profile"] != "openshell-worker-v1" {
         return Err("not a broker fixture".into());
     }
     let tag = format!(

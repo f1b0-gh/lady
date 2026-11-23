@@ -2,18 +2,18 @@
 { pkgs, openssl, configPath, sourcePath, brokerPath, runtimePath }:
 let
   cfg = builtins.fromJSON (builtins.readFile configPath);
-  checked = cfg.image.backend == "nix" && cfg.image.profile == "openshell-wasi"
+  checked = cfg.image.backend == "nix" && cfg.image.profile == "openshell-worker-v1"
     && cfg.image.platform == "x86_64-linux" && cfg.tools == {} && cfg.checks == []
     && !(cfg.sandbox ? provider) && cfg ? storage
     && !(cfg ? dependencies) && !(cfg ? audit)
     && cfg.permissions.network == [] && cfg.permissions.filesystem == [];
-  broker = pkgs.runCommand "ladyshell-lo-executor" {
+  broker = pkgs.runCommand "ladyshell-sandbox-worker" {
     nativeBuildInputs = [ pkgs.autoPatchelfHook ];
     buildInputs = [ pkgs.stdenv.cc.cc.lib openssl ];
   } ''
     mkdir -p $out/bin
-    cp ${builtins.path { path = brokerPath; name = "lo-executor-worker"; }} $out/bin/lo-executor-worker
-    chmod 755 $out/bin/lo-executor-worker
+    cp ${builtins.path { path = brokerPath; name = "sandbox-worker"; }} $out/bin/sandbox-worker
+    chmod 755 $out/bin/sandbox-worker
     autoPatchelf $out
   '';
   runtime = pkgs.runCommand "ladyshell-broker-runtime" {
@@ -53,13 +53,13 @@ in assert checked; pkgs.dockerTools.buildLayeredImage {
       chown 10001:10001 var/lib/ladyshell/broker/$area
     done
     ln -s ${runtime}/bin/ladyshell usr/local/bin/ladyshell
-    ln -s ${broker}/bin/lo-executor-worker usr/local/bin/lo-executor-worker
+    ln -s ${broker}/bin/sandbox-worker usr/local/bin/sandbox-worker
   '';
   config = {
     User = "10001:10001";
     Labels = {
-      "ladyshell.image.profile" = "openshell-wasi";
-      "ladyshell.broker.binary" = "${broker}/bin/lo-executor-worker";
+      "ladyshell.image.profile" = "openshell-worker-v1";
+      "ladyshell.broker.binary" = "${broker}/bin/sandbox-worker";
     };
     WorkingDir = "/sandbox/workspace/project";
     Env = [ "PATH=/usr/local/bin:/bin" "HOME=/sandbox" ];

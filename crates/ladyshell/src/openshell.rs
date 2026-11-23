@@ -140,7 +140,7 @@ impl Backend {
             observed["labels"].get(label) == state.get("owner"),
             "Sandbox ownership mismatch"
         );
-        if state["image_profile"] == "openshell-wasi" {
+        if state["image_profile"] == "openshell-worker-v1" {
             crate::apply::broker::verify_state(self, state)?;
         } else {
             ensure!(

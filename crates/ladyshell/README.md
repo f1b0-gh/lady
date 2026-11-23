@@ -7,7 +7,7 @@ remain separate from inventory and document validation.
 
 ```toml
 [dependencies]
-ladyshell = "=0.1.0"
+ladyshell = "=0.2.0"
 ```
 
 For the `ladyshell` and `audit-validator` executables, install `ladyshell-cli`.
@@ -43,13 +43,15 @@ policy admission. Native and broker deployments use the same selection type.
 
 An orphaned fixed-broker invocation can retain an execution fence while its
 result survives remotely. After explicit `execution::recover`, the separately
-admitted `execution::observe_broker` retrieves bounded observation bytes for LO
+admitted `execution::observe_broker` retrieves opaque observation bytes for the embedding host
 to verify. `destroy::run_recovering` seals and exports before deleting the exact
 fenced generation, including interrupted nonexecution invocations. Both preserve
-the original uncertainty and fence; neither grants worker execution or Promise
+the original uncertainty and fence; neither grants worker execution or application
 retirement. See the bounded-storage guide for the caller's policy obligations.
 
 Lady's own code uses [Apache-2.0](LICENSE). The imported
 [audit validator](src/audit/validator/LICENSE-MIT) and
 [audit methods](resources/audit/security-audit/LICENSE) retain their MIT notices.
 [Provenance](resources/audit/provenance.json) records their sources and adaptations.
+
+The optional sandbox profile uses the provider-neutral [worker contract](https://github.com/f1b0-gh/lady/blob/main/docs/sandbox-worker.md). Application adapters live outside Ladyshell; no application-specific executable or task schema is required.

@@ -12,8 +12,8 @@ use serde_json::{json, Value};
 use std::{fs, os::unix::fs::symlink, path::PathBuf};
 
 fn select_broker_fixture(f: &mut Fixture) -> Result<()> {
-    f.current["image_profile"] = json!("openshell-wasi");
-    f.current["broker_binary"] = json!("/nix/store/synthetic-worker/bin/lo-executor-worker");
+    f.current["image_profile"] = json!("openshell-worker-v1");
+    f.current["broker_binary"] = json!("/nix/store/synthetic-worker/bin/sandbox-worker");
     f.current["storage"] = json!({});
     f.current
         .as_object_mut()
@@ -46,8 +46,8 @@ fn broker_upload_uses_original_environment_and_fixed_bounded_transport() -> Resu
             assert_eq!(
                 last,
                 [
-                    "/usr/local/bin/lo-executor-worker",
-                    "broker-upload",
+                    "/usr/local/bin/sandbox-worker",
+                    "sandbox-upload",
                     "/var/lib/ladyshell/broker/control",
                     "/var/lib/ladyshell/broker/artifacts",
                     "/var/lib/ladyshell/broker/incoming",
@@ -832,10 +832,10 @@ fn orphaned_broker_operation(kind: &str) -> Result<Fixture> {
         &f.state,
         &f.root.path().join("broker-receiver"),
         vec![TaskDefinition {
-            id: "lo-broker".into(),
+            id: "fixture-worker".into(),
             argv: [
-                "/usr/local/bin/lo-executor-worker",
-                "broker",
+                "/usr/local/bin/sandbox-worker",
+                "sandbox-execute",
                 "/var/lib/ladyshell/broker/control",
                 "/var/lib/ladyshell/broker/artifacts",
                 "/var/lib/ladyshell/broker/incoming",
@@ -854,10 +854,9 @@ fn orphaned_broker_operation(kind: &str) -> Result<Fixture> {
     let invocation = Invocation {
         scope: "scope".into(),
         id: "original".into(),
-        task: "lo-broker".into(),
-        definition_sha256: f.store.catalog().definition_digest("lo-broker")?,
-        intent: json!({"format":1,"operation":{"kind":kind,"start":{
-            "request":{"fixture":"original typed LO request"},"input":"original input"}}}),
+        task: "fixture-worker".into(),
+        definition_sha256: f.store.catalog().definition_digest("fixture-worker")?,
+        intent: json!({"application":"independent-fixture", "action":kind, "message":"original input"}),
     };
     f.key = invocation.key();
     f.store.accept(
@@ -891,7 +890,6 @@ fn orphan_observation_preserves_original_uncertainty_and_fence() -> Result<()> {
     let result = observe_broker_with(
         &f.store,
         &f.key,
-        &"a".repeat(64),
         &mut f.driver,
         |command, timeout, limit, input| {
             let argv: Vec<_> = command
@@ -901,8 +899,8 @@ fn orphan_observation_preserves_original_uncertainty_and_fence() -> Result<()> {
             assert_eq!(
                 &argv[argv.len() - 5..],
                 [
-                    "/usr/local/bin/lo-executor-worker",
-                    "broker",
+                    "/usr/local/bin/sandbox-worker",
+                    "sandbox-observe",
                     "/var/lib/ladyshell/broker/control",
                     "/var/lib/ladyshell/broker/artifacts",
                     "/var/lib/ladyshell/broker/incoming"
@@ -912,8 +910,9 @@ fn orphan_observation_preserves_original_uncertainty_and_fence() -> Result<()> {
             assert_eq!(limit, 16384);
             assert_eq!(
                 serde_json::from_slice::<Value>(input.unwrap_or_default()).ok(),
-                Some(json!({"format":1,"operation":{"kind":"observe","request":{
-                    "fixture":"original typed LO request"},"request_digest":"a".repeat(64)}}))
+                Some(
+                    json!({"application":"independent-fixture", "action":"execute", "message":"original input"})
+                )
             );
             assert!(matches!(f.store.worker_present(&f.key), Ok(true)));
             assert!(StateLock::acquire_existing(&f.state).is_err());
@@ -922,7 +921,7 @@ fn orphan_observation_preserves_original_uncertainty_and_fence() -> Result<()> {
                 ClientResult::Exit { code: 0 },
                 CapturedOutputs {
                     stdout: CapturedStream {
-                        bytes: b"historical reply validated by LO".to_vec(),
+                        bytes: b"opaque historical application reply".to_vec(),
                         truncated: false,
                     },
                     stderr: CapturedStream::default(),
@@ -930,7 +929,7 @@ fn orphan_observation_preserves_original_uncertainty_and_fence() -> Result<()> {
             )
         },
     )?;
-    assert_eq!(result, b"historical reply validated by LO");
+    assert_eq!(result, b"opaque historical application reply");
     assert_eq!(serde_json::to_value(f.store.inspect(&f.key)?)?, before);
     assert_eq!(fs::read(f.state.join("retained-execution.json"))?, fence);
     assert!(SessionLock::acquire(&f.state, true).is_err());
@@ -985,12 +984,10 @@ fn orphan_observation_refuses_changed_or_absent_original_evidence() -> Result<()
         "source",
         "state",
         "live_recovery",
-        "digest",
         "deleting",
     ] {
         let mut f = orphaned_broker()?;
         let mut held = None;
-        let mut digest = "a".repeat(64);
         match damage {
             "missing_fence" => fs::remove_file(f.state.join("retained-execution.json"))?,
             "other_fence" => {
@@ -1015,12 +1012,11 @@ fn orphan_observation_refuses_changed_or_absent_original_evidence() -> Result<()
                 files::publish_json(&f.state.join("state.json"), &f.current, true)?;
             }
             "live_recovery" => held = Some(f.store.acquire_recovery(&f.key)?),
-            "digest" => digest = "A".repeat(64),
             "deleting" => fs::write(f.state.join("broker-destroy.json"), b"{}")?,
             _ => unreachable!(),
         }
         assert!(
-            observe_broker_with(&f.store, &f.key, &digest, &mut f.driver, no_launch).is_err(),
+            observe_broker_with(&f.store, &f.key, &mut f.driver, no_launch).is_err(),
             "{damage}"
         );
         assert_eq!(f.store.inspect(&f.key)?.phase, Phase::Uncertain);
@@ -1031,11 +1027,8 @@ fn orphan_observation_refuses_changed_or_absent_original_evidence() -> Result<()
 }
 
 #[test]
-fn fenced_cleanup_permits_interrupted_nonexecution_but_observe_does_not() -> Result<()> {
-    let mut f = orphaned_broker_operation("stage")?;
-    assert!(
-        observe_broker_with(&f.store, &f.key, &"a".repeat(64), &mut f.driver, no_launch).is_err()
-    );
+fn fenced_cleanup_permits_interrupted_opaque_application_operations() -> Result<()> {
+    let f = orphaned_broker_operation("stage")?;
     let selected = state::select_generation(&f.state)?;
     let mut args = crate::request::Destroy {
         state: f.state.clone(),
@@ -1065,12 +1058,8 @@ fn orphan_observation_never_acknowledges_lost_or_truncated_transport() -> Result
     for failure in ["lost", "truncated", "oversize"] {
         let mut f = orphaned_broker()?;
         let before = serde_json::to_value(f.store.inspect(&f.key)?)?;
-        assert!(observe_broker_with(
-            &f.store,
-            &f.key,
-            &"a".repeat(64),
-            &mut f.driver,
-            |_, _, _, _| {
+        assert!(
+            observe_broker_with(&f.store, &f.key, &mut f.driver, |_, _, _, _| {
                 (
                     if failure == "lost" {
                         ClientResult::IoFailure
@@ -1085,9 +1074,9 @@ fn orphan_observation_never_acknowledges_lost_or_truncated_transport() -> Result
                         stderr: CapturedStream::default(),
                     },
                 )
-            }
-        )
-        .is_err());
+            })
+            .is_err()
+        );
         assert_eq!(serde_json::to_value(f.store.inspect(&f.key)?)?, before);
         assert!(SessionLock::acquire(&f.state, true).is_err());
     }

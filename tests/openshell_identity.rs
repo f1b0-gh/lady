@@ -52,7 +52,7 @@ fn identity_probe() -> TestResult {
     match scenario.as_str() {
         "broker-storage" => {
             let current = json!({"sandbox_name":"fixture","sandbox_id":"resource-id",
-                "owner":"owner","policy_hash":"hash","image_profile":"openshell-wasi","storage":{}});
+                "owner":"owner","policy_hash":"hash","image_profile":"openshell-worker-v1","storage":{}});
             let error = backend
                 .verify_execution(&current)
                 .err()

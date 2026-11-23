@@ -101,7 +101,7 @@ fn native_destroy_cannot_discard_broker_records_without_volume_lifecycle(
     let directory = root.path().join("state");
     ladyshell::state::create_directory(&directory)?;
     let current = json!({"schema_version":2,"sandbox_name":"test","sandbox_id":"id","policy_hash":"hash",
-        "image_profile":"openshell-wasi","broker_binary":"/fixed/worker","storage":{},
+        "image_profile":"openshell-worker-v1","broker_binary":"/fixed/worker","storage":{},
         "owner":"owner","desired_hash":"desired","image_id":"image","project_snapshot":root.path(),
         "build_dir":"build","context":{"gateway":"test","workspace":"default"}});
     fs::write(directory.join("state.json"), serde_json::to_vec(&current)?)?;

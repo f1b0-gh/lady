@@ -72,16 +72,15 @@ impl Driver for Native {
         Ok(false)
     }
     fn seal(&mut self, current: &Value, token: &str) -> Result<()> {
-        let input =
-            serde_json::to_vec(&json!({"format":1,"operation":{"kind":"seal","token":token}}))?;
+        let input = serde_json::to_vec(&json!({"format":1,"action":"seal","token":token}))?;
         let reply = process::capture_input(
-            self.command(current, &broker::BROKER_ARGS)?,
+            self.command(current, &crate::sandbox_worker::CONTROL_ARGS)?,
             &input,
             Duration::from_secs(30),
             16384,
         )?;
         ensure!(
-            crate::json::parse(&reply)? == json!({"Ok":{"token":token,"accepting":false}}),
+            crate::json::parse(&reply)? == json!({"format":1,"token":token,"accepting":false}),
             "Broker seal refused or correlation changed"
         );
         Ok(())

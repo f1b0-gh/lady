@@ -131,7 +131,7 @@ pub fn create_broker(
 ) -> Result<EnvironmentLock> {
     configuration.config.validate_broker()?;
     let artifacts_sha256 = BTreeMap::from([
-        ("lo-executor-worker".into(), artifact_hash(broker)?),
+        ("worker".into(), artifact_hash(broker)?),
         ("ladyshell".into(), artifact_hash(runtime)?),
     ]);
     let mut recipes_sha256 = BTreeMap::new();

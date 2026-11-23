@@ -86,7 +86,7 @@ pub(crate) fn ensure_available(directory: &Path) -> Result<()> {
 /// Host state and exports survive all sandbox/volume removal operations.
 pub(super) fn run(lock: &StateLock, current: &Value, driver: &mut impl Driver) -> Result<Value> {
     ensure!(
-        current["image_profile"] == "openshell-wasi",
+        current["image_profile"] == "openshell-worker-v1",
         "Not a fixed broker deployment"
     );
     lock.verify_directory()?;

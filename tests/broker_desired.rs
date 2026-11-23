@@ -13,7 +13,7 @@ fn explicit_broker_inputs_keep_the_embedding_executable_out_of_the_image() -> Re
         &config,
         r#"{
         schema_version = 1, name = "broker-fixture",
-        image = {backend = "nix", profile = "openshell-wasi", platform = "x86_64-linux"},
+        image = {backend = "nix", profile = "openshell-worker-v1", platform = "x86_64-linux"},
         sources = {include = ["README.md"], exclude = []}, tools = {},
         missions = { dev = {tools = [], include = [], depends_on = [], checks = []} },
         sandbox = {gateway = "unused", workspace = "default"},
@@ -47,7 +47,7 @@ fn explicit_broker_inputs_keep_the_embedding_executable_out_of_the_image() -> Re
         2
     );
     assert_eq!(
-        desired["artifacts"]["lo-executor-worker"]["path"],
+        desired["artifacts"]["worker"]["path"],
         args.worker.to_str().ok_or("worker")?
     );
     assert_eq!(

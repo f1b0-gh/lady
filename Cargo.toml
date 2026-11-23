@@ -6,12 +6,12 @@ resolver = "2"
 license = "Apache-2.0 AND MIT"
 name = "ladyshell-cli"
 default-run = "ladyshell"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Run authorized OpenShell tasks and retain their execution evidence"
 repository = "https://github.com/f1b0-gh/lady"
 readme = "docs/ladyshell-cli.md"
-include = ["/src/**", "/tests/**", "/examples/source_snapshot.rs", "/Cargo.toml", "/Cargo.lock", "/docs/ladyshell-cli.md", "/LICENSE", "/LICENSE-MIT"]
+include = ["/src/**", "/tests/**", "/examples/source_snapshot.rs", "/examples/sandbox_worker.rs", "/Cargo.toml", "/Cargo.lock", "/docs/ladyshell-cli.md", "/LICENSE", "/LICENSE-MIT"]
 
 [[bin]]
 name = "ladyshell"
@@ -22,7 +22,7 @@ name = "audit-validator"
 path = "src/bin/audit-validator.rs"
 
 [dependencies]
-ladyshell = { version = "=0.1.0", path = "crates/ladyshell" }
+ladyshell = { version = "=0.2.0", path = "crates/ladyshell" }
 clap = { version = "4", features = ["derive"] }
 serde_json = "1"
 

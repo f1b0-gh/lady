@@ -1,3 +1,7 @@
+> The current profile follows the [provider-neutral worker contract](sandbox-worker.md).
+> Earlier dated qualification below used the previous experimental protocol;
+> its results do not by themselves qualify the version 1 worker adapter.
+
 # Bounded broker storage
 
 A fixed WASI broker needs separate capacity for incoming components, immutable
@@ -10,14 +14,14 @@ creation/deletion journals, original identity checks, and correlation of fresh
 mount and filesystem observations. This is an optional capability. Ordinary
 `app::lock_broker`, `app::make_broker_plan` and `app::apply_broker` accept an
 explicit `BrokerDesired` with independently selected worker and Ladyshell runtime
-ELFs. Native provisioning supports the closed `openshell-wasi` profile on the
+ELFs. Native provisioning supports the closed `openshell-worker-v1` profile on the
 qualified local OpenShell 0.1.4 Docker backend. Ordinary `destroy` seals the broker,
 retains a verified storage archive and removes the original sandbox and volumes.
 `--discard-work` refuses broker state. `destroy::cancel_broker` handles interrupted
 provisioning against the original operation. The governed retained-receiver bridge
 is still being integrated; this is not yet a complete task lifecycle API.
 
-For an embedding host that obtains LO approval between planning and effects,
+For an embedding host that obtains host policy approval between planning and effects,
 use `app::select_plan` followed by `app::apply_broker_expected`. Retain the
 selection in the approved operation body. The original directory and plan are
 checked under the lifecycle leases, and interrupted or completed recovery keeps
@@ -72,11 +76,11 @@ not proof that a task or managed Promise may retire.
 
 ## Fixed image and publication
 
-Select `image = { backend = "nix", profile = "openshell-wasi",
+Select `image = { backend = "nix", profile = "openshell-worker-v1",
 platform = "x86_64-linux" }` and the storage block. Omit the provider; the broker
 profile rejects native tools, mission checks, dependency preparation, audit and
 extra permissions. The existing native profile still requires its provider.
-`BrokerDesired` names both `worker` (the LO `lo-executor-worker` ELF) and `runtime`
+`BrokerDesired` names both `worker` (an independently approved worker ELF) and `runtime`
 (the Ladyshell CLI ELF); an embedding application is never substituted for either.
 
 The environment lock hashes both artifacts and the five fixed Nix recipes.
@@ -171,11 +175,11 @@ hexadecimal correlation token, and the original storage profile. The worker
 rechecks the measured tmpfs caps and the denial of writes outside those mounts.
 
 The host must first fence retained receivers and incoming uploads, then seal the
-LO broker generation. The exporter requires the sealed `.lifecycle` directory
+worker generation. The exporter requires the sealed `.lifecycle` directory
 and absence of its `open` directory. It takes an independent exclusive lock on the
 original control directory for the entire snapshot. An active broker writer,
 missing lifecycle metadata or a substituted marker refuses export. This requires
-a worker image with the LO Initialize/Seal protocol; old images cannot provide
+a worker image with the versioned worker control contract; old images cannot provide
 this capability.
 
 Exports preserve empty directories, incomplete dispatch files, installed packages
@@ -207,7 +211,7 @@ journal before deletion. Calling the export primitives alone does not. No export
 receipt grants lifecycle authority, establishes LO task retirement or permits a
 sealed generation to resume execution.
 
-Ordinary fixed-broker provisioning now initializes the LO lifecycle only after
+Ordinary fixed-broker provisioning now initializes the worker lifecycle only after
 verifying the original runtime, mandatory policy and all mounted caps. The host
 retains `protocol.json` alongside `binding.json` and `mounts.json` before publishing
 the deployment. Unsupported workers, mismatched replies and sealed generations
@@ -280,7 +284,7 @@ original-volume absence and idempotent retry:
 
 ```sh
 LADYSHELL_BROKER_IMAGE_EVIDENCE=/absolute/path/to/evidence \
-LADYSHELL_BROKER_WORKER=/absolute/path/to/lo-executor-worker \
+LADYSHELL_BROKER_WORKER=/absolute/path/to/sandbox_worker \
 LADYSHELL_STORAGE_TEST_GATEWAY=openshell \
 cargo test --locked -p ladyshell-cli --test broker_image_native \
   qualified_broker_destroy -- --ignored --nocapture
@@ -351,13 +355,12 @@ holds its original session lease through the bounded transport. It accepts
 nonempty input of at most 2 MiB whose SHA-256 matches the supplied lowercase hex
 digest; timeouts range from 1 to 86,400 seconds.
 
-The command is fixed: `lo-executor-worker broker-upload` with the three broker
+The command is fixed: `sandbox-worker sandbox-upload` with the three broker
 roots and component digest. Binary bytes travel through stdin. A successful
 `UploadedComponent` requires a successful exit, bounded untruncated output and
 an exact digest/length receipt. No task field can select paths or native argv.
-This requires an LO worker implementing `broker-upload`; the initial
-Initialize/Seal capability check alone does not establish intake support. Lock
-and qualify matching worker, Ladyshell library and runtime versions together.
+This requires a worker implementing the [version 1 contract](sandbox-worker.md).
+Original experimental images are not reinterpreted or migrated.
 
 The broker uses create-only files and the same mutation/seal lock as Stage and
 Execute. Disk exhaustion can leave an occupied partial incoming file. A repeat
@@ -371,14 +374,12 @@ activation or task admission. Initiate the owning lifecycle operation under the
 orchestrator's live policy guard, then perform blocking transport outside that
 guard. A serialized pin or successful upload is not evidence of task retirement.
 
-The ignored `native_component_upload_staging_execution_and_full_intake_export`
+The ignored `independent_worker_upload_execution_and_full_intake_export`
 qualification uses the same evidence/worker/gateway variables as the native
-destroy test, plus `LADYSHELL_BROKER_TEST_PACKAGE` naming an explicit maintained
-LO summary package directory (`artifact.json` and `components/<digest>.wasm`).
-It uploads and stages through the ordinary retained receiver, executes the
-summary component, exhausts the incoming byte cap and refuses a partial retry,
-then exports before ordinary deletion. Its host admissions are synthetic; it
-does not qualify LO policy or Promise integration.
+destroy test, with `LADYSHELL_BROKER_WORKER` naming the
+independent fixture worker built from `examples/sandbox_worker.rs`. Its payload
+is ordinary JSON and arbitrary binary intake; application component execution
+is qualified by the consuming application, outside Lady.
 
 
 ## Recover a fenced receiver before deleting its broker
@@ -390,14 +391,12 @@ execution remains excluded by `retained-execution.json`. Stopping the runtime to
 remove this fence would lose the broker's volatile storage.
 
 After independent host policy admission, `execution::observe_broker` can issue a
-bounded, fixed `Observe` request through this exact fence. It requires the
-original fixed broker Execute definition and extracts the request from its
-retained intent. The caller supplies the digest computed from LO's original typed
-Start and must validate the returned bytes with LO's `broker::reply_for`. Lady
-does not reserialize an untyped JSON object to derive LO's protocol digest.
-Changed receiver, invocation fence, environment, runtime or source fails closed.
-A distinct recovery lease excludes concurrent ownership and supplies no worker
-transition authority. The original record and fence remain unchanged.
+bounded call through this exact fence. It requires the original fixed
+`sandbox-execute` definition. The fixed observation entry receives the original
+retained intent unchanged.
+The worker adapter derives its application lookup and the host validates its
+reply. Ladyshell neither parses application fields nor computes an application
+request digest. The caller cannot substitute an observation payload or argv.
 
 For cleanup, independently retain the original receiver binding/key and selected
 environment generation in the admitted host intent, then call
@@ -409,8 +408,8 @@ verifies the original deletion intent and absence instead of requiring a running
 sandbox. The original fence, uncertain receiver record and host export survive.
 
 These blocking operations belong outside live policy guards, in an already
-admitted host lifecycle process. Historical broker results still require current
-LO Engine acceptance and disclosure policy. Export, local process exit and
-sandbox deletion do not themselves close LO execution scopes or refund Promise
+admitted host lifecycle process. Historical worker results still require current
+application acceptance and disclosure policy. Export, local process exit and
+sandbox deletion do not themselves close application execution scopes or refund
 capacity. The APIs are library integration points; they add no generic command
 escape hatch or automatic retry to the CLI.

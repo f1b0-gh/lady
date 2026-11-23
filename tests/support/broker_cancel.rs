@@ -77,23 +77,21 @@ impl Driver for Interrupted {
                 "--no-login-shell",
                 n,
                 "--",
-                "/usr/local/bin/lo-executor-worker",
-                "broker",
+                "/usr/local/bin/sandbox-worker",
+                "sandbox-control",
                 "/var/lib/ladyshell/broker/control",
                 "/var/lib/ladyshell/broker/artifacts",
                 "/var/lib/ladyshell/broker/incoming",
             ]);
             let reply = ladyshell::process::capture_input(
                 command,
-                &serde_json::to_vec(
-                    &json!({"format":1,"operation":{"kind":"seal","token":token}}),
-                )?,
+                &serde_json::to_vec(&json!({"format":1,"action":"seal","token":token}))?,
                 std::time::Duration::from_secs(30),
                 16384,
             )?;
             assert_eq!(
                 ladyshell::json::parse(&reply)?,
-                json!({"Ok":{"token":token,"accepting":false}})
+                json!({"format":1,"token":token,"accepting":false})
             );
             let directory = Path::new(state::text(&b["storage"], "directory")?);
             std::fs::rename(

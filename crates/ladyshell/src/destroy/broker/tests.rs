@@ -130,7 +130,7 @@ fn request() -> export::Request {
 }
 fn current() -> Value {
     json!({"sandbox_id":"original", "sandbox_name":"owned", "owner":"a".repeat(32),
-        "image_profile":"openshell-wasi", "desired_inputs":{"evaluated":{"config":{"storage":request().profile}}}})
+        "image_profile":"openshell-worker-v1", "desired_inputs":{"evaluated":{"config":{"storage":request().profile}}}})
 }
 fn lock(path: &Path) -> Result<state::StateLock> {
     state::StateLock::acquire(path)

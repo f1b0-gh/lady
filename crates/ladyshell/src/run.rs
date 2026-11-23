@@ -22,7 +22,7 @@ pub(crate) fn ensure_no_pending(directory: &Path) -> Result<()> {
 }
 
 pub(crate) fn verify_provider(backend: &Backend, current: &Value) -> Result<()> {
-    if current["image_profile"] == "openshell-wasi" {
+    if current["image_profile"] == "openshell-worker-v1" {
         let config: crate::config::ResolvedConfig =
             serde_json::from_value(current["desired_inputs"]["evaluated"]["config"].clone())?;
         return config.validate_broker();

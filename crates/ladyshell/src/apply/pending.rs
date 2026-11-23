@@ -19,7 +19,7 @@ pub(crate) fn broker(directory: &Path) -> Result<Value> {
         op.schema_version == 2
             && op.phase != Phase::Complete
             && !op.restore_only
-            && desired["evaluated"]["config"]["image"]["profile"] == "openshell-wasi"
+            && desired["evaluated"]["config"]["image"]["profile"] == "openshell-worker-v1"
             && plan::digest(desired)? == op.desired_hash,
         "Cancellation requires an original incomplete broker provisioning operation"
     );
@@ -46,7 +46,7 @@ pub(crate) fn broker(directory: &Path) -> Result<Value> {
     );
     if let Some(build) = &op.build {
         ensure!(
-            build["image_profile"] == "openshell-wasi",
+            build["image_profile"] == "openshell-worker-v1",
             "Original build is not a broker profile"
         );
     }
@@ -68,7 +68,7 @@ mod tests {
     use crate::{environment_lock::atomic_json, error::Result, plan, state};
     use serde_json::{json, Value};
     fn operation() -> Result<Value> {
-        let desired = json!({"context":{"gateway":"test","workspace":"default"},"evaluated":{"config":{"image":{"profile":"openshell-wasi"},"storage":{"control":{"bytes":65536,"inodes":32},"artifacts":{"bytes":65536,"inodes":32},"incoming":{"bytes":65536,"inodes":32}}}}});
+        let desired = json!({"context":{"gateway":"test","workspace":"default"},"evaluated":{"config":{"image":{"profile":"openshell-worker-v1"},"storage":{"control":{"bytes":65536,"inodes":32},"artifacts":{"bytes":65536,"inodes":32},"incoming":{"bytes":65536,"inodes":32}}}}});
         Ok(
             json!({"schema_version":2,"desired_hash":plan::digest(&desired)?,"desired_inputs":desired,
             "state_before":null,"observed_before":{},"phase":"planned","owner":"a".repeat(32),"sandbox_name":"er-aaaaaaaaaaaa",

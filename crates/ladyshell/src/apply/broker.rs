@@ -12,29 +12,23 @@ use crate::{
 use serde_json::{json, Value};
 use std::{path::Path, time::Duration};
 
-pub(crate) const BROKER_ARGS: [&str; 5] = [
-    "/usr/local/bin/lo-executor-worker",
-    "broker",
-    "/var/lib/ladyshell/broker/control",
-    "/var/lib/ladyshell/broker/artifacts",
-    "/var/lib/ladyshell/broker/incoming",
-];
+use crate::sandbox_worker::{BINARY, CONTROL_ARGS, PROTOCOL};
 fn initialized_reply(reply: &Value, token: &str) -> Result<()> {
     ensure!(
-        *reply == json!({"Ok":{"token":token,"accepting":true}}),
+        *reply == json!({"format":1,"token":token,"accepting":true}),
         "Broker lifecycle initialization refused or capability changed"
     );
     Ok(())
 }
 fn lifecycle_reply(reply: &Value, token: &str, cleanup: bool) -> Result<()> {
-    if cleanup && *reply == json!({"Ok":{"token":token,"accepting":false}}) {
+    if cleanup && *reply == json!({"format":1,"token":token,"accepting":false}) {
         return Ok(());
     }
     initialized_reply(reply, token)
 }
 fn verify_protocol(original: &Value, expected: &Value, cleanup: bool) -> Result<()> {
     let mut sealed = expected.clone();
-    sealed["reply"]["Ok"]["accepting"] = json!(false);
+    sealed["reply"]["accepting"] = json!(false);
     ensure!(
         original == expected || (cleanup && *original == sealed),
         "Original broker lifecycle capability changed"
@@ -44,8 +38,8 @@ fn verify_protocol(original: &Value, expected: &Value, cleanup: bool) -> Result<
 fn protocol(evidence: &Value, binding: &Value) -> Result<Value> {
     let token = crate::plan::digest(&json!({"format":1,"binding":binding,"storage":evidence}))?;
     Ok(
-        json!({"format":1, "request":{"format":1,"operation":{"kind":"initialize","token":token}},
-        "reply":{"Ok":{"token":token,"accepting":true}}}),
+        json!({"format":1, "request":{"format":1,"action":"initialize","token":token},
+        "reply":{"format":1,"token":token,"accepting":true}}),
     )
 }
 fn qualified_gateway(value: &Value) -> Result<()> {
@@ -261,13 +255,7 @@ fn validate_inner(backend: &Backend, name: &str, build: &Value, cleanup: bool) -
         "Incorrect broker UID"
     );
     ensure!(
-        String::from_utf8(exec(
-            backend,
-            name,
-            &["/bin/readlink", "-f", "/usr/local/bin/lo-executor-worker"],
-            b""
-        )?)?
-        .trim()
+        String::from_utf8(exec(backend, name, &["/bin/readlink", "-f", BINARY], b"")?)?.trim()
             == text(build, "broker_binary")?,
         "Broker binary changed"
     );
@@ -284,13 +272,11 @@ fn validate_inner(backend: &Backend, name: &str, build: &Value, cleanup: bool) -
     let reply = exec(
         backend,
         name,
-        &BROKER_ARGS,
-        &serde_json::to_vec(
-            &json!({"format":0,"operation":{"kind":"inspect","pin":"0".repeat(64)}}),
-        )?,
+        &CONTROL_ARGS,
+        &serde_json::to_vec(&json!({"format":1,"action":"probe"}))?,
     )?;
     ensure!(
-        crate::json::parse(&reply)? == json!({"Err":"broker_format"}),
+        crate::json::parse(&reply)? == json!({"format":1,"protocol":PROTOCOL}),
         "Broker protocol mismatch"
     );
     let measured = measure(backend, evidence, &binding)?;
@@ -309,14 +295,10 @@ fn validate_inner(backend: &Backend, name: &str, build: &Value, cleanup: bool) -
     let reply = crate::json::parse(&exec(
         backend,
         name,
-        &BROKER_ARGS,
+        &CONTROL_ARGS,
         &serde_json::to_vec(&expected["request"])?,
     )?)?;
-    lifecycle_reply(
-        &reply,
-        text(&expected["request"]["operation"], "token")?,
-        cleanup,
-    )?;
+    lifecycle_reply(&reply, text(&expected["request"], "token")?, cleanup)?;
     expected["reply"] = reply;
     unchanged(
         &binding["runtime"],
@@ -440,11 +422,13 @@ mod tests {
     #[test]
     fn broker_initialization_requires_original_correlation_and_open_generation() {
         let token = "a".repeat(64);
-        assert!(initialized_reply(&json!({"Ok":{"token":token,"accepting":true}}), &token).is_ok());
+        assert!(
+            initialized_reply(&json!({"format":1,"token":token,"accepting":true}), &token).is_ok()
+        );
         for reply in [
-            json!({"Ok":{"token":token,"accepting":false}}),
-            json!({"Ok":{"token":"b".repeat(64),"accepting":true}}),
-            json!({"Ok":{"token":token,"accepting":true,"retired":true}}),
+            json!({"format":1,"token":token,"accepting":false}),
+            json!({"format":1,"token":"b".repeat(64),"accepting":true}),
+            json!({"format":1,"token":token,"accepting":true,"retired":true}),
             json!({"Err":"unsupported"}),
         ] {
             assert!(initialized_reply(&reply, &token).is_err());
@@ -453,12 +437,12 @@ mod tests {
     #[test]
     fn sealed_initialization_is_eligible_only_for_cleanup() -> Result<()> {
         let token = "a".repeat(64);
-        let sealed = json!({"Ok":{"token":token,"accepting":false}});
+        let sealed = json!({"format":1,"token":token,"accepting":false});
         assert!(lifecycle_reply(&sealed, &token, false).is_err());
         lifecycle_reply(&sealed, &token, true)?;
         for reply in [
-            json!({"Ok":{"token":"b".repeat(64),"accepting":false}}),
-            json!({"Ok":{"token":token,"accepting":false,"retired":true}}),
+            json!({"format":1,"token":"b".repeat(64),"accepting":false}),
+            json!({"format":1,"token":token,"accepting":false,"retired":true}),
         ] {
             assert!(lifecycle_reply(&reply, &token, true).is_err());
         }
@@ -467,10 +451,10 @@ mod tests {
             &json!({"runtime":"original"}),
         )?;
         let mut retained = expected.clone();
-        retained["reply"]["Ok"]["accepting"] = json!(false);
+        retained["reply"]["accepting"] = json!(false);
         assert!(verify_protocol(&retained, &expected, false).is_err());
         verify_protocol(&retained, &expected, true)?;
-        retained["request"]["operation"]["token"] = json!("b".repeat(64));
+        retained["request"]["token"] = json!("b".repeat(64));
         assert!(verify_protocol(&retained, &expected, true).is_err());
         Ok(())
     }

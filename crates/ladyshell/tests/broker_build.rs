@@ -28,7 +28,7 @@ fn broker_build_checks_explicit_artifact_before_any_native_tool_or_codex_lookup(
         "sources":{"include":[],"exclude":[]},"tools":{},
         "missions":{"dev":{"tools":[],"include":[],"depends_on":[],"checks":[]}},
         "sandbox":{"gateway":"unused","workspace":"default"},
-        "image":{"backend":"nix","profile":"openshell-wasi","platform":"x86_64-linux"},
+        "image":{"backend":"nix","profile":"openshell-worker-v1","platform":"x86_64-linux"},
         "storage":{"control":{"bytes":65536,"inodes":32},
             "artifacts":{"bytes":262144,"inodes":64},"incoming":{"bytes":262144,"inodes":64}}}))?
     .resolve("dev")?;
@@ -42,7 +42,7 @@ fn broker_build_checks_explicit_artifact_before_any_native_tool_or_codex_lookup(
     let lock = environment_lock::create_broker(evaluated.clone(), &resources, &broker, &runtime)?;
     let mut desired = json!({"project":project,"resources":resources,"sources":{},
         "evaluated":evaluated,"environment_lock":lock,
-        "artifacts":{"lo-executor-worker":{"path":broker,"sha256":environment_lock::artifact_hash(&broker)?},
+        "artifacts":{"worker":{"path":broker,"sha256":environment_lock::artifact_hash(&broker)?},
             "ladyshell":{"path":runtime,"sha256":environment_lock::artifact_hash(&runtime)?}}});
     fs::write(&broker, b"\x7fELFchanged")?;
     let error = image::build(&desired, &state, None)
@@ -51,7 +51,7 @@ fn broker_build_checks_explicit_artifact_before_any_native_tool_or_codex_lookup(
     assert!(
         error
             .to_string()
-            .contains("Artifact changed since plan: lo-executor-worker"),
+            .contains("Artifact changed since plan: worker"),
         "{error}"
     );
     use std::os::unix::fs::PermissionsExt;
@@ -64,7 +64,7 @@ fn broker_build_checks_explicit_artifact_before_any_native_tool_or_codex_lookup(
         );
     }
     // An old native artifact cannot be substituted into the fixed broker slot.
-    desired["artifacts"]["lo-executor-worker"] = Value::Null;
+    desired["artifacts"]["worker"] = Value::Null;
     let error = image::build(&desired, &state, None)
         .err()
         .ok_or("missing broker accepted")?;

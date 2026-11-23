@@ -13,10 +13,10 @@ pub(super) enum Case {
 
 pub(super) fn verify(root: &Path, state: &Path, case: Case) -> Result<()> {
     let definition = TaskDefinition {
-        id: "lo-broker".into(),
+        id: "fixture-worker".into(),
         argv: [
-            "/usr/local/bin/lo-executor-worker",
-            "broker",
+            "/usr/local/bin/sandbox-worker",
+            "sandbox-execute",
             "/var/lib/ladyshell/broker/control",
             "/var/lib/ladyshell/broker/artifacts",
             "/var/lib/ladyshell/broker/incoming",
@@ -41,10 +41,10 @@ pub(super) fn verify(root: &Path, state: &Path, case: Case) -> Result<()> {
     };
     let invocation = Invocation {
         scope: "transport-qualification".into(),
-        id: "original-initialize".into(),
-        task: "lo-broker".into(),
-        definition_sha256: store.catalog().definition_digest("lo-broker")?,
-        intent: json!({"format":1,"operation":{"kind":"initialize","token":"c".repeat(64)}}),
+        id: "original-echo".into(),
+        task: "fixture-worker".into(),
+        definition_sha256: store.catalog().definition_digest("fixture-worker")?,
+        intent: json!({"key":"c".repeat(64),"value":{"message":"independent application"}}),
     };
     let admission = Admission {
         reference: "synthetic-transport-qualification".into(),
@@ -73,7 +73,7 @@ pub(super) fn verify(root: &Path, state: &Path, case: Case) -> Result<()> {
     let output = store.read_output(&key, Stream::Stdout, 0, 16384)?;
     assert_eq!(
         ladyshell::json::parse(&output)?,
-        json!({"Ok":{"token":"c".repeat(64),"accepting":true}})
+        json!({"echo":{"message":"independent application"}})
     );
     assert!(execution::worker(&store, &key).is_err());
     let reopened = Store::open(&receiver, &binding.receiver_id)?;
@@ -96,9 +96,9 @@ fn operation(store: &Store, id: &str, operation: Value) -> Result<Value> {
     let invocation = Invocation {
         scope: "transport-qualification".into(),
         id: id.into(),
-        task: "lo-broker".into(),
-        definition_sha256: store.catalog().definition_digest("lo-broker")?,
-        intent: json!({"format":1,"operation":operation}),
+        task: "fixture-worker".into(),
+        definition_sha256: store.catalog().definition_digest("fixture-worker")?,
+        intent: operation,
     };
     store.accept_protected_with_clock(
         &invocation,
@@ -124,38 +124,18 @@ fn operation(store: &Store, id: &str, operation: Value) -> Result<Value> {
 }
 
 fn components(root: &Path, store: &Store) -> Result<()> {
-    let fixture = std::path::PathBuf::from(
-        std::env::var_os("LADYSHELL_BROKER_TEST_PACKAGE")
-            .ok_or("explicit maintained summary package fixture required")?,
-    );
-    let artifact = ladyshell::json::parse(&ladyshell::files::read_limited(
-        &fixture.join("artifact.json"),
-        16384,
-    )?)?;
-    let component = artifact["descriptor"]["component"]
-        .as_str()
-        .ok_or("component digest")?;
-    assert!(component.len() == 64 && component.bytes().all(|b| b.is_ascii_hexdigit()));
-    let bytes = ladyshell::files::read_limited(
-        &fixture.join("components").join(format!("{component}.wasm")),
-        2 * 1024 * 1024,
-    )?;
+    // Arbitrary bytes and application JSON: no component format or external executor.
+    let bytes = vec![23; 65536];
+    let component = &ladyshell::files::hash(&bytes);
     let environment = &store.catalog().environment;
     let uploaded = execution::upload(environment, component, &bytes, 30)?;
-    assert_eq!(uploaded.component, component);
+    assert_eq!(uploaded.component, component.as_str());
     assert_eq!(uploaded.bytes, bytes.len() as u64);
     atomic_json(
         &root.join("component-upload.json"),
         &serde_json::to_value(uploaded)?,
     )?;
     assert!(execution::upload(environment, component, &bytes, 30).is_err());
-    let staged = operation(
-        store,
-        "stage",
-        json!({"kind":"stage", "descriptor":artifact["descriptor"], "approved":artifact["pin"]}),
-    )?;
-    assert_eq!(staged["Ok"]["pin"], artifact["pin"]);
-
     // The original complete component occupies part of the capped incoming area.
     // A larger distinct input must leave a partial file and report no receipt.
     let partial = vec![37; 2 * 1024 * 1024];
@@ -184,30 +164,17 @@ fn components(root: &Path, store: &Store) -> Result<()> {
     assert_eq!(incoming.bytes, 262144);
     assert!(execution::upload(environment, &partial_digest, &partial, 30).is_err());
 
-    let input = r#"{"alerts":[],"inventory":{"devices":[]}}"#;
-    let before = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() + 300;
     let executed = operation(
         store,
         "execute",
-        json!({"kind":"execute", "start": {
-        "request":{"worker":"native-qualification","deployment":"fixed-broker", "incarnation":"a".repeat(64),"sequence":1,
-            "binding":{"task":"transport-fixture","invocation":"original","attempt":1,"generation":1,
-                "package":artifact["pin"],"action":"alerts.review", "input_digest":ladyshell::files::hash(input.as_bytes()),
-                "context_digest":"b".repeat(64),"not_after":before}}, "input":input}}),
+        json!({"key":"e".repeat(64), "value":{"uploaded":component}}),
     )?;
-    assert_eq!(executed["Ok"]["record"]["phase"], "completed");
-    let result = executed["Ok"]["record"]["result"]["Ok"]
-        .as_str()
-        .ok_or("component result")?;
-    assert_eq!(
-        ladyshell::json::parse(result.as_bytes())?,
-        json!({"high_priority":0,"matched_assets":0})
-    );
+    assert_eq!(executed, json!({"echo":{"uploaded":component}}));
     atomic_json(
         &root.join("component-execution.json"),
-        &json!({"stage":staged, "execution":executed,
-        "incoming":incoming, "partial_digest":partial_digest, "partial_bytes":partial.len(),
-        "repeated_upload_refused":true}),
+        &json!({"execution":executed, "incoming":incoming,
+            "partial_digest":partial_digest, "partial_bytes":partial.len(),
+            "repeated_upload_refused":true, "independent_worker":true}),
     )?;
     Ok(())
 }

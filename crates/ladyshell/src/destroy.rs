@@ -108,7 +108,7 @@ fn run_selected(
         selected.verify_generation(&lock, &current)?;
     }
     ensure_ready_for_destroy(&lock)?;
-    if current["image_profile"] == "openshell-wasi" {
+    if current["image_profile"] == "openshell-worker-v1" {
         ensure!(
             !args.discard_work,
             "The broker lifecycle requires retaining records before deletion"

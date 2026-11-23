@@ -222,7 +222,7 @@ pub(crate) fn validate(value: &Value) -> Result<()> {
     ] {
         text(value, field)?;
     }
-    if value["image_profile"] == "openshell-wasi" {
+    if value["image_profile"] == "openshell-worker-v1" {
         text(value, "broker_binary")?;
         ensure!(
             value.get("codex_binary").is_none() && value["storage"].is_object(),

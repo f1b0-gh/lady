@@ -258,7 +258,7 @@ pub struct UploadedComponent {
 /// Transfer an independently admitted component to the original fixed broker.
 /// Supply the independently retained installation pin, never a guest assertion.
 /// The host must retain its exact operation before invoking this blocking I/O
-/// primitive outside LO guards, for example in an already initiated lifecycle
+/// primitive outside host policy guards, for example in an already initiated lifecycle
 /// process. Errors remain unresolved: do not automatically repeat an upload.
 /// The broker preserves an existing partial or complete file without replacement.
 pub fn upload(
@@ -293,15 +293,15 @@ fn upload_with(
     );
     let (lock, _lease, current) = preflight_environment(environment, driver)?;
     ensure!(
-        current["image_profile"] == "openshell-wasi",
+        current["image_profile"] == "openshell-worker-v1",
         "Component upload requires the fixed broker profile"
     );
     let command = run::sandbox_command(
         &Backend::new(&current["context"])?,
         &current,
         &[
-            "/usr/local/bin/lo-executor-worker",
-            "broker-upload",
+            "/usr/local/bin/sandbox-worker",
+            "sandbox-upload",
             "/var/lib/ladyshell/broker/control",
             "/var/lib/ladyshell/broker/artifacts",
             "/var/lib/ladyshell/broker/incoming",
@@ -488,7 +488,7 @@ pub(crate) fn recovery(store: &Store, key: &Key) -> Result<Recovery> {
     let current = state::load(&lock.directory)?
         .ok_or_else(|| invalid("Original environment state is missing"))?;
     ensure!(
-        current["image_profile"] == "openshell-wasi",
+        current["image_profile"] == "openshell-worker-v1",
         "Fenced recovery requires the fixed broker profile"
     );
     ensure!(
@@ -515,56 +515,40 @@ pub(crate) fn recovery(store: &Store, key: &Key) -> Result<Recovery> {
     })
 }
 
-/// Observe a surviving fixed-broker result after explicit `recover`. The host
-/// must independently admit this operation and retain its receiver binding/key.
-/// `request_digest` comes from LO's original typed Start; the request itself is
-/// extracted from the original retained Execute, never supplied by a caller.
-/// Returned bytes are bounded transport evidence which LO must correlate before
-/// use. This does not complete the original transport, clear its fence, authorize
-/// disclosure, prove termination, or release task/Promise capacity.
-pub fn observe_broker(store: &Store, key: &Key, request_digest: &str) -> Result<Vec<u8>> {
-    observe_broker_with(
-        store,
-        key,
-        request_digest,
-        &mut Native,
-        capture::run_with_input,
-    )
+/// Ask the original worker's fixed observation entry about the original intent.
+/// The host independently admits disclosure/recovery; the worker must implement
+/// observation without replaying execution. Application bytes remain opaque here.
+/// The returned bounded bytes are evidence for the application to correlate.
+/// This never completes the receiver, clears its fence or grants task retirement.
+pub fn observe_broker(store: &Store, key: &Key) -> Result<Vec<u8>> {
+    observe_broker_with(store, key, &mut Native, capture::run_with_input)
 }
 fn observe_broker_with(
     store: &Store,
     key: &Key,
-    request_digest: &str,
     driver: &mut impl Driver,
     transfer: impl FnOnce(Command, Duration, usize, Option<&[u8]>) -> (ClientResult, CapturedOutputs),
 ) -> Result<Vec<u8>> {
-    super::model::hex(request_digest, 64)?;
+    use crate::sandbox_worker::{EXECUTE_ARGS, MAX_BYTES, OBSERVE_ARGS};
     let held = recovery(store, key)?;
-    // Observe must not cross a separate deletion/cancellation lifecycle fence.
     crate::destroy::broker::ensure_available(&held.lock.directory)?;
     let record = &held.record;
     let task = &record.definition;
     ensure!(
-        task.id == "lo-broker"
-            && task.argv == crate::apply::broker::BROKER_ARGS
-            && task.output_limit_bytes == 16384
-            && task.input == Some(InputChannel::IntentJsonV1 { max_bytes: 16384 }),
-        "Recovery requires the original fixed broker definition"
+        task.argv == EXECUTE_ARGS
+            && task.output_limit_bytes == MAX_BYTES
+            && task.input
+                == Some(InputChannel::IntentJsonV1 {
+                    max_bytes: MAX_BYTES
+                }),
+        "Recovery requires the original fixed worker definition"
     );
-    let intent = &record.invocation.intent;
+    // No caller-supplied query, task schema or substituted digest. The adapter
+    // derives its read-only query from the exact retained application intent.
+    let input = serde_json::to_vec(&record.invocation.intent)?;
     ensure!(
-        intent["format"] == 1 && intent["operation"]["kind"] == "execute",
-        "Observation requires an original broker Execute"
-    );
-    let request = intent["operation"]["start"]
-        .get("request")
-        .filter(|r| r.is_object())
-        .ok_or_else(|| invalid("Original broker request is missing"))?;
-    let input = serde_json::to_vec(&json!({"format":1,"operation":{
-        "kind":"observe","request":request,"request_digest":request_digest}}))?;
-    ensure!(
-        input.len() <= 16384,
-        "Broker observation exceeds its input bound"
+        input.len() <= MAX_BYTES as usize,
+        "Observation exceeds its input bound"
     );
     let (_, source) = live_inputs(
         &held.lock,
@@ -579,13 +563,13 @@ fn observe_broker_with(
     let command = run::sandbox_command(
         &Backend::new(&held.current["context"])?,
         &held.current,
-        &crate::apply::broker::BROKER_ARGS,
+        &OBSERVE_ARGS,
         task.timeout_seconds,
     )?;
     let (result, output) = transfer(
         command,
         Duration::from_secs(u64::from(task.timeout_seconds)),
-        16384,
+        MAX_BYTES as usize,
         Some(&input),
     );
     held.lock.verify_directory()?;
@@ -599,8 +583,8 @@ fn observe_broker_with(
         result == (ClientResult::Exit { code: 0 })
             && !output.stdout.truncated
             && !output.stderr.truncated
-            && output.stdout.bytes.len() <= 16384
-            && output.stderr.bytes.len() <= 16384,
+            && output.stdout.bytes.len() <= MAX_BYTES as usize
+            && output.stderr.bytes.len() <= MAX_BYTES as usize,
         "Broker observation transport is unresolved"
     );
     Ok(output.stdout.bytes)

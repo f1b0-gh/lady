@@ -107,7 +107,7 @@ fn changed_cancellation_record_refuses_before_backend_or_journal() -> Result<()>
     let root = root()?;
     let state = root.path().join("state");
     let lock = StateLock::acquire(&state)?;
-    let desired = json!({"context":{"gateway":"g","workspace":"w"},"evaluated":{"config":{"image":{"profile":"openshell-wasi"},"storage":{"control":{"bytes":65536,"inodes":32},"artifacts":{"bytes":65536,"inodes":32},"incoming":{"bytes":65536,"inodes":32}}}}});
+    let desired = json!({"context":{"gateway":"g","workspace":"w"},"evaluated":{"config":{"image":{"profile":"openshell-worker-v1"},"storage":{"control":{"bytes":65536,"inodes":32},"artifacts":{"bytes":65536,"inodes":32},"incoming":{"bytes":65536,"inodes":32}}}}});
     let mut operation = json!({"schema_version":2,"desired_hash":ladyshell::plan::digest(&desired)?,"desired_inputs":desired,"state_before":null,"observed_before":{},"phase":"planned","owner":"a".repeat(32),"sandbox_name":"er-aaaaaaaaaaaa","restore_only":false,"build":null,"result":null});
     atomic_json(&state.join("operation.json"), &operation)?;
     drop(lock);

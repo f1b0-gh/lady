@@ -86,7 +86,7 @@ impl Artifacts<'_> {
                 ("ladyshell", runtime),
             ],
             Self::Broker { worker, runtime } => {
-                vec![("lo-executor-worker", worker), ("ladyshell", runtime)]
+                vec![("worker", worker), ("ladyshell", runtime)]
             }
         }
     }

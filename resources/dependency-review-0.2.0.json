@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-11-23T07:05:19.399043+00:00",
+  "source": "https://api.osv.dev/v1/querybatch",
+  "input": {
+    "path": "Cargo.lock",
+    "sha256": "713e6a6f47105f6572a6795cad4c7ab8f5b203d40d2ad3efacb2fe202a6915e6"
+  },
+  "reference": {
+    "revision": "a093119372f3054fdc029d015b045f80d763824d",
+    "lock_sha256": "0540ef7b2041fd7d9052fd33743613f75c30e4d15cc82a194ecc63e050bb378b"
+  },
+  "scope": "All registry packages, all platforms/features/dependency kinds",
+  "package_versions_queried": 291,
+  "query_sha256": "1bf019f98d0ee6183a0f81bb5376411243e44543f266ae2ac6c9bdc0301f2fb8",
+  "response_sha256": "879efb594bbd92f61879630e5f71a1c5d30d03f70264ec03ff70f3955917dfaf",
+  "added_identities": [
+    [
+      "form_urlencoded",
+      "1.2.3",
+      "registry+https://github.com/rust-lang/crates.io-index",
+      "afa489199eaffb1211795df1c6236ce1ad0d41a6fa45250add73e3b02420f06e"
+    ],
+    [
+      "ladyshell",
+      "0.2.0",
+      null,
+      null
+    ],
+    [
+      "ladyshell-cli",
+      "0.2.0",
+      null,
+      null
+    ],
+    [
+      "url",
+      "2.5.9",
+      "registry+https://github.com/rust-lang/crates.io-index",
+      "f00cd2407bb42c0ef17be88d4cf020f5cceffd121665bac9b8b9493a369b3b1a"
+    ]
+  ],
+  "removed_identities": [
+    [
+      "form_urlencoded",
+      "1.2.2",
+      "registry+https://github.com/rust-lang/crates.io-index",
+      "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf"
+    ],
+    [
+      "ladyshell",
+      "0.1.0",
+      null,
+      null
+    ],
+    [
+      "ladyshell-cli",
+      "0.1.0",
+      null,
+      null
+    ],
+    [
+      "url",
+      "2.5.8",
+      "registry+https://github.com/rust-lang/crates.io-index",
+      "ff67a8a4397373c3ef660812acab3268222035010ab8680ec4215f38ba3d0eed"
+    ]
+  ],
+  "findings": [
+    {
+      "name": "chrono",
+      "version": "0.4.45",
+      "advisories": [
+        {
+          "id": "RUSTSEC-2026-0543",
+          "modified": "2026-11-17T10:15:02.344223Z"
+        }
+      ]
+    }
+  ],
+  "exceptions": [],
+  "limitations": [
+    "Existing chrono maintenance finding retained, not waived.",
+    "OSV version matching does not establish exploitability or cover native closures."
+  ]
+}

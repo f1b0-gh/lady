@@ -36,7 +36,7 @@ pub(super) fn build(desired: &Value, directory: &Path, migration: Option<&Value>
         "build_dir":out,"loaded":false,"validated":false});
     atomic_json(&out.join("broker-build.json"), &receipt)?;
     // Authenticate every named artifact before invoking Nix or the container daemon.
-    for name in ["lo-executor-worker", "ladyshell"] {
+    for name in ["worker", "ladyshell"] {
         let record = desired["artifacts"]
             .get(name)
             .filter(|v| v.is_object())
@@ -90,7 +90,7 @@ pub(super) fn build(desired: &Value, directory: &Path, migration: Option<&Value>
         ("flakePath", nix),
         ("configPath", out.join("config.json")),
         ("sourcePath", source.clone()),
-        ("brokerPath", out.join("lo-executor-worker")),
+        ("brokerPath", out.join("worker")),
         ("runtimePath", out.join("ladyshell")),
     ] {
         command.arg("--argstr").arg(name).arg(value);
@@ -135,7 +135,7 @@ pub(super) fn build(desired: &Value, directory: &Path, migration: Option<&Value>
     receipt["metadata_validated"] = json!(true);
     atomic_json(&out.join("broker-build.json"), &receipt)?;
     Ok(
-        json!({"image_profile":"openshell-wasi","image_id":image_id,"archive":archive,
+        json!({"image_profile":"openshell-worker-v1","image_id":image_id,"archive":archive,
         "policy_path":policy_path,"build_dir":out,"project_snapshot":source,
         "host_sources":actual,"broker_binary":binary,"dependencies":null}),
     )
@@ -147,13 +147,13 @@ fn metadata_binary(metadata: &Value) -> Result<&str> {
     );
     let labels = &metadata["Config"]["Labels"];
     ensure!(
-        labels["ladyshell.image.profile"] == "openshell-wasi",
+        labels["ladyshell.image.profile"] == "openshell-worker-v1",
         "Incorrect image profile"
     );
     let binary = text(labels, "ladyshell.broker.binary")?;
     let suffix = binary
         .strip_prefix("/nix/store/")
-        .and_then(|v| v.strip_suffix("-ladyshell-lo-executor/bin/lo-executor-worker"))
+        .and_then(|v| v.strip_suffix("-ladyshell-sandbox-worker/bin/sandbox-worker"))
         .ok_or_else(|| invalid("Broker must resolve to its fixed Nix artifact".into()))?;
     ensure!(
         suffix.len() == 32
@@ -171,11 +171,11 @@ mod tests {
     #[test]
     fn image_metadata_requires_closed_identity_and_fixed_broker_path() -> Result<()> {
         let binary = format!(
-            "/nix/store/{}-ladyshell-lo-executor/bin/lo-executor-worker",
+            "/nix/store/{}-ladyshell-sandbox-worker/bin/sandbox-worker",
             "0".repeat(32)
         );
         let original = json!({"Config":{"User":"10001:10001", "Labels":{
-            "ladyshell.image.profile":"openshell-wasi", "ladyshell.broker.binary":binary}}});
+            "ladyshell.image.profile":"openshell-worker-v1", "ladyshell.broker.binary":binary}}});
         assert_eq!(metadata_binary(&original)?, binary);
         for (key, value) in [("User", json!("0")), ("Labels", json!({}))] {
             let mut changed = original.clone();
@@ -184,8 +184,8 @@ mod tests {
         }
         for path in [
             "/tmp/worker",
-            "/nix/store/../lo-executor-worker",
-            "/nix/store/000-ladyshell-lo-executor/bin/lo-executor-worker",
+            "/nix/store/../sandbox-worker",
+            "/nix/store/000-ladyshell-sandbox-worker/bin/sandbox-worker",
         ] {
             let mut changed = original.clone();
             changed["Config"]["Labels"]["ladyshell.broker.binary"] = json!(path);

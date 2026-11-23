@@ -72,7 +72,7 @@ impl Image {
     pub fn broker() -> Self {
         Self {
             backend: "nix".into(),
-            profile: "openshell-wasi".into(),
+            profile: "openshell-worker-v1".into(),
             platform: "x86_64-linux".into(),
         }
     }
@@ -167,7 +167,7 @@ impl Config {
         identifier(&self.name)?;
         ensure!(
             self.image == Image::default() || self.image == Image::broker(),
-            "Supported image: Nix, openshell-native or openshell-wasi, x86_64-linux"
+            "Supported image: Nix, openshell-native or openshell-worker-v1, x86_64-linux"
         );
         if self.image == Image::broker() {
             ensure!(

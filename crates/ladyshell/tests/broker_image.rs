@@ -6,7 +6,7 @@ fn config() -> serde_json::Value {
     json!({"schema_version":1,"name":"broker","sources":{"include":[],"exclude":[]},
         "tools":{},"missions":{"dev":{"tools":[],"include":[],"depends_on":[],"checks":[]}},
         "sandbox":{"gateway":"g","workspace":"w"},
-        "image":{"backend":"nix","profile":"openshell-wasi","platform":"x86_64-linux"},
+        "image":{"backend":"nix","profile":"openshell-worker-v1","platform":"x86_64-linux"},
         "storage":{"control":{"bytes":65536,"inodes":32},
             "artifacts":{"bytes":262144,"inodes":64},"incoming":{"bytes":262144,"inodes":64}}})
 }
@@ -57,7 +57,7 @@ fn broker_lock_names_and_hashes_native_artifacts_without_codex_substitution() ->
         fs::write(root.path().join("nix").join(name), name)?;
     }
     let runtime = root.path().join("ladyshell");
-    let broker = root.path().join("lo-executor-worker");
+    let broker = root.path().join("worker");
     fs::write(&runtime, b"\x7fELFsynthetic-runtime")?;
     fs::write(&broker, b"\x7fELFsynthetic-broker")?;
     let evaluated = Evaluated {
@@ -71,7 +71,7 @@ fn broker_lock_names_and_hashes_native_artifacts_without_codex_substitution() ->
         environment_lock::create_broker(evaluated.clone(), root.path(), &broker, &runtime)?;
     assert_eq!(original.artifacts_sha256.len(), 2);
     assert_eq!(
-        original.artifacts_sha256["lo-executor-worker"],
+        original.artifacts_sha256["worker"],
         environment_lock::artifact_hash(&broker)?
     );
     assert_eq!(

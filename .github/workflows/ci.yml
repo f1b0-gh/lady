@@ -68,6 +68,8 @@ jobs:
           .venv/bin/python -m unittest discover -s tests -p 'test_*.py'
           python3 -m unittest discover -s examples/ladyhost/scenario -p 'test_*.py'
           (cd crates/ladyboot/tests && python3 -m unittest test_assembly test_vm_drivers)
+          cargo build --locked --example sandbox_worker
+          python3 tests/check_sandbox_worker.py target/debug/examples/sandbox_worker
           python3 tests/check_boundaries.py --bootc crates/ladyboot
           python3 tests/check_workspace_packages.py
           CHECKS

@@ -66,7 +66,7 @@ pub trait Driver {
         config: &Value,
     ) -> Result<()> {
         ensure!(
-            build["image_profile"] != "openshell-wasi",
+            build["image_profile"] != "openshell-worker-v1",
             "Driver does not support broker creation"
         );
         self.create(name, build, owner, text(&config["sandbox"], "provider")?)
@@ -74,7 +74,7 @@ pub trait Driver {
     /// Validate the exact retained profile on initial publication and recovery.
     fn validate_profile(&mut self, name: &str, build: &Value) -> Result<Value> {
         ensure!(
-            build["image_profile"] != "openshell-wasi",
+            build["image_profile"] != "openshell-worker-v1",
             "Driver does not support broker validation"
         );
         self.validate(name, text(build, "codex_binary")?)
@@ -236,7 +236,7 @@ fn apply_selected(
             desired_hash: desired_hash.clone(),
             approved_plan: expected_plan.map(str::to_owned),
             desired_inputs: (desired["evaluated"]["config"]["image"]["profile"]
-                == "openshell-wasi")
+                == "openshell-worker-v1")
                 .then(|| desired.clone()),
             state_before: state.clone(),
             observed_before: observed,
@@ -344,7 +344,7 @@ fn apply_selected(
         );
         std::thread::sleep(std::time::Duration::from_secs(1));
     };
-    if build["image_profile"] == "openshell-wasi" && op.phase == Phase::Built {
+    if build["image_profile"] == "openshell-worker-v1" && op.phase == Phase::Built {
         // Persist before validation can create an original runtime binding. A
         // missing binding after this point is not evidence of no prior runtime.
         op.phase = Phase::Validating;
@@ -417,14 +417,14 @@ impl Driver for NativeDriver {
         owner: &str,
         config: &Value,
     ) -> Result<()> {
-        if build["image_profile"] == "openshell-wasi" {
+        if build["image_profile"] == "openshell-worker-v1" {
             broker::create(&self.backend, name, build, owner)
         } else {
             self.create(name, build, owner, text(&config["sandbox"], "provider")?)
         }
     }
     fn validate_profile(&mut self, name: &str, build: &Value) -> Result<Value> {
-        if build["image_profile"] == "openshell-wasi" {
+        if build["image_profile"] == "openshell-worker-v1" {
             broker::validate(&self.backend, name, build)
         } else {
             self.validate(name, text(build, "codex_binary")?)

@@ -162,7 +162,7 @@ impl Driver for Supported {
     fn build(&mut self, _: &Value, _: &Path, _: Option<&Value>) -> Result<Value> {
         if self.broker {
             return Ok(
-                json!({"image_profile":"openshell-wasi", "image_id":"image", "broker_binary":"/fake", "project_snapshot":"/fake", "build_dir":"/fake"}),
+                json!({"image_profile":"openshell-worker-v1", "image_id":"image", "broker_binary":"/fake", "project_snapshot":"/fake", "build_dir":"/fake"}),
             );
         }
         Ok(

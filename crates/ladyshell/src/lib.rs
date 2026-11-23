@@ -58,3 +58,5 @@ pub mod review_merge;
 pub mod stacks;
 
 pub mod management;
+
+pub mod sandbox_worker;
