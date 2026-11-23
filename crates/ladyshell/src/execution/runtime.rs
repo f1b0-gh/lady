@@ -273,8 +273,47 @@ pub fn upload(
         bytes,
         timeout_seconds,
         &mut Native,
+        || Ok(()),
         capture::run_with_input,
     )
+}
+/// Upload only if the exclusive Unix-seconds deadline still permits initiation.
+/// Checks a fresh host clock before preflight and immediately before transport;
+/// clock failure or rollback refuses initiation. The deadline does not cancel a
+/// started transfer: `timeout_seconds` and retained partial-intake semantics still
+/// apply. This is an additional bound, never an authorization grant.
+pub fn upload_before(
+    environment: &EnvironmentPin,
+    component: &str,
+    bytes: &[u8],
+    timeout_seconds: u32,
+    admit_before: u64,
+) -> Result<UploadedComponent> {
+    upload_with(
+        environment,
+        component,
+        bytes,
+        timeout_seconds,
+        &mut Native,
+        upload_deadline(admit_before, now),
+        capture::run_with_input,
+    )
+}
+fn upload_deadline(
+    admit_before: u64,
+    mut clock: impl FnMut() -> Result<u64>,
+) -> impl FnMut() -> Result<()> {
+    let mut previous = None;
+    move || {
+        let current = clock()?;
+        ensure!(current < admit_before, "Component upload admission expired");
+        ensure!(
+            previous.is_none_or(|at| current >= at),
+            "Component upload clock moved backwards"
+        );
+        previous = Some(current);
+        Ok(())
+    }
 }
 fn upload_with(
     environment: &EnvironmentPin,
@@ -282,6 +321,7 @@ fn upload_with(
     bytes: &[u8],
     timeout_seconds: u32,
     driver: &mut impl Driver,
+    mut check: impl FnMut() -> Result<()>,
     transfer: impl FnOnce(Command, Duration, usize, Option<&[u8]>) -> (ClientResult, CapturedOutputs),
 ) -> Result<UploadedComponent> {
     ensure!(
@@ -291,6 +331,7 @@ fn upload_with(
             && (1..=86400).contains(&timeout_seconds),
         "Invalid bounded component upload"
     );
+    check()?;
     let (lock, _lease, current) = preflight_environment(environment, driver)?;
     ensure!(
         current["image_profile"] == "openshell-worker-v1",
@@ -312,6 +353,7 @@ fn upload_with(
     // Keep the original session lease through transport. Seal in the broker
     // separately fences its actual writes, including after host/client death.
     drop(lock);
+    check()?;
     let (result, output) = transfer(
         command,
         Duration::from_secs(u64::from(timeout_seconds)),
