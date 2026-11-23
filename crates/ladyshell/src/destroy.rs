@@ -23,6 +23,61 @@ pub fn run_pinned(args: &Destroy, selected: &state::Selection) -> Result<Value> 
     run_selected(args, None, Some(selected))
 }
 
+/// Seal, export and delete the original broker while retaining an uncertain
+/// invocation's exact execution fence. Independently admit and retain the
+/// selected generation, receiver binding and key before calling. The invocation
+/// may be Execute, Stage or a storage probe; cleanup never replays it. A busy
+/// broker seal fails closed. The original record/fence survive even successful
+/// deletion, and grant no task termination or Promise retirement authority.
+pub fn run_recovering(
+    args: &Destroy,
+    selected: &state::Selection,
+    store: &crate::execution::Store,
+    key: &crate::execution::Key,
+) -> Result<Value> {
+    with_recovery(args, selected, store, key, |lock, current| {
+        let mut driver = broker::Native::new(current)?;
+        broker::run(lock, current, &mut driver)
+    })
+}
+pub(crate) fn with_recovery(
+    args: &Destroy,
+    selected: &state::Selection,
+    store: &crate::execution::Store,
+    key: &crate::execution::Key,
+    cleanup: impl FnOnce(&state::StateLock, &Value) -> Result<Value>,
+) -> Result<Value> {
+    ensure!(
+        !args.discard_work,
+        "Fenced broker cleanup must retain its export"
+    );
+    let held = crate::execution::recovery(store, key)?;
+    ensure!(
+        crate::files::absolute(&args.state)? == held.lock.directory,
+        "Cleanup state differs from original fenced environment"
+    );
+    selected.verify_generation(&held.lock, &held.current)?;
+    ensure_ready_for_destroy(&held.lock)?;
+    // No unconditional Ready observation here: after deletion, the retained
+    // broker journal must verify the original deletion intent and absence.
+    // Before seal/export, that same driver verifies the original live runtime.
+    cleanup(&held.lock, &held.current)
+}
+
+fn ensure_ready_for_destroy(lock: &state::StateLock) -> Result<()> {
+    if let Some(operation) = state::read(&lock.directory.join("operation.json"))? {
+        ensure!(
+            operation["phase"] == "complete",
+            "Apply was interrupted: resume before destroy"
+        );
+    }
+    ensure!(
+        !lock.directory.join("checkout-pending.json").try_exists()?,
+        "Checkout application was interrupted: resume before destroy"
+    );
+    lock.verify_directory()
+}
+
 pub(crate) fn run_expected(
     args: &Destroy,
     expected: &crate::associations::Association,
@@ -52,17 +107,7 @@ fn run_selected(
     if let Some(selected) = selected {
         selected.verify_generation(&lock, &current)?;
     }
-    if let Some(operation) = state::read(&lock.directory.join("operation.json"))? {
-        ensure!(
-            operation["phase"] == "complete",
-            "Apply was interrupted: resume before destroy"
-        );
-    }
-    ensure!(
-        !lock.directory.join("checkout-pending.json").try_exists()?,
-        "Checkout application was interrupted: resume before destroy"
-    );
-    lock.verify_directory()?;
+    ensure_ready_for_destroy(&lock)?;
     if current["image_profile"] == "openshell-wasi" {
         ensure!(
             !args.discard_work,

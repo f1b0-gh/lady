@@ -41,6 +41,14 @@ cancellation to the exact original incomplete broker provisioning record.
 These checks supplement fresh runtime verification and the embedding host's
 policy admission. Native and broker deployments use the same selection type.
 
+An orphaned fixed-broker invocation can retain an execution fence while its
+result survives remotely. After explicit `execution::recover`, the separately
+admitted `execution::observe_broker` retrieves bounded observation bytes for LO
+to verify. `destroy::run_recovering` seals and exports before deleting the exact
+fenced generation, including interrupted nonexecution invocations. Both preserve
+the original uncertainty and fence; neither grants worker execution or Promise
+retirement. See the bounded-storage guide for the caller's policy obligations.
+
 Lady's own code uses [Apache-2.0](LICENSE). The imported
 [audit validator](src/audit/validator/LICENSE-MIT) and
 [audit methods](resources/audit/security-audit/LICENSE) retain their MIT notices.

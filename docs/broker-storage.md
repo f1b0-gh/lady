@@ -379,3 +379,38 @@ It uploads and stages through the ordinary retained receiver, executes the
 summary component, exhausts the incoming byte cap and refuses a partial retry,
 then exports before ordinary deletion. Its host admissions are synthetic; it
 does not qualify LO policy or Promise integration.
+
+
+## Recover a fenced receiver before deleting its broker
+
+A receiver process can disappear after the broker saves a result but before the
+receiver saves its client receipt. Call `execution::recover` for that original
+receiver/key to retain `Uncertain`; it refuses a still-owned invocation. Ordinary
+execution remains excluded by `retained-execution.json`. Stopping the runtime to
+remove this fence would lose the broker's volatile storage.
+
+After independent host policy admission, `execution::observe_broker` can issue a
+bounded, fixed `Observe` request through this exact fence. It requires the
+original fixed broker Execute definition and extracts the request from its
+retained intent. The caller supplies the digest computed from LO's original typed
+Start and must validate the returned bytes with LO's `broker::reply_for`. Lady
+does not reserialize an untyped JSON object to derive LO's protocol digest.
+Changed receiver, invocation fence, environment, runtime or source fails closed.
+A distinct recovery lease excludes concurrent ownership and supplies no worker
+transition authority. The original record and fence remain unchanged.
+
+For cleanup, independently retain the original receiver binding/key and selected
+environment generation in the admitted host intent, then call
+`destroy::run_recovering`. This enters the existing one-way seal/export/delete
+journal under that same fence. It also permits cleanup after an interrupted Stage
+or storage probe; it never replays the interrupted operation. A busy seal or
+unverifiable live runtime prevents deletion. After deletion, journal recovery
+verifies the original deletion intent and absence instead of requiring a running
+sandbox. The original fence, uncertain receiver record and host export survive.
+
+These blocking operations belong outside live policy guards, in an already
+admitted host lifecycle process. Historical broker results still require current
+LO Engine acceptance and disclosure policy. Export, local process exit and
+sandbox deletion do not themselves close LO execution scopes or refund Promise
+capacity. The APIs are library integration points; they add no generic command
+escape hatch or automatic retry to the CLI.

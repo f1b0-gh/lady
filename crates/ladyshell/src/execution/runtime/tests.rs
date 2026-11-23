@@ -819,3 +819,277 @@ fn untrusted_snapshot_binary_refuses_accepted_worker_before_inventory() -> Resul
     assert!(r.dispatched_at.is_none());
     Ok(())
 }
+
+// The real receiver journal and fence survive a synthetic lost transport.
+// Only the external runtime/transport are substituted in this unit fixture.
+fn orphaned_broker() -> Result<Fixture> {
+    orphaned_broker_operation("execute")
+}
+fn orphaned_broker_operation(kind: &str) -> Result<Fixture> {
+    let mut f = fixture_with_continuous(false)?;
+    select_broker_fixture(&mut f)?;
+    let binding = install_with(
+        &f.state,
+        &f.root.path().join("broker-receiver"),
+        vec![TaskDefinition {
+            id: "lo-broker".into(),
+            argv: [
+                "/usr/local/bin/lo-executor-worker",
+                "broker",
+                "/var/lib/ladyshell/broker/control",
+                "/var/lib/ladyshell/broker/artifacts",
+                "/var/lib/ladyshell/broker/incoming",
+            ]
+            .map(String::from)
+            .to_vec(),
+            timeout_seconds: 3,
+            output_limit_bytes: 16384,
+            input: Some(InputChannel::IntentJsonV1 { max_bytes: 16384 }),
+        }],
+        &mut f.driver,
+    )?;
+    f.store = Store::open(&f.root.path().join("broker-receiver"), &binding.receiver_id)?;
+    f.store.bind_owner("scope", None)?;
+    f.store.advance_claim("scope", None, 1)?;
+    let invocation = Invocation {
+        scope: "scope".into(),
+        id: "original".into(),
+        task: "lo-broker".into(),
+        definition_sha256: f.store.catalog().definition_digest("lo-broker")?,
+        intent: json!({"format":1,"operation":{"kind":kind,"start":{
+            "request":{"fixture":"original typed LO request"},"input":"original input"}}}),
+    };
+    f.key = invocation.key();
+    f.store.accept(
+        &invocation,
+        &Admission {
+            reference: "ref".into(),
+            admit_before: 100,
+            owner: None,
+            claim: 1,
+        },
+        10,
+    )?;
+    // Drop ownership after the dispatch marker, without a receiver completion.
+    let worker = f.store.acquire_worker(&f.key)?;
+    let lock = StateLock::acquire_existing(&f.state)?;
+    let session = SessionLock::acquire(&f.state, true)?;
+    Fence::for_record(&f.store, &f.store.inspect(&f.key)?).install(&session)?;
+    f.store.begin(&worker, 20)?;
+    drop(session);
+    drop(lock);
+    drop(worker);
+    f.store.recover(&f.key, 21)?;
+    Ok(f)
+}
+
+#[test]
+fn orphan_observation_preserves_original_uncertainty_and_fence() -> Result<()> {
+    let mut f = orphaned_broker()?;
+    let before = serde_json::to_value(f.store.inspect(&f.key)?)?;
+    let fence = fs::read(f.state.join("retained-execution.json"))?;
+    let result = observe_broker_with(
+        &f.store,
+        &f.key,
+        &"a".repeat(64),
+        &mut f.driver,
+        |command, timeout, limit, input| {
+            let argv: Vec<_> = command
+                .get_args()
+                .map(|a| a.to_string_lossy().into_owned())
+                .collect();
+            assert_eq!(
+                &argv[argv.len() - 5..],
+                [
+                    "/usr/local/bin/lo-executor-worker",
+                    "broker",
+                    "/var/lib/ladyshell/broker/control",
+                    "/var/lib/ladyshell/broker/artifacts",
+                    "/var/lib/ladyshell/broker/incoming"
+                ]
+            );
+            assert_eq!(timeout, Duration::from_secs(3));
+            assert_eq!(limit, 16384);
+            assert_eq!(
+                serde_json::from_slice::<Value>(input.unwrap_or_default()).ok(),
+                Some(json!({"format":1,"operation":{"kind":"observe","request":{
+                    "fixture":"original typed LO request"},"request_digest":"a".repeat(64)}}))
+            );
+            assert!(matches!(f.store.worker_present(&f.key), Ok(true)));
+            assert!(StateLock::acquire_existing(&f.state).is_err());
+            assert!(SessionLock::acquire(&f.state, true).is_err());
+            (
+                ClientResult::Exit { code: 0 },
+                CapturedOutputs {
+                    stdout: CapturedStream {
+                        bytes: b"historical reply validated by LO".to_vec(),
+                        truncated: false,
+                    },
+                    stderr: CapturedStream::default(),
+                },
+            )
+        },
+    )?;
+    assert_eq!(result, b"historical reply validated by LO");
+    assert_eq!(serde_json::to_value(f.store.inspect(&f.key)?)?, before);
+    assert_eq!(fs::read(f.state.join("retained-execution.json"))?, fence);
+    assert!(SessionLock::acquire(&f.state, true).is_err());
+    assert!(f.store.acquire_worker(&f.key).is_err());
+    Ok(())
+}
+
+#[test]
+fn fenced_cleanup_keeps_uncertainty_and_requires_original_generation() -> Result<()> {
+    let f = orphaned_broker()?;
+    let selected = state::select_generation(&f.state)?;
+    let before = serde_json::to_value(f.store.inspect(&f.key)?)?;
+    let args = crate::request::Destroy {
+        state: f.state.clone(),
+        discard_work: false,
+    };
+    let receipt =
+        crate::destroy::with_recovery(&args, &selected, &f.store, &f.key, |lock, current| {
+            assert_eq!(current["sandbox_id"], "sb");
+            assert_eq!(lock.directory, f.state);
+            assert!(SessionLock::acquire(&f.state, true).is_err());
+            assert!(f.store.worker_present(&f.key)?);
+            assert!(StateLock::acquire_existing(&f.state).is_err());
+            Ok(json!({"test":"only the existing sealed cleanup driver may run here"}))
+        })?;
+    assert_eq!(
+        receipt["test"],
+        "only the existing sealed cleanup driver may run here"
+    );
+    assert_eq!(serde_json::to_value(f.store.inspect(&f.key)?)?, before);
+    assert!(SessionLock::acquire(&f.state, true).is_err());
+    let mut changed = f.current.clone();
+    changed["unreviewed_extension"] = json!(true);
+    files::publish_json(&f.state.join("state.json"), &changed, true)?;
+    assert!(crate::destroy::with_recovery(
+        &args,
+        &selected,
+        &f.store,
+        &f.key,
+        |_, _| unreachable!("changed generation reached cleanup")
+    )
+    .is_err());
+    Ok(())
+}
+
+#[test]
+fn orphan_observation_refuses_changed_or_absent_original_evidence() -> Result<()> {
+    for damage in [
+        "missing_fence",
+        "other_fence",
+        "runtime",
+        "source",
+        "state",
+        "live_recovery",
+        "digest",
+        "deleting",
+    ] {
+        let mut f = orphaned_broker()?;
+        let mut held = None;
+        let mut digest = "a".repeat(64);
+        match damage {
+            "missing_fence" => fs::remove_file(f.state.join("retained-execution.json"))?,
+            "other_fence" => {
+                let path = f.state.join("retained-execution.json");
+                let mut value: Value = serde_json::from_slice(&fs::read(&path)?)?;
+                value["intent_sha256"] = json!("b".repeat(64));
+                files::publish_json(&path, &value, true)?;
+            }
+            "runtime" => f.driver.generation = "replacement".into(),
+            "source" => {
+                f.driver.source.insert(
+                    "changed".into(),
+                    Entry {
+                        sha256: "0".repeat(64),
+                        size: 0,
+                        executable: false,
+                    },
+                );
+            }
+            "state" => {
+                f.current["policy_hash"] = json!("replacement");
+                files::publish_json(&f.state.join("state.json"), &f.current, true)?;
+            }
+            "live_recovery" => held = Some(f.store.acquire_recovery(&f.key)?),
+            "digest" => digest = "A".repeat(64),
+            "deleting" => fs::write(f.state.join("broker-destroy.json"), b"{}")?,
+            _ => unreachable!(),
+        }
+        assert!(
+            observe_broker_with(&f.store, &f.key, &digest, &mut f.driver, no_launch).is_err(),
+            "{damage}"
+        );
+        assert_eq!(f.store.inspect(&f.key)?.phase, Phase::Uncertain);
+        assert!(f.store.acquire_worker(&f.key).is_err());
+        drop(held);
+    }
+    Ok(())
+}
+
+#[test]
+fn fenced_cleanup_permits_interrupted_nonexecution_but_observe_does_not() -> Result<()> {
+    let mut f = orphaned_broker_operation("stage")?;
+    assert!(
+        observe_broker_with(&f.store, &f.key, &"a".repeat(64), &mut f.driver, no_launch).is_err()
+    );
+    let selected = state::select_generation(&f.state)?;
+    let mut args = crate::request::Destroy {
+        state: f.state.clone(),
+        discard_work: true,
+    };
+    assert!(crate::destroy::with_recovery(
+        &args,
+        &selected,
+        &f.store,
+        &f.key,
+        |_, _| unreachable!("discard reached cleanup")
+    )
+    .is_err());
+    args.discard_work = false;
+    crate::destroy::with_recovery(&args, &selected, &f.store, &f.key, |_, _| Ok(Value::Null))?;
+    // Cleanup after a lost deletion reply must enter the existing journal even
+    // when its original remote runtime is absent. No live preflight here.
+    fs::write(f.state.join("broker-destroy.json"), b"{}")?;
+    crate::destroy::with_recovery(&args, &selected, &f.store, &f.key, |_, _| Ok(Value::Null))?;
+    assert_eq!(f.store.inspect(&f.key)?.phase, Phase::Uncertain);
+    assert!(SessionLock::acquire(&f.state, true).is_err());
+    Ok(())
+}
+
+#[test]
+fn orphan_observation_never_acknowledges_lost_or_truncated_transport() -> Result<()> {
+    for failure in ["lost", "truncated", "oversize"] {
+        let mut f = orphaned_broker()?;
+        let before = serde_json::to_value(f.store.inspect(&f.key)?)?;
+        assert!(observe_broker_with(
+            &f.store,
+            &f.key,
+            &"a".repeat(64),
+            &mut f.driver,
+            |_, _, _, _| {
+                (
+                    if failure == "lost" {
+                        ClientResult::IoFailure
+                    } else {
+                        ClientResult::Exit { code: 0 }
+                    },
+                    CapturedOutputs {
+                        stdout: CapturedStream {
+                            bytes: vec![0; if failure == "oversize" { 16385 } else { 1 }],
+                            truncated: failure == "truncated",
+                        },
+                        stderr: CapturedStream::default(),
+                    },
+                )
+            }
+        )
+        .is_err());
+        assert_eq!(serde_json::to_value(f.store.inspect(&f.key)?)?, before);
+        assert!(SessionLock::acquire(&f.state, true).is_err());
+    }
+    Ok(())
+}

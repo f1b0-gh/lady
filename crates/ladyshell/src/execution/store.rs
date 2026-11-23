@@ -43,6 +43,9 @@ impl WorkerLease {
         Ok(self.dir.try_clone()?)
     }
 }
+pub(crate) struct RecoveryLease {
+    _lease: fs::Lease,
+}
 struct Loaded {
     dir: File,
     record: Record,

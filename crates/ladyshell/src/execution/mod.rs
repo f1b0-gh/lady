@@ -2,9 +2,10 @@
 mod capture;
 pub(crate) mod fence;
 mod runtime;
+pub(crate) use runtime::recovery;
 pub use runtime::{
-    install, install_pinned, reconcile, recover, status, submit, upload, worker, Status,
-    UploadedComponent,
+    install, install_pinned, observe_broker, reconcile, recover, status, submit, upload, worker,
+    Status, UploadedComponent,
 };
 mod model;
 mod store;
