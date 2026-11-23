@@ -114,7 +114,19 @@ struct Fixture {
     a: Admission,
 }
 fn fixture() -> Result<Fixture> {
-    let temp = tempfile::tempdir()?;
+    let parent = std::path::Path::new("/tmp/lady");
+    match fs::create_dir(parent) {
+        Ok(()) => (),
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => (),
+        Err(e) => return Err(e.into()),
+    }
+    use std::os::unix::fs::MetadataExt;
+    let metadata = fs::symlink_metadata(parent)?;
+    assert!(metadata.is_dir() && !metadata.file_type().is_symlink());
+    assert_eq!(metadata.uid(), fs::metadata(".")?.uid());
+    let temp = tempfile::Builder::new()
+        .prefix("receiver-")
+        .tempdir_in(parent)?;
     fs::set_permissions(temp.path(), fs::Permissions::from_mode(0o700))?;
     let path = temp.path().join("receiver");
     let c = catalog();
@@ -1200,5 +1212,22 @@ fn protected_acceptance_refuses_busy_receiver_without_waiting_for_another_writer
     })?;
     assert!(refused, "protected admission waited for a receiver lock");
     assert!(f.s.lookup(&f.i)?.is_none());
+    Ok(())
+}
+
+#[test]
+fn ended_worker_lease_does_not_survive_in_a_fork_inherited_description() -> Result<()> {
+    let f = fixture()?;
+    f.s.accept(&f.i, &f.a, 10)?;
+    let lease = f.s.acquire_worker(&f.i.key())?;
+    let inherited = lease.inherited_description()?;
+    assert!(f.s.worker_present(&f.i.key())?);
+    drop(lease);
+    // dup retains exactly the open-file description that fork would inherit,
+    // without scheduling a child or relying on an exec timing window.
+    assert!(!f.s.worker_present(&f.i.key())?);
+    let next = f.s.acquire_worker(&f.i.key())?;
+    drop(next);
+    drop(inherited);
     Ok(())
 }

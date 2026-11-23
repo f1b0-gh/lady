@@ -28,11 +28,20 @@ pub struct Store {
     manifest_bytes: u64,
     poisoned: AtomicBool,
 }
-/// Exclusive kernel ownership of the original invocation directory.
+/// Exclusive kernel ownership of the original invocation directory. Dropping
+/// the lease explicitly unlocks its file description, even if a concurrent fork
+/// inherited it. This does not clear an uncertain dispatch or prove termination.
 pub struct WorkerLease {
     key: Key,
     instance: Arc<()>,
     dir: File,
+    _lease: fs::Lease,
+}
+#[cfg(test)]
+impl WorkerLease {
+    pub(in crate::execution) fn inherited_description(&self) -> Result<File> {
+        Ok(self.dir.try_clone()?)
+    }
 }
 struct Loaded {
     dir: File,
@@ -56,7 +65,8 @@ impl Store {
             "Retained catalogue too large"
         );
         let root = fs::Root::load(path, true)?;
-        fs::lock(&root.dir, false)?;
+        let _lease =
+            fs::lock(&root.dir, false)?.ok_or_else(|| invalid("Retained receiver is busy"))?;
         fs::publish(
             &root.dir,
             "catalog.json",
@@ -77,7 +87,7 @@ impl Store {
         hex(expected_receiver, 64)?;
         let root = fs::Root::load(path, false)?;
         let lock = root.verify()?;
-        fs::lock(&lock, false)?;
+        let _lease = fs::lock(&lock, false)?.ok_or_else(|| invalid("Retained receiver is busy"))?;
         let bytes = fs::bytes(&root.dir, "catalog.json", MANIFEST_LIMIT)?;
         let installation: Installation = serde_json::from_value(crate::json::parse(&bytes)?)?;
         let binding = installation.binding()?;
@@ -121,7 +131,8 @@ impl Store {
         f: impl FnOnce(&mut Ledger) -> Result<T>,
     ) -> Result<T> {
         let lock = self.root.verify()?;
-        ensure!(fs::lock(&lock, nonblocking)?, "Retained receiver is busy");
+        let _lease =
+            fs::lock(&lock, nonblocking)?.ok_or_else(|| invalid("Retained receiver is busy"))?;
         self.root.verify()?;
         ensure!(
             !writing || !self.poisoned.load(Ordering::Acquire),
