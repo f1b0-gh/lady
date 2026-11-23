@@ -16,6 +16,8 @@ use std::{
     },
     path::{Component, Path, PathBuf},
 };
+mod selection;
+pub use selection::{select_generation, Selection};
 pub struct StateLock {
     _file: File,
     directory_file: File,

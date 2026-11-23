@@ -337,3 +337,113 @@ fn interrupted_publication_keeps_original_result_when_revalidation_fails() -> Re
     assert_eq!(retained["result"], original["result"]);
     Ok(())
 }
+
+#[test]
+fn approved_plan_is_required_before_effects_and_during_interrupted_recovery() -> Result<()> {
+    for broker in [false, true] {
+        let root = project_temp()?;
+        let mut desired = desired();
+        if broker {
+            desired["evaluated"]["config"]["sandbox"] = json!({});
+            desired["evaluated"]["config"]["image"] =
+                serde_json::to_value(ladyshell::config::Image::broker())?;
+        }
+        save_plan(root.path(), &desired)?;
+        let saved = ladyshell::state::read(&root.path().join("plan.json"))?.ok_or_else(|| {
+            Error::InvalidInput {
+                message: "plan missing".into(),
+            }
+        })?;
+        let expected = plan::digest(&saved)?;
+        let mut driver = Supported {
+            broker,
+            fail_validation: true,
+            ..Default::default()
+        };
+        let wrong = "0".repeat(64);
+        assert!(
+            ladyshell::apply::apply_with_expected(&desired, root.path(), &mut driver, &wrong)
+                .is_err()
+        );
+        assert_eq!(driver.creates, 0);
+        assert!(!root.path().join("operation.json").exists());
+        assert!(ladyshell::apply::apply_with_expected(
+            &desired,
+            root.path(),
+            &mut driver,
+            &expected
+        )
+        .is_err());
+        assert_eq!(driver.creates, 1);
+        driver.fail_validation = false;
+        // Even replacing plan.json cannot redirect an admitted recovery to another plan.
+        let mut replacement = saved;
+        replacement["review"] = json!("another approval");
+        atomic_json(&root.path().join("plan.json"), &replacement)?;
+        let replacement_digest = plan::digest(&replacement)?;
+        assert!(ladyshell::apply::apply_with_expected(
+            &desired,
+            root.path(),
+            &mut driver,
+            &replacement_digest
+        )
+        .is_err());
+        // The original journal is sufficient; a newly written plan cannot change it.
+        let result =
+            ladyshell::apply::apply_with_expected(&desired, root.path(), &mut driver, &expected)?;
+        assert_eq!(result["sandbox_id"], "one");
+        assert_eq!(driver.creates, 1);
+        // A lost reply after completion observes that same original operation.
+        assert_eq!(
+            ladyshell::apply::apply_with_expected(&desired, root.path(), &mut driver, &expected)?,
+            result
+        );
+        assert_eq!(driver.creates, 1);
+    }
+    Ok(())
+}
+
+#[test]
+fn legacy_interrupted_operation_cannot_acquire_a_new_plan_approval() -> Result<()> {
+    let root = project_temp()?;
+    let desired = desired();
+    save_plan(root.path(), &desired)?;
+    let expected = plan::digest(&plan::plan(
+        &desired,
+        None,
+        &json!({"sandbox":null,"image_exists":false}),
+    )?)?;
+    let mut driver = Supported {
+        fail_validation: true,
+        ..Default::default()
+    };
+    assert!(apply_with(&desired, root.path(), &mut driver).is_err());
+    driver.fail_validation = false;
+    let error =
+        ladyshell::apply::apply_with_expected(&desired, root.path(), &mut driver, &expected)
+            .err()
+            .ok_or_else(|| ladyshell::error::Error::InvalidInput {
+                message: "legacy operation rebound".into(),
+            })?;
+    assert!(error.to_string().contains("reviewed plan"), "{error}");
+    assert_eq!(driver.creates, 1);
+    apply_with(&desired, root.path(), &mut driver)?;
+    assert_eq!(driver.creates, 1);
+    Ok(())
+}
+
+fn project_temp() -> Result<tempfile::TempDir> {
+    let parent = std::path::Path::new("/tmp/lady");
+    match std::fs::create_dir(parent) {
+        Ok(()) => (),
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => (),
+        Err(error) => return Err(error.into()),
+    }
+    let metadata = std::fs::symlink_metadata(parent)?;
+    use std::os::unix::fs::MetadataExt;
+    assert!(metadata.is_dir() && !metadata.file_type().is_symlink());
+    assert_eq!(metadata.uid(), std::fs::metadata(".")?.uid());
+    Ok(tempfile::Builder::new()
+        .prefix("approved-plan-")
+        .tempdir_in(parent)?)
+}

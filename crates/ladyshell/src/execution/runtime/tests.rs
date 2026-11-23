@@ -734,6 +734,33 @@ fn ordinary_installation_binds_runtime_live_inventory_and_excludes_project_and_s
 }
 
 #[test]
+fn selected_installation_refuses_changed_generation_before_receiver_creation() -> Result<()> {
+    let mut f = fixture()?;
+    let selected = state::select_generation(&f.state)?;
+    let tasks = f.store.catalog().tasks.clone();
+    let receiver = f.root.path().join("selected-receiver");
+    let mut changed = f.current.clone();
+    changed["owner"] = json!("replacement");
+    files::publish_json(&f.state.join("state.json"), &changed, true)?;
+    let error = install_selected(
+        &f.state,
+        &receiver,
+        tasks.clone(),
+        &mut f.driver,
+        Some(&selected),
+    )
+    .err()
+    .ok_or_else(|| invalid("replacement installed"))?;
+    assert!(error.to_string().contains("selection"), "{error}");
+    assert!(!receiver.exists());
+    files::publish_json(&f.state.join("state.json"), &f.current, true)?;
+    let binding = install_selected(&f.state, &receiver, tasks, &mut f.driver, Some(&selected))?;
+    let store = Store::open(&receiver, &binding.receiver_id)?;
+    assert_eq!(store.catalog().environment.owner, f.current["owner"]);
+    Ok(())
+}
+
+#[test]
 fn provider_revocation_during_live_inventory_refuses_before_dispatch() -> Result<()> {
     let mut f = fixture()?;
     f.driver.revoke_during_inventory = true;

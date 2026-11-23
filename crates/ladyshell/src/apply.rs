@@ -99,6 +99,8 @@ struct Operation {
     schema_version: u32,
     desired_hash: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    approved_plan: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     desired_inputs: Option<Value>,
     state_before: Option<Value>,
     observed_before: Value,
@@ -110,6 +112,32 @@ struct Operation {
     result: Option<Value>,
 }
 pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -> Result<Value> {
+    apply_selected(desired, directory, driver, None)
+}
+/// Apply or resume exactly the reviewed plan. The embedding caller must hold
+/// the original state and exclusive session leases, as for `apply_with`.
+/// An older journal without an approved-plan binding cannot acquire one on retry.
+pub fn apply_with_expected(
+    desired: &Value,
+    directory: &Path,
+    driver: &mut impl Driver,
+    expected_plan: &str,
+) -> Result<Value> {
+    ensure!(
+        expected_plan.len() == 64
+            && expected_plan
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
+        "Invalid reviewed plan digest"
+    );
+    apply_selected(desired, directory, driver, Some(expected_plan))
+}
+fn apply_selected(
+    desired: &Value,
+    directory: &Path,
+    driver: &mut impl Driver,
+    expected_plan: Option<&str>,
+) -> Result<Value> {
     crate::destroy::broker::ensure_available(directory)?;
     let state = state::load(directory)?;
     let path = directory.join("operation.json");
@@ -121,13 +149,24 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         .get("storage")
         .map(|value| serde_json::from_value::<crate::storage::Profile>(value.clone()))
         .transpose()?;
-    driver.preflight(desired)?;
-    if let Some(op) = operation.as_ref().filter(|op| op.phase != Phase::Complete) {
+    if let Some(op) = operation.as_ref().filter(|op| {
+        op.phase != Phase::Complete
+            || expected_plan.is_some_and(|expected| op.approved_plan.as_deref() == Some(expected))
+    }) {
+        ensure!(
+            expected_plan.is_none_or(|expected| op.approved_plan.as_deref() == Some(expected)),
+            "Interrupted operation differs from reviewed plan"
+        );
         ensure!(
             op.schema_version == 2 && op.desired_hash == desired_hash,
             "Operation interrupted with different inputs: resume using its original inputs"
         );
-        if op.phase == Phase::Publishing && state == op.result {
+        ensure!(
+            op.phase != Phase::Complete || state == op.result,
+            "State changed after the reviewed operation completed"
+        );
+        driver.preflight(desired)?;
+        if matches!(op.phase, Phase::Publishing | Phase::Complete) && state == op.result {
             let result = op
                 .result
                 .clone()
@@ -163,6 +202,12 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
     } else {
         let saved = state::read(&directory.join("plan.json"))?
             .ok_or_else(|| invalid("Run plan before apply".into()))?;
+        let saved_digest = plan::digest(&saved)?;
+        ensure!(
+            expected_plan.is_none_or(|expected| expected == saved_digest),
+            "Saved plan differs from reviewed plan"
+        );
+        driver.preflight(desired)?;
         let observed = driver.observe(state.as_ref())?;
         plan::verify(&saved, desired, state.as_ref(), &observed)?;
         if saved["actions"].as_array().is_some_and(|a| a.is_empty()) {
@@ -189,6 +234,7 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         let op = Operation {
             schema_version: 2,
             desired_hash: desired_hash.clone(),
+            approved_plan: expected_plan.map(str::to_owned),
             desired_inputs: (desired["evaluated"]["config"]["image"]["profile"]
                 == "openshell-wasi")
                 .then(|| desired.clone()),

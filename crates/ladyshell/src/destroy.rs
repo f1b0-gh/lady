@@ -11,24 +11,31 @@ mod batch;
 pub(crate) mod broker;
 mod cancel;
 pub use batch::{all, all_at};
-pub use cancel::cancel_broker;
+pub use cancel::{cancel_broker, cancel_broker_pinned, select_cancellation};
 
 pub fn run(args: &Destroy) -> Result<Value> {
-    run_selected(args, None)
+    run_selected(args, None, None)
+}
+/// Delete only the selected original generation under ordinary lifecycle locks.
+/// Export progress alone does not change a generation. Policy admission remains
+/// the caller's responsibility; this selection grants no authority.
+pub fn run_pinned(args: &Destroy, selected: &state::Selection) -> Result<Value> {
+    run_selected(args, None, Some(selected))
 }
 
 pub(crate) fn run_expected(
     args: &Destroy,
     expected: &crate::associations::Association,
 ) -> Result<Value> {
-    run_selected(args, Some(expected))
+    run_selected(args, Some(expected), None)
 }
 
 fn run_selected(
     args: &Destroy,
     expected: Option<&crate::associations::Association>,
+    selected: Option<&state::Selection>,
 ) -> Result<Value> {
-    let lock = if expected.is_some() {
+    let lock = if expected.is_some() || selected.is_some() {
         state::StateLock::acquire_existing(&args.state)?
     } else {
         state::StateLock::acquire(&args.state)?
@@ -41,6 +48,9 @@ fn run_selected(
     })?;
     if let Some(expected) = expected {
         expected.verify(&current)?;
+    }
+    if let Some(selected) = selected {
+        selected.verify_generation(&lock, &current)?;
     }
     if let Some(operation) = state::read(&lock.directory.join("operation.json"))? {
         ensure!(

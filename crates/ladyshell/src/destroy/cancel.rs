@@ -98,9 +98,31 @@ fn run_with(lock: &StateLock, operation: &Value, driver: &mut impl Driver) -> Re
 /// Cancel only the pending broker provisioning attempt, retaining predecessor state,
 /// original journals and any required generation export. Caller supplies policy admission.
 pub fn cancel_broker(args: &crate::request::Existing) -> Result<Value> {
+    cancel_selected(args, None)
+}
+/// Select the exact incomplete operation without contacting its backend.
+pub fn select_cancellation(directory: &std::path::Path) -> Result<state::Selection> {
+    let lock = StateLock::acquire_existing(directory)?;
+    let operation = crate::apply::interrupted_broker(&lock.directory)?;
+    state::Selection::capture(&lock, &operation)
+}
+/// Cancel only the selected original provisioning record and directory.
+pub fn cancel_broker_pinned(
+    args: &crate::request::Existing,
+    selected: &state::Selection,
+) -> Result<Value> {
+    cancel_selected(args, Some(selected))
+}
+fn cancel_selected(
+    args: &crate::request::Existing,
+    selected: Option<&state::Selection>,
+) -> Result<Value> {
     let lock = StateLock::acquire_existing(&args.state)?;
     let _lease = state::SessionLock::acquire(&lock.directory, true)?;
     crate::continuous::host::lifecycle_directory(&lock.directory)?;
     let operation = crate::apply::interrupted_broker(&lock.directory)?;
+    if let Some(selected) = selected {
+        selected.verify(&lock, &operation)?;
+    }
     run_with(&lock, &operation, &mut native::Native)
 }

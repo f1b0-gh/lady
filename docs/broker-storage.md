@@ -17,6 +17,17 @@ retains a verified storage archive and removes the original sandbox and volumes.
 provisioning against the original operation. The governed retained-receiver bridge
 is still being integrated; this is not yet a complete task lifecycle API.
 
+For an embedding host that obtains LO approval between planning and effects,
+use `app::select_plan` followed by `app::apply_broker_expected`. Retain the
+selection in the approved operation body. The original directory and plan are
+checked under the lifecycle leases, and interrupted or completed recovery keeps
+the original plan binding. Select the environment with
+`state::select_generation` for `execution::install_pinned` and
+`destroy::run_pinned`; select the incomplete operation with
+`destroy::select_cancellation` for `destroy::cancel_broker_pinned`. A selection
+is not an admission. These APIs leave policy ownership in the embedding host
+and share the same generation and plan checks with native provisioning.
+
 ## Configuration and lifecycle
 
 The optional Nickel `storage` block selects byte and inode ceilings:

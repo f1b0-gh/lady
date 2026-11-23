@@ -76,15 +76,44 @@ fn plan_inputs(desired: Value, directory: &Path) -> Result<Value> {
     Ok(result)
 }
 pub fn apply(args: &Desired) -> Result<Value> {
-    apply_inputs(desired(args)?, &args.state)
+    apply_inputs(desired(args)?, &args.state, None)
 }
 /// Apply an explicitly locked fixed-broker plan under the ordinary state and session leases.
 pub fn apply_broker(args: &BrokerDesired) -> Result<Value> {
-    apply_inputs(desired_broker(args)?, &args.state)
+    apply_inputs(desired_broker(args)?, &args.state, None)
 }
-fn apply_inputs(desired: Value, directory: &Path) -> Result<Value> {
-    let lock = state::StateLock::acquire(directory)?;
+/// Bind native provisioning to the reviewed plan under the lifecycle leases.
+pub fn apply_expected(args: &Desired, expected_plan: &state::Selection) -> Result<Value> {
+    apply_inputs(desired(args)?, &args.state, Some(expected_plan))
+}
+/// Bind broker provisioning to the reviewed plan under the same lifecycle leases.
+pub fn apply_broker_expected(
+    args: &BrokerDesired,
+    expected_plan: &state::Selection,
+) -> Result<Value> {
+    apply_inputs(desired_broker(args)?, &args.state, Some(expected_plan))
+}
+/// Retain a non-authorizing binding to a saved plan and its original directory.
+pub fn select_plan(directory: &Path) -> Result<state::Selection> {
+    let lock = state::StateLock::acquire_existing(directory)?;
+    let plan = state::read(&lock.directory.join("plan.json"))?
+        .ok_or_else(|| invalid("Run plan before selecting it".into()))?;
+    state::Selection::capture(&lock, &plan)
+}
+fn apply_inputs(
+    desired: Value,
+    directory: &Path,
+    expected_plan: Option<&state::Selection>,
+) -> Result<Value> {
+    let lock = if expected_plan.is_some() {
+        state::StateLock::acquire_existing(directory)?
+    } else {
+        state::StateLock::acquire(directory)?
+    };
     let _lease = state::SessionLock::acquire(&lock.directory, true)?;
+    if let Some(expected) = expected_plan {
+        expected.verify_directory(&lock)?;
+    }
     crate::continuous::host::execution_directory(&lock.directory)?;
     if let Some(current) = state::load(&lock.directory)? {
         ensure!(
@@ -93,11 +122,16 @@ fn apply_inputs(desired: Value, directory: &Path) -> Result<Value> {
         );
     }
     let backend = Backend::new(&desired["context"])?;
-    crate::apply::apply_with(
-        &desired,
-        &lock.directory,
-        &mut crate::apply::NativeDriver { backend },
-    )
+    let mut driver = crate::apply::NativeDriver { backend };
+    match expected_plan {
+        Some(expected) => crate::apply::apply_with_expected(
+            &desired,
+            &lock.directory,
+            &mut driver,
+            expected.digest(),
+        ),
+        None => crate::apply::apply_with(&desired, &lock.directory, &mut driver),
+    }
 }
 pub fn status(directory: &Path) -> Result<Value> {
     let lock = state::StateLock::acquire(directory)?;

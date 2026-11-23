@@ -123,15 +123,38 @@ fn live_inputs(
 pub fn install(state: &Path, receiver: &Path, tasks: Vec<TaskDefinition>) -> Result<Binding> {
     install_with(state, receiver, tasks, &mut Native)
 }
+/// Install only in the independently selected original environment generation.
+/// The selection is checked under the ordinary lifecycle leases before runtime
+/// observation or receiver publication. It supplies no policy authorization.
+pub fn install_pinned(
+    state: &Path,
+    receiver: &Path,
+    tasks: Vec<TaskDefinition>,
+    selected: &state::Selection,
+) -> Result<Binding> {
+    install_selected(state, receiver, tasks, &mut Native, Some(selected))
+}
 fn install_with(
     state: &Path,
     receiver: &Path,
     tasks: Vec<TaskDefinition>,
     driver: &mut impl Driver,
 ) -> Result<Binding> {
+    install_selected(state, receiver, tasks, driver, None)
+}
+fn install_selected(
+    state: &Path,
+    receiver: &Path,
+    tasks: Vec<TaskDefinition>,
+    driver: &mut impl Driver,
+    selected: Option<&state::Selection>,
+) -> Result<Binding> {
     let lock = StateLock::acquire_existing(state)?;
     let lease = SessionLock::acquire(&lock.directory, true)?;
     let current = load_inputs(&lock)?;
+    if let Some(selected) = selected {
+        selected.verify_generation(&lock, &current)?;
+    }
     let path = files::absolute(receiver)?;
     super::model::normalized(&path)?;
     let project = Path::new(state::text(&current["desired_inputs"], "project")?).canonicalize()?;
