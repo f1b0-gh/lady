@@ -37,6 +37,7 @@ fn broker_upload_uses_original_environment_and_fixed_bounded_transport() -> Resu
         bytes,
         30,
         &mut f.driver,
+        || Ok(()),
         |command, timeout, limit, input| {
             let args: Vec<_> = command
                 .get_args()
@@ -86,7 +87,16 @@ fn broker_upload_refuses_changed_runtime_input_or_profile_before_transport() -> 
             launched.set(true);
             (ClientResult::IoFailure, CapturedOutputs::default())
         };
-    assert!(upload_with(&environment, &digest, bytes, 30, &mut f.driver, no_launch).is_err());
+    assert!(upload_with(
+        &environment,
+        &digest,
+        bytes,
+        30,
+        &mut f.driver,
+        || Ok(()),
+        no_launch
+    )
+    .is_err());
     select_broker_fixture(&mut f)?;
     assert!(upload_with(
         &environment,
@@ -94,10 +104,20 @@ fn broker_upload_refuses_changed_runtime_input_or_profile_before_transport() -> 
         b"changed",
         30,
         &mut f.driver,
+        || Ok(()),
         no_launch
     )
     .is_err());
-    assert!(upload_with(&environment, &digest, bytes, 0, &mut f.driver, no_launch).is_err());
+    assert!(upload_with(
+        &environment,
+        &digest,
+        bytes,
+        0,
+        &mut f.driver,
+        || Ok(()),
+        no_launch
+    )
+    .is_err());
     let oversize = vec![0; 2 * 1024 * 1024 + 1];
     assert!(upload_with(
         &environment,
@@ -105,11 +125,21 @@ fn broker_upload_refuses_changed_runtime_input_or_profile_before_transport() -> 
         &oversize,
         30,
         &mut f.driver,
+        || Ok(()),
         no_launch
     )
     .is_err());
     f.driver.generation = "changed-generation".into();
-    assert!(upload_with(&environment, &digest, bytes, 30, &mut f.driver, no_launch).is_err());
+    assert!(upload_with(
+        &environment,
+        &digest,
+        bytes,
+        30,
+        &mut f.driver,
+        || Ok(()),
+        no_launch
+    )
+    .is_err());
     assert!(
         !launched.get(),
         "refused upload must not initiate transport"
@@ -143,6 +173,7 @@ fn broker_upload_never_treats_truncated_mismatched_or_lost_output_as_a_receipt()
             bytes,
             30,
             &mut f.driver,
+            || Ok(()),
             |_, _, _, _| {
                 launched.set(true);
                 (
@@ -1080,5 +1111,91 @@ fn orphan_observation_never_acknowledges_lost_or_truncated_transport() -> Result
         assert_eq!(serde_json::to_value(f.store.inspect(&f.key)?)?, before);
         assert!(SessionLock::acquire(&f.state, true).is_err());
     }
+    Ok(())
+}
+
+#[test]
+fn broker_upload_deadline_is_checked_after_preflight_without_transport_on_refusal() -> Result<()> {
+    for (times, allowed, preflight) in [
+        ([100, 109], true, true),
+        ([100, 110], false, true),
+        ([100, 99], false, true),
+        ([110, 110], false, false),
+    ] {
+        let mut f = fixture()?;
+        select_broker_fixture(&mut f)?;
+        let environment = f.store.catalog().environment.clone();
+        let bytes = b"deadline component";
+        let digest = files::hash(bytes);
+        let launched = std::cell::Cell::new(false);
+        let inventories = f.driver.inventories;
+        let mut times = times.into_iter();
+        let check = upload_deadline(110, || {
+            times.next().ok_or_else(|| invalid("clock exhausted"))
+        });
+        let result = upload_with(
+            &environment,
+            &digest,
+            bytes,
+            30,
+            &mut f.driver,
+            check,
+            |_, _, _, _| {
+                launched.set(true);
+                let reply = json!({"Ok":{"component":digest,"bytes":bytes.len()}}).to_string();
+                (
+                    ClientResult::Exit { code: 0 },
+                    CapturedOutputs {
+                        stdout: CapturedStream {
+                            bytes: reply.into_bytes(),
+                            truncated: false,
+                        },
+                        stderr: CapturedStream::default(),
+                    },
+                )
+            },
+        );
+        assert_eq!(result.is_ok(), allowed);
+        assert_eq!(
+            launched.get(),
+            allowed,
+            "refused deadlines must not start transport"
+        );
+        assert_eq!(f.driver.inventories > inventories, preflight);
+    }
+    Ok(())
+}
+
+#[test]
+fn broker_upload_clock_failure_after_preflight_does_not_start_transport() -> Result<()> {
+    let mut f = fixture()?;
+    select_broker_fixture(&mut f)?;
+    let environment = f.store.catalog().environment.clone();
+    let bytes = b"deadline component";
+    let digest = files::hash(bytes);
+    let mut first = true;
+    let check = upload_deadline(110, || {
+        if first {
+            first = false;
+            Ok(100)
+        } else {
+            Err(invalid("unavailable clock"))
+        }
+    });
+    let launched = std::cell::Cell::new(false);
+    let result = upload_with(
+        &environment,
+        &digest,
+        bytes,
+        30,
+        &mut f.driver,
+        check,
+        |_, _, _, _| {
+            launched.set(true);
+            (ClientResult::IoFailure, CapturedOutputs::default())
+        },
+    );
+    assert!(result.is_err());
+    assert!(!launched.get());
     Ok(())
 }

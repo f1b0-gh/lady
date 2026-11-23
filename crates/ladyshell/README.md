@@ -55,3 +55,11 @@ Lady's own code uses [Apache-2.0](LICENSE). The imported
 [Provenance](resources/audit/provenance.json) records their sources and adaptations.
 
 The optional sandbox profile uses the provider-neutral [worker contract](https://github.com/f1b0-gh/lady/blob/main/docs/sandbox-worker.md). Application adapters live outside Ladyshell; no application-specific executable or task schema is required.
+
+On the unreleased development branch, `execution::upload_before` adds an exclusive
+Unix-seconds initiation deadline to `upload`. The host clock is checked before
+preflight and again immediately before transport; expiry, clock failure and
+observed clock rollback refuse initiation. This bound grants no authority and
+does not cancel an already started transfer. The existing transfer timeout,
+verified runtime/storage checks and retained partial-intake rules still apply.
+The existing `upload` signature and behavior remain available.
