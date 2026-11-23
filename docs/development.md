@@ -124,6 +124,17 @@ OpenShell deployment, OS image lifecycle, or GitHub App installation.
 
 ## Known dependency findings
 
+The 0.2.0 release review retains the previous reference and records its exact
+changes in [the release review](../resources/dependency-review-0.2.0.json).
+Ladyshell now requires `url >=2.5.9`, fixing
+[RUSTSEC-2026-0592](https://rustsec.org/advisories/RUSTSEC-2026-0592.html).
+Its required `form_urlencoded` dependency advances to 1.2.3. The only other
+version changes are the Ladyshell library/CLI release versions; no new package
+names or version splits were introduced. A fresh all-registry OSV query retains
+the existing Chrono maintenance finding below, without an exception or clean
+security claim. The following dated review remains historical evidence.
+
+
 The 2026-11-22 OSV query covers all 291 crates.io package versions in `Cargo.lock`,
 without platform, feature or dependency-kind filtering. The
 [review record](../resources/dependency-review.json) binds the exact lock, query,

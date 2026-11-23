@@ -7,6 +7,8 @@ use std::collections::{BTreeMap, BTreeSet};
 #[serde(deny_unknown_fields)]
 pub struct Config {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub storage: Option<crate::storage::Profile>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dependencies: Option<crate::deps::DependencyConfig>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub audit: Option<crate::audit::config::AuditConfig>,
@@ -47,7 +49,8 @@ pub struct Mission {
 pub struct Sandbox {
     pub gateway: String,
     pub workspace: String,
-    pub provider: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -61,6 +64,15 @@ impl Default for Image {
         Self {
             backend: "nix".into(),
             profile: "openshell-native".into(),
+            platform: "x86_64-linux".into(),
+        }
+    }
+}
+impl Image {
+    pub fn broker() -> Self {
+        Self {
+            backend: "nix".into(),
+            profile: "openshell-worker-v1".into(),
             platform: "x86_64-linux".into(),
         }
     }
@@ -104,6 +116,8 @@ pub struct Filesystem {
 #[serde(deny_unknown_fields)]
 pub struct ResolvedConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub storage: Option<crate::storage::Profile>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dependencies: Option<crate::deps::DependencyConfig>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub audit: Option<crate::audit::config::AuditConfig>,
@@ -140,6 +154,9 @@ impl Config {
         Ok(config)
     }
     pub fn validate(&self) -> Result<()> {
+        if let Some(storage) = &self.storage {
+            storage.validate()?;
+        }
         if let Some(dependencies) = &self.dependencies {
             dependencies.validate()?;
         }
@@ -149,9 +166,22 @@ impl Config {
         ensure!(self.schema_version == 1, "schema_version 1 is required");
         identifier(&self.name)?;
         ensure!(
-            self.image == Image::default(),
-            "Supported image: Nix, openshell-native, x86_64-linux"
+            self.image == Image::default() || self.image == Image::broker(),
+            "Supported image: Nix, openshell-native or openshell-worker-v1, x86_64-linux"
         );
+        if self.image == Image::broker() {
+            ensure!(
+                self.storage.is_some() && self.sandbox.provider.is_none()
+                    && self.tools.is_empty() && self.dependencies.is_none() && self.audit.is_none()
+                    && self.permissions.network.is_empty() && self.permissions.filesystem.is_empty(),
+                "Fixed broker requires bounded storage and no provider, tools, dependencies, audit or extra permissions"
+            );
+        } else {
+            ensure!(
+                self.sandbox.provider.is_some(),
+                "Native profile requires a provider"
+            );
+        }
         ensure!(self.sync.mode == "files", "Unsupported sync mode");
         relative_path(&self.sync.destination)?;
         ensure!(
@@ -168,12 +198,11 @@ impl Config {
         for path in self.sources.include.iter().chain(&self.sources.exclude) {
             relative_path(path)?;
         }
-        for id in [
-            &self.sandbox.gateway,
-            &self.sandbox.workspace,
-            &self.sandbox.provider,
-        ] {
+        for id in [&self.sandbox.gateway, &self.sandbox.workspace] {
             identifier(id)?;
+        }
+        if let Some(provider) = &self.sandbox.provider {
+            identifier(provider)?;
         }
         for (name, tool) in &self.tools {
             identifier(name)?;
@@ -193,6 +222,10 @@ impl Config {
         );
         ensure!(self.missions.len() <= 1024, "Maximum 1024 missions");
         for (name, mission) in &self.missions {
+            ensure!(
+                self.image != Image::broker() || mission.checks.is_empty(),
+                "Fixed broker profile does not execute native mission checks"
+            );
             identifier(name)?;
             for path in &mission.include {
                 relative_path(path)?;
@@ -308,6 +341,7 @@ impl Config {
             checks.extend(m.checks.iter().cloned());
         }
         Ok(ResolvedConfig {
+            storage: self.storage.clone(),
             dependencies: self.dependencies.clone(),
             audit: self.audit.clone(),
             schema_version: 1,
@@ -325,6 +359,29 @@ impl Config {
             image: self.image.clone(),
             sync: self.sync.clone(),
         })
+    }
+}
+impl ResolvedConfig {
+    pub(crate) fn validate_broker(&self) -> Result<()> {
+        ensure!(
+            self.image == Image::broker() && self.schema_version == 1,
+            "Fixed broker image profile is required"
+        );
+        self.storage
+            .as_ref()
+            .ok_or_else(|| invalid("Broker storage missing".into()))?
+            .validate()?;
+        ensure!(
+            self.sandbox.provider.is_none()
+                && self.tools.is_empty()
+                && self.checks.is_empty()
+                && self.dependencies.is_none()
+                && self.audit.is_none()
+                && self.permissions.network.is_empty()
+                && self.permissions.filesystem.is_empty(),
+            "Fixed broker configuration contains unsupported capabilities"
+        );
+        Ok(())
     }
 }
 pub fn resolve(value: Value, mission: &str) -> Result<Value> {

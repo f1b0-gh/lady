@@ -33,8 +33,77 @@ fn catalog() -> Catalog {
             argv: vec!["cmd".into(), "".into()],
             timeout_seconds: 5,
             output_limit_bytes: 16,
+            input: None,
         }],
     }
+}
+
+#[test]
+fn absent_input_keeps_original_definition_encoding() -> Result<()> {
+    let original = r#"{"id":"test","argv":["cmd",""],"timeout_seconds":5,"output_limit_bytes":16}"#;
+    let task: TaskDefinition = serde_json::from_str(original)?;
+    assert_eq!(serde_json::to_string(&task)?, original);
+    Ok(())
+}
+
+#[test]
+fn installed_input_mode_is_pinned_and_bounds_acceptance() -> Result<()> {
+    let temp = tempfile::tempdir()?;
+    fs::set_permissions(temp.path(), fs::Permissions::from_mode(0o700))?;
+    let original = catalog();
+    let mut encoded = serde_json::to_value(&original)?;
+    encoded["tasks"][0]["input"] = json!({"kind":"intent_json_v1","max_bytes":10});
+    let c: Catalog = serde_json::from_value(encoded)?;
+    assert_ne!(
+        c.definition_digest("test")?,
+        original.definition_digest("test")?
+    );
+    let b = Store::create(&temp.path().join("receiver"), c)?;
+    let s = Store::open(&temp.path().join("receiver"), &b.receiver_id)?;
+    s.bind_owner("scope", None)?;
+    s.advance_claim("scope", None, 1)?;
+    let mut i = Invocation {
+        scope: "scope".into(),
+        id: "id".into(),
+        task: "test".into(),
+        definition_sha256: s.catalog().definition_digest("test")?,
+        intent: json!({"long":"exceeds installed bound"}),
+    };
+    let a = Admission {
+        reference: "test".into(),
+        admit_before: 20,
+        owner: None,
+        claim: 1,
+    };
+    assert!(s.accept(&i, &a, 10).is_err());
+    assert!(s.lookup(&i)?.is_none());
+    i.intent = json!({"x":1});
+    assert!(s.accept(&i, &a, 11)?.is_new);
+    drop(s);
+    let reopened = Store::open(&temp.path().join("receiver"), &b.receiver_id)?;
+    let retained = reopened
+        .lookup(&i)?
+        .ok_or_else(|| invalid("missing retained invocation"))?;
+    assert_eq!(retained.invocation, i);
+    Ok(())
+}
+
+#[test]
+fn input_channel_rejects_unknown_modes_fields_and_invalid_bounds() -> Result<()> {
+    for input in [
+        json!({"kind":"argv","max_bytes":100}),
+        json!({"kind":"intent_json_v1","max_bytes":0}),
+        json!({"kind":"intent_json_v1","max_bytes":16385}),
+        json!({"kind":"intent_json_v1","max_bytes":100,"program":"other"}),
+    ] {
+        let mut c = serde_json::to_value(catalog())?;
+        c["tasks"][0]["input"] = input;
+        let valid = serde_json::from_value::<Catalog>(c)
+            .ok()
+            .is_some_and(|catalog| catalog.validate().is_ok());
+        assert!(!valid);
+    }
+    Ok(())
 }
 struct Fixture {
     _temp: tempfile::TempDir,
@@ -45,7 +114,19 @@ struct Fixture {
     a: Admission,
 }
 fn fixture() -> Result<Fixture> {
-    let temp = tempfile::tempdir()?;
+    let parent = std::path::Path::new("/tmp/lady");
+    match fs::create_dir(parent) {
+        Ok(()) => (),
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => (),
+        Err(e) => return Err(e.into()),
+    }
+    use std::os::unix::fs::MetadataExt;
+    let metadata = fs::symlink_metadata(parent)?;
+    assert!(metadata.is_dir() && !metadata.file_type().is_symlink());
+    assert_eq!(metadata.uid(), fs::metadata(".")?.uid());
+    let temp = tempfile::Builder::new()
+        .prefix("receiver-")
+        .tempdir_in(parent)?;
     fs::set_permissions(temp.path(), fs::Permissions::from_mode(0o700))?;
     let path = temp.path().join("receiver");
     let c = catalog();
@@ -1034,5 +1115,119 @@ fn masked_unindexed_directories_still_require_private_ownership_and_bounded_cont
         assert!(f.s.accept(&f.i, &f.a, 10).is_err());
         assert_eq!(fs::metadata(&dir)?.permissions().mode() & 0o7777, mode);
     }
+    Ok(())
+}
+
+#[test]
+fn protected_acceptance_checks_current_owner_claim_and_deadline_before_duplicate_recovery(
+) -> Result<()> {
+    let f = fixture()?;
+    let first = f.s.accept_protected_with_clock(&f.i, &f.a, || Ok(10))?;
+    assert!(first.is_new);
+    assert!(f
+        .s
+        .accept_protected_with_clock(&f.i, &f.a, || Ok(20))
+        .is_err());
+    let mut current = f.a.clone();
+    current.admit_before = 50;
+    f.s.advance_claim(&f.i.scope, None, 2)?;
+    assert!(f
+        .s
+        .accept_protected_with_clock(&f.i, &current, || Ok(21))
+        .is_err());
+    current.claim = 2;
+    let duplicate = f.s.accept_protected_with_clock(&f.i, &current, || Ok(22))?;
+    assert!(!duplicate.is_new);
+    assert_eq!(duplicate.record, first.record);
+    let next = owner(1);
+    f.s.bind_owner(&f.i.scope, Some(&next))?;
+    f.s.advance_claim(&f.i.scope, Some(&next), 1)?;
+    assert!(f
+        .s
+        .accept_protected_with_clock(&f.i, &current, || Ok(23))
+        .is_err());
+    current.owner = Some(next);
+    current.claim = 1;
+    let duplicate = f.s.accept_protected_with_clock(&f.i, &current, || Ok(24))?;
+    assert!(!duplicate.is_new);
+    assert_eq!(duplicate.record, first.record);
+    // Protected observation never updates the original admission or grants a
+    // new execution. Legacy recovery remains available without fresh admission.
+    assert_eq!(f.s.accept(&f.i, &f.a, 500)?.record, first.record);
+    assert_eq!(f.s.inspect(&f.i.key())?, first.record);
+    Ok(())
+}
+#[test]
+fn protected_duplicate_samples_clock_once_and_rejects_changed_intent() -> Result<()> {
+    let f = fixture()?;
+    let first = f.s.accept_protected_with_clock(&f.i, &f.a, || Ok(10))?;
+    let mut calls = 0;
+    let duplicate = f.s.accept_protected_with_clock(&f.i, &f.a, || {
+        calls += 1;
+        Ok(11)
+    })?;
+    assert_eq!(calls, 1);
+    assert_eq!(duplicate.record, first.record);
+    let mut changed = f.i.clone();
+    changed.intent = json!({"substituted":true});
+    assert!(f
+        .s
+        .accept_protected_with_clock(&changed, &f.a, || Ok(12))
+        .is_err());
+    assert_eq!(f.s.inspect(&f.i.key())?, first.record);
+    Ok(())
+}
+
+#[test]
+fn protected_acceptance_refuses_busy_receiver_without_waiting_for_another_writer() -> Result<()> {
+    use std::{os::fd::AsRawFd, sync::mpsc, time::Duration};
+    let f = fixture()?;
+    let directory = files::open_directory(&f.path)?;
+    // SAFETY: the independently opened directory descriptor remains owned here.
+    assert_eq!(
+        unsafe { libc::flock(directory.as_raw_fd(), libc::LOCK_EX) },
+        0
+    );
+    let refused = thread::scope(|threads| -> Result<bool> {
+        let (tx, rx) = mpsc::channel();
+        let fixture = &f;
+        let worker = threads.spawn(move || {
+            let result = fixture
+                .s
+                .accept_protected_with_clock(&fixture.i, &fixture.a, || Ok(10));
+            let _ = tx.send(result.is_err());
+        });
+        let response = rx.recv_timeout(Duration::from_secs(5));
+        // Release before joining even on failure, so a blocking regression cannot
+        // strand the test process or retain a lock for the rest of the suite.
+        // SAFETY: this thread still owns the live locked directory descriptor.
+        assert_eq!(
+            unsafe { libc::flock(directory.as_raw_fd(), libc::LOCK_UN) },
+            0
+        );
+        worker
+            .join()
+            .map_err(|_| invalid("acceptance worker panicked"))?;
+        Ok(response == Ok(true))
+    })?;
+    assert!(refused, "protected admission waited for a receiver lock");
+    assert!(f.s.lookup(&f.i)?.is_none());
+    Ok(())
+}
+
+#[test]
+fn ended_worker_lease_does_not_survive_in_a_fork_inherited_description() -> Result<()> {
+    let f = fixture()?;
+    f.s.accept(&f.i, &f.a, 10)?;
+    let lease = f.s.acquire_worker(&f.i.key())?;
+    let inherited = lease.inherited_description()?;
+    assert!(f.s.worker_present(&f.i.key())?);
+    drop(lease);
+    // dup retains exactly the open-file description that fork would inherit,
+    // without scheduling a child or relying on an exec timing window.
+    assert!(!f.s.worker_present(&f.i.key())?);
+    let next = f.s.acquire_worker(&f.i.key())?;
+    drop(next);
+    drop(inherited);
     Ok(())
 }

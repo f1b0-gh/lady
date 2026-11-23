@@ -93,6 +93,45 @@ invocation ID. Receiver retention is capacity-limited. Preserve the original
 receiver for lookup. A separate installation has a new identity and applies
 only to newly admitted work.
 
+## Deliver retained input to a fixed program
+
+An installed task can opt into a bounded stdin channel:
+
+```json
+{
+  "id": "component-broker",
+  "argv": ["/usr/local/bin/component-broker", "serve-once"],
+  "timeout_seconds": 30,
+  "output_limit_bytes": 16384,
+  "input": {"kind": "intent_json_v1", "max_bytes": 16384}
+}
+```
+
+The program is an example deployment executable; installation does not supply
+it. The input mode and bound become part of the installed definition digest.
+Omitting `input` preserves the original definition encoding and supplies no stdin.
+Rust callers constructing `TaskDefinition` explicitly must supply `input: None`
+for that behavior, or select `InputChannel::IntentJsonV1`. Older binaries reject
+the new field; deploy the updated receiver before installing an input-enabled
+catalogue. Existing retained catalogues need no migration.
+The maximum is 1–16,384 bytes of encoded JSON, within the existing intent bound.
+An invocation exceeding its installed bound is refused before acceptance.
+
+For `intent_json_v1`, the supervisor serializes the retained `intent` value as
+compact JSON, without a trailing newline, writes those bytes, then closes stdin.
+The input is data: it cannot replace the installed argv, environment or program.
+Reopening the receiver uses the original retained value. A duplicate invocation
+still returns its original record and does not launch again. Admission, owner,
+claim, environment and source checks apply before delivery.
+
+Input and output progress together under the installed timeout. A broken pipe
+or exit before all input bytes have been written records `io_failure`; timeout
+or partial delivery retains uncertainty. Successful pipe delivery alone does not
+prove the sandbox program consumed the request. Require an application reply
+that binds the original request before treating it as an application result.
+Never place raw credentials in intent; keep them behind a separately governed
+host service.
+
 ## Inspect, reconnect and recover
 
 ```sh
@@ -140,6 +179,28 @@ ladyshell execution reconcile --receiver "$RECEIVER" --receiver-id "$RECEIVER_ID
 
 Use `ladyshell help execution COMMAND` for details. Help runs without
 configuration, credentials or state.
+
+## Protected host acceptance
+
+Rust integrations holding a live authority guard can use
+`Store::accept_protected_with_clock`. It validates the current owner, exact claim
+and fresh exclusive deadline under the receiver ledger lock before returning even
+an exact duplicate. It refuses a busy lock immediately. The clock runs once under
+that lock and must not reenter this receiver or a policy store. Local filesystem
+I/O remains subject to host scheduling; this is not a real-time latency guarantee.
+
+The host must authenticate admission and ownership advancement independently.
+Serialized admission metadata grants no authority. Keep the original authority
+guard live through acceptance, then perform remote dispatch separately through
+the retained worker. This path uses the same catalogue, journal and invocation
+format for native programs and fixed WASI brokers.
+
+A duplicate returns its unchanged original record. It does not update that
+record's deadline or owner, readmit execution, or launch another worker. Observe
+that original record after uncertainty. Ordinary `accept`, `accept_with_clock`
+and CLI submission retain their existing recovery behavior: exact original
+invocations can be looked up without supplying fresh admission. A complete
+LO computation Recipient adapter still requires separate integration and tests.
 
 ## External lo-tasks provider
 

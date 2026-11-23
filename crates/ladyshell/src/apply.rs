@@ -1,3 +1,6 @@
+mod pending;
+pub(crate) use pending::broker as interrupted_broker;
+pub(crate) mod broker;
 use crate::{
     environment_lock::atomic_json,
     error::{ensure, Error, Result},
@@ -10,6 +13,39 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::path::Path;
 pub trait Driver {
+    fn preflight(&mut self, desired: &Value) -> Result<()> {
+        if let Some(value) = desired["evaluated"]["config"].get("storage") {
+            let profile: crate::storage::Profile = serde_json::from_value(value.clone())?;
+            profile.validate()?;
+            self.preflight_storage(&profile, &desired["context"])?;
+        }
+        Ok(())
+    }
+    /// Qualify the selected storage backend before any build or provisioning.
+    /// Existing drivers refuse this optional capability until implemented.
+    fn preflight_storage(
+        &mut self,
+        _profile: &crate::storage::Profile,
+        _context: &Value,
+    ) -> Result<()> {
+        Err(invalid("Driver does not support bounded storage".into()))
+    }
+    /// Reconcile the original per-resource journal, retaining each identity
+    /// before proceeding. A missing previously observed volume must be refused.
+    fn prepare_storage(
+        &mut self,
+        _profile: &crate::storage::Profile,
+        _directory: &Path,
+        _owner: &str,
+        _context: &Value,
+    ) -> Result<Value> {
+        Err(invalid("Driver does not support bounded storage".into()))
+    }
+    /// Freshly verify the original backend, volumes, mounted limits and runtime.
+    /// Recorded creation options alone are insufficient evidence.
+    fn verify_storage(&mut self, _name: &str, _evidence: &Value) -> Result<()> {
+        Err(invalid("Driver does not verify mounted storage".into()))
+    }
     fn observe(&mut self, state: Option<&Value>) -> Result<Value>;
     fn sandbox(&mut self, name: &str) -> Result<Option<Value>>;
     fn build(
@@ -21,6 +57,28 @@ pub trait Driver {
     fn capture(&mut self, state: &Value, directory: &Path) -> Result<Value>;
     fn create(&mut self, name: &str, build: &Value, owner: &str, provider: &str) -> Result<()>;
     fn validate(&mut self, name: &str, binary: &str) -> Result<Value>;
+    /// Select a supported creation profile without inventing a native provider.
+    fn create_profile(
+        &mut self,
+        name: &str,
+        build: &Value,
+        owner: &str,
+        config: &Value,
+    ) -> Result<()> {
+        ensure!(
+            build["image_profile"] != "openshell-worker-v1",
+            "Driver does not support broker creation"
+        );
+        self.create(name, build, owner, text(&config["sandbox"], "provider")?)
+    }
+    /// Validate the exact retained profile on initial publication and recovery.
+    fn validate_profile(&mut self, name: &str, build: &Value) -> Result<Value> {
+        ensure!(
+            build["image_profile"] != "openshell-worker-v1",
+            "Driver does not support broker validation"
+        );
+        self.validate(name, text(build, "codex_binary")?)
+    }
     fn restore(&mut self, state: &Value) -> Result<()>;
     fn published(&mut self, _directory: &Path) -> Result<()> {
         Ok(())
@@ -31,6 +89,7 @@ pub trait Driver {
 enum Phase {
     Planned,
     Built,
+    Validating,
     Publishing,
     Complete,
 }
@@ -39,6 +98,10 @@ enum Phase {
 struct Operation {
     schema_version: u32,
     desired_hash: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    approved_plan: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    desired_inputs: Option<Value>,
     state_before: Option<Value>,
     observed_before: Value,
     phase: Phase,
@@ -49,18 +112,61 @@ struct Operation {
     result: Option<Value>,
 }
 pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -> Result<Value> {
+    apply_selected(desired, directory, driver, None)
+}
+/// Apply or resume exactly the reviewed plan. The embedding caller must hold
+/// the original state and exclusive session leases, as for `apply_with`.
+/// An older journal without an approved-plan binding cannot acquire one on retry.
+pub fn apply_with_expected(
+    desired: &Value,
+    directory: &Path,
+    driver: &mut impl Driver,
+    expected_plan: &str,
+) -> Result<Value> {
+    ensure!(
+        expected_plan.len() == 64
+            && expected_plan
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
+        "Invalid reviewed plan digest"
+    );
+    apply_selected(desired, directory, driver, Some(expected_plan))
+}
+fn apply_selected(
+    desired: &Value,
+    directory: &Path,
+    driver: &mut impl Driver,
+    expected_plan: Option<&str>,
+) -> Result<Value> {
+    crate::destroy::broker::ensure_available(directory)?;
     let state = state::load(directory)?;
     let path = directory.join("operation.json");
     let mut operation = state::read(&path)?
         .map(serde_json::from_value::<Operation>)
         .transpose()?;
     let desired_hash = plan::digest(desired)?;
-    if let Some(op) = operation.as_ref().filter(|op| op.phase != Phase::Complete) {
+    let storage = desired["evaluated"]["config"]
+        .get("storage")
+        .map(|value| serde_json::from_value::<crate::storage::Profile>(value.clone()))
+        .transpose()?;
+    if let Some(op) = operation.as_ref().filter(|op| {
+        op.phase != Phase::Complete
+            || expected_plan.is_some_and(|expected| op.approved_plan.as_deref() == Some(expected))
+    }) {
+        ensure!(
+            expected_plan.is_none_or(|expected| op.approved_plan.as_deref() == Some(expected)),
+            "Interrupted operation differs from reviewed plan"
+        );
         ensure!(
             op.schema_version == 2 && op.desired_hash == desired_hash,
             "Operation interrupted with different inputs: resume using its original inputs"
         );
-        if op.phase == Phase::Publishing && state == op.result {
+        ensure!(
+            op.phase != Phase::Complete || state == op.result,
+            "State changed after the reviewed operation completed"
+        );
+        driver.preflight(desired)?;
+        if matches!(op.phase, Phase::Publishing | Phase::Complete) && state == op.result {
             let result = op
                 .result
                 .clone()
@@ -74,10 +180,8 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
                     && observed["phase"] == "Ready",
                 "Publication interrupted and resource mismatch"
             );
-            driver.validate(
-                text(&result, "sandbox_name")?,
-                text(&result, "codex_binary")?,
-            )?;
+            driver.validate_profile(text(&result, "sandbox_name")?, &result)?;
+            verify_storage(&result, driver)?;
             driver.published(directory)?;
             let mut completed = op.clone();
             completed.phase = Phase::Complete;
@@ -98,9 +202,18 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
     } else {
         let saved = state::read(&directory.join("plan.json"))?
             .ok_or_else(|| invalid("Run plan before apply".into()))?;
+        let saved_digest = plan::digest(&saved)?;
+        ensure!(
+            expected_plan.is_none_or(|expected| expected == saved_digest),
+            "Saved plan differs from reviewed plan"
+        );
+        driver.preflight(desired)?;
         let observed = driver.observe(state.as_ref())?;
         plan::verify(&saved, desired, state.as_ref(), &observed)?;
         if saved["actions"].as_array().is_some_and(|a| a.is_empty()) {
+            if let Some(state) = &state {
+                verify_storage(state, driver)?;
+            }
             driver.published(directory)?;
             return state.ok_or_else(|| invalid("State is missing for an empty plan".into()));
         }
@@ -121,6 +234,10 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         let op = Operation {
             schema_version: 2,
             desired_hash: desired_hash.clone(),
+            approved_plan: expected_plan.map(str::to_owned),
+            desired_inputs: (desired["evaluated"]["config"]["image"]["profile"]
+                == "openshell-worker-v1")
+                .then(|| desired.clone()),
             state_before: state.clone(),
             observed_before: observed,
             phase: Phase::Planned,
@@ -137,6 +254,7 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
     if op.restore_only {
         let state = state.ok_or_else(|| invalid("Missing restoration state".into()))?;
         driver.restore(&state)?;
+        verify_storage(&state, driver)?;
         driver.published(directory)?;
         op.phase = Phase::Complete;
         op.result = Some(state.clone());
@@ -174,16 +292,35 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         op.phase = Phase::Built;
         atomic_json(&path, &op)?;
     }
-    let build = op
+    let mut build = op
         .build
         .clone()
         .ok_or_else(|| invalid("Build is missing from the journal".into()))?;
+    if let Some(profile) = &storage {
+        let evidence = driver.prepare_storage(
+            profile,
+            &directory.join(format!("storage-{}", op.owner)),
+            &op.owner,
+            &desired["context"],
+        )?;
+        ensure!(evidence.is_object(), "Missing storage evidence");
+        if let Some(original) = build.get("storage") {
+            ensure!(*original == evidence, "Original storage evidence changed");
+        } else {
+            build
+                .as_object_mut()
+                .ok_or_else(|| invalid("Build is not an object".into()))?
+                .insert("storage".into(), evidence);
+            op.build = Some(build.clone());
+            atomic_json(&path, &op)?;
+        }
+    }
     if driver.sandbox(&op.sandbox_name)?.is_none() {
-        driver.create(
+        driver.create_profile(
             &op.sandbox_name,
             &build,
             &op.owner,
-            text(&desired["evaluated"]["config"]["sandbox"], "provider")?,
+            &desired["evaluated"]["config"],
         )?;
     }
     let start = std::time::Instant::now();
@@ -207,7 +344,16 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
         );
         std::thread::sleep(std::time::Duration::from_secs(1));
     };
-    let effective = driver.validate(&op.sandbox_name, text(&build, "codex_binary")?)?;
+    if build["image_profile"] == "openshell-worker-v1" && op.phase == Phase::Built {
+        // Persist before validation can create an original runtime binding. A
+        // missing binding after this point is not evidence of no prior runtime.
+        op.phase = Phase::Validating;
+        atomic_json(&path, &op)?;
+    }
+    let effective = driver.validate_profile(&op.sandbox_name, &build)?;
+    if let Some(evidence) = build.get("storage") {
+        driver.verify_storage(&op.sandbox_name, evidence)?;
+    }
     atomic_json(
         &directory.join(format!("policy-{}.json", op.owner)),
         &effective,
@@ -236,10 +382,54 @@ pub fn apply_with(desired: &Value, directory: &Path, driver: &mut impl Driver) -
     atomic_json(&path, &op)?;
     Ok(result)
 }
+fn verify_storage(state: &Value, driver: &mut impl Driver) -> Result<()> {
+    if let Some(evidence) = state.get("storage") {
+        driver.verify_storage(text(state, "sandbox_name")?, evidence)?;
+    }
+    Ok(())
+}
 pub struct NativeDriver {
     pub backend: Backend,
 }
 impl Driver for NativeDriver {
+    fn preflight(&mut self, desired: &Value) -> Result<()> {
+        if desired["evaluated"]["config"].get("storage").is_some() {
+            broker::preflight(&self.backend, desired)?;
+        }
+        Ok(())
+    }
+    fn prepare_storage(
+        &mut self,
+        profile: &crate::storage::Profile,
+        directory: &Path,
+        owner: &str,
+        context: &Value,
+    ) -> Result<Value> {
+        broker::prepare(&self.backend, profile, directory, owner, context)
+    }
+    fn verify_storage(&mut self, name: &str, evidence: &Value) -> Result<()> {
+        broker::verify(&self.backend, name, evidence)
+    }
+    fn create_profile(
+        &mut self,
+        name: &str,
+        build: &Value,
+        owner: &str,
+        config: &Value,
+    ) -> Result<()> {
+        if build["image_profile"] == "openshell-worker-v1" {
+            broker::create(&self.backend, name, build, owner)
+        } else {
+            self.create(name, build, owner, text(&config["sandbox"], "provider")?)
+        }
+    }
+    fn validate_profile(&mut self, name: &str, build: &Value) -> Result<Value> {
+        if build["image_profile"] == "openshell-worker-v1" {
+            broker::validate(&self.backend, name, build)
+        } else {
+            self.validate(name, text(build, "codex_binary")?)
+        }
+    }
     fn published(&mut self, directory: &Path) -> Result<()> {
         if directory.join("continuous-staging.json").try_exists()? {
             return Ok(());

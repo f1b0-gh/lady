@@ -430,3 +430,15 @@ fn replacement_activates_once_preserves_task_epoch_and_recovers_old_retirement(
     }
     Ok(())
 }
+
+#[test]
+fn deletion_fence_blocks_checkpoint_before_any_runtime_effect(
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    let (_tmp, directory, current, mut driver) = fixture()?;
+    driver.fail_start = false;
+    fs::write(directory.join("broker-destroy.json"), b"pending")?;
+    assert!(host::checkpoint_with(&directory, &mut driver, "checkpoint", 0).is_err());
+    assert!(driver.calls.is_empty());
+    assert_eq!(ladyshell::state::load(&directory)?, Some(current));
+    Ok(())
+}

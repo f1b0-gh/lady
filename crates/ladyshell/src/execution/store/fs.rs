@@ -206,23 +206,34 @@ pub(in crate::execution) fn publish(
     dir.sync_all()?;
     Ok(())
 }
+/// Explicitly end this owner's lock even if another thread's fork inherited
+/// the open-file description before exec. Close remains the crash fallback.
+pub(super) struct Lease(File);
+impl Drop for Lease {
+    fn drop(&mut self) {
+        let _ = self.0.unlock();
+    }
+}
 // Each caller passes a newly opened file description (never a dup of its
-// pinned fd). Close releases this participant's flock, including on crash.
-pub(super) fn lock(dir: &File, nonblocking: bool) -> Result<bool> {
+// pinned fd). The duplicate only keeps the acquired lease's descriptor alive;
+// it does not create a second owner or alter nonblocking contention behavior.
+pub(super) fn lock(dir: &File, nonblocking: bool) -> Result<Option<Lease>> {
+    let retained = dir.try_clone()?;
     let flags = libc::LOCK_EX | if nonblocking { libc::LOCK_NB } else { 0 };
     loop {
         // SAFETY: dir owns the live fd; flock borrows it for this call.
         if unsafe { libc::flock(dir.as_raw_fd(), flags) } == 0 {
-            return Ok(true);
+            return Ok(Some(Lease(retained)));
         }
         let e = io::Error::last_os_error();
         match e.kind() {
             io::ErrorKind::Interrupted => continue,
-            io::ErrorKind::WouldBlock if nonblocking => return Ok(false),
+            io::ErrorKind::WouldBlock if nonblocking => return Ok(None),
             _ => return Err(e.into()),
         }
     }
 }
+
 pub(super) struct Root {
     pub path: PathBuf,
     pub parent: File,
@@ -265,5 +276,37 @@ impl Root {
         )?;
         same(&dir, &self.dir)?;
         Ok(dir)
+    }
+}
+
+#[cfg(test)]
+mod lease_tests {
+    use super::*;
+
+    #[test]
+    fn metadata_lease_ends_even_with_inherited_open_descriptions() -> Result<()> {
+        let parent = Path::new("/tmp/lady");
+        match fs::create_dir(parent) {
+            Ok(()) => (),
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => (),
+            Err(e) => return Err(e.into()),
+        }
+        let metadata = fs::symlink_metadata(parent)?;
+        assert!(metadata.is_dir() && !metadata.file_type().is_symlink());
+        assert_eq!(metadata.uid(), fs::metadata(".")?.uid());
+        let root = tempfile::Builder::new()
+            .prefix("metadata-lease-")
+            .tempdir_in(parent)?;
+        for nonblocking in [false, true] {
+            let original = files::open_directory(root.path())?;
+            let lease = lock(&original, nonblocking)?.ok_or_else(|| invalid("lease missing"))?;
+            let inherited = original.try_clone()?;
+            let independent = files::open_directory(root.path())?;
+            assert!(lock(&independent, true)?.is_none());
+            drop(lease);
+            assert!(lock(&independent, true)?.is_some());
+            drop(inherited);
+        }
+        Ok(())
     }
 }

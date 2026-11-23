@@ -50,6 +50,18 @@ fn identity_probe() -> TestResult {
         workspace: "default".into(),
     };
     match scenario.as_str() {
+        "broker-storage" => {
+            let current = json!({"sandbox_name":"fixture","sandbox_id":"resource-id",
+                "owner":"owner","policy_hash":"hash","image_profile":"openshell-worker-v1","storage":{}});
+            let error = backend
+                .verify_execution(&current)
+                .err()
+                .ok_or("missing broker storage accepted")?;
+            assert!(
+                error.to_string().contains("directory"),
+                "broker must verify original storage instead of native provider fields: {error}"
+            );
+        }
         "unadmitted" => {
             let observed: Value = serde_json::from_slice(&fs::read(
                 std::env::var_os("LADYSHELL_BACKEND_OBSERVATION").ok_or("observation")?,
@@ -137,4 +149,13 @@ fn identity_observation_refuses_empty_ids_phases_and_malformed_labels() -> TestR
 fn missing_resource_is_distinguished_from_transport_failure() -> TestResult {
     probe(json!({}), "not-found", "not-found")?;
     probe(json!({}), "unavailable", "unavailable")
+}
+
+#[test]
+fn broker_execution_requires_its_original_storage_binding() -> TestResult {
+    probe(
+        json!({"id":"resource-id","phase":"Ready","labels":{"ladyshell.owner":"owner"},"configuration_admission":{"policy_hash":"hash"}}),
+        "broker-storage",
+        "ok",
+    )
 }

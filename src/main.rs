@@ -32,6 +32,12 @@ fn main() {
             Command::Manage(args) => {
                 ladyshell_cli::management_cli::run(args).map(|code| exit_status = code)
             }
+            Command::CancelBroker(args) => {
+                ladyshell::destroy::cancel_broker(&ladyshell::request::Existing {
+                    state: args.state,
+                })
+                .and_then(print_json)
+            }
             Command::Destroy(args) => {
                 if args.all {
                     ladyshell::destroy::all(&ladyshell::request::DestroyAll {
@@ -83,6 +89,9 @@ fn main() {
             Command::Review(args) => review(args).and_then(print_json),
             Command::Stack(args) => stack(args).and_then(print_json),
             Command::Cs(args) => continuous(args).and_then(print_json),
+            Command::BrokerExport => broker_export(),
+            Command::BrokerStorageProbe => ladyshell::storage::probe()
+                .and_then(|value| print_json(serde_json::to_value(value)?)),
             Command::CsWorker => continuous_worker().and_then(print_json),
             Command::CsWorkerProfile => print_json(ladyshell::continuous::worker::profile(
                 std::path::Path::new("/sandbox/workspace/project"),
@@ -573,4 +582,19 @@ fn stack(args: ladyshell_cli::cli::StackOptions) -> ladyshell::error::Result<ser
             onto,
         } => ladyshell::stacks::restack_onto(&directory, &state, onto.as_deref()),
     }
+}
+
+fn broker_export() -> ladyshell::error::Result<()> {
+    let mut bytes = Vec::new();
+    std::io::stdin()
+        .lock()
+        .take(16385)
+        .read_to_end(&mut bytes)?;
+    if bytes.len() > 16384 {
+        return Err(ladyshell::error::Error::InvalidInput {
+            message: "Export request exceeds 16384 bytes".into(),
+        });
+    }
+    let request: ladyshell::storage::export::Request = serde_json::from_slice(&bytes)?;
+    ladyshell::storage::export::worker(&request, std::io::stdout().lock())
 }

@@ -165,6 +165,7 @@
         ${pkgs.lib.getBin openssl}/bin/openssl version >> $out/linkage.txt
       '';
     };
+    lib.mkBrokerImage = args: import ./broker-image.nix ({ inherit pkgs openssl; } // args);
     lib.mkImage = args: import ./image.nix ({ inherit pkgs rustToolchains openssl tpm2Tss networkTools; } // args);
     lib.packageVersions = {
       nickel = pkgs.nickel.version;

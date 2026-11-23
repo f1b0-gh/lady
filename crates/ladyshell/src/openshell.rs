@@ -140,7 +140,15 @@ impl Backend {
             observed["labels"].get(label) == state.get("owner"),
             "Sandbox ownership mismatch"
         );
-        self.validate_policy(text(state, "sandbox_name")?, text(state, "codex_binary")?)?;
+        if state["image_profile"] == "openshell-worker-v1" {
+            crate::apply::broker::verify_state(self, state)?;
+        } else {
+            ensure!(
+                state.get("image_profile").is_none(),
+                "Unknown execution image profile"
+            );
+            self.validate_policy(text(state, "sandbox_name")?, text(state, "codex_binary")?)?;
+        }
         Ok(observed)
     }
     pub fn validate_policy(&self, name: &str, binary: &str) -> Result<Value> {

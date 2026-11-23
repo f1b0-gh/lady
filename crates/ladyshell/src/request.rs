@@ -14,6 +14,21 @@ pub struct Desired {
     pub mission: String,
 }
 
+/// Explicit fixed-broker image inputs for an embedding host such as Ladyness.
+/// Application component versions are staged separately after provisioning.
+#[derive(Clone, Debug)]
+pub struct BrokerDesired {
+    pub config: PathBuf,
+    pub project: PathBuf,
+    pub state: PathBuf,
+    pub resources: PathBuf,
+    pub worker: PathBuf,
+    pub runtime: PathBuf,
+    pub lock: Option<PathBuf>,
+    pub ladybom: Option<PathBuf>,
+    pub mission: String,
+}
+
 #[derive(Clone, Debug)]
 pub struct Existing {
     pub state: PathBuf,

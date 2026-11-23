@@ -15,6 +15,7 @@ use std::{
     process::Command,
     time::Duration,
 };
+mod broker;
 fn archive_reader(path: &Path) -> Result<Box<dyn Read>> {
     let mut file = BufReader::new(files::open_regular(path)?);
     let gzip = file.fill_buf()?.starts_with(&[0x1f, 0x8b]);
@@ -82,6 +83,14 @@ pub fn load_archive(archive: &str, image_id: &str) -> Result<()> {
     Ok(())
 }
 pub fn build(desired: &Value, directory: &Path, migration: Option<&Value>) -> Result<Value> {
+    let selected: ResolvedConfig = serde_json::from_value(desired["evaluated"]["config"].clone())?;
+    if selected.image == crate::config::Image::broker() {
+        return broker::build(desired, directory, migration);
+    }
+    ensure!(
+        selected.image == crate::config::Image::default(),
+        "Unsupported image profile"
+    );
     let out = tempfile::Builder::new()
         .prefix("build-")
         .tempdir_in(directory)?

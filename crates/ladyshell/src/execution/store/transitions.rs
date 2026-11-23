@@ -10,20 +10,36 @@ impl Store {
                 found.record.phase == Phase::Accepted,
                 "Only accepted retained work can acquire a worker"
             );
-            ensure!(
-                fs::lock(&found.dir, true)?,
-                "Retained invocation already owned"
-            );
+            let lease = fs::lock(&found.dir, true)?
+                .ok_or_else(|| invalid("Retained invocation already owned"))?;
             fs::same(&found.dir, &self.directory_for(l, &key.digest()?)?)?;
             Ok(WorkerLease {
                 key: key.clone(),
                 instance: self.instance.clone(),
                 dir: found.dir,
+                _lease: lease,
             })
         })
     }
+    // This lease cannot be supplied to begin/complete: historical observation
+    // never acquires executable worker authority, including after a lost reply.
+    pub(crate) fn acquire_recovery(&self, key: &Key) -> Result<RecoveryLease> {
+        self.locked(false, |l| {
+            let found = self.required(l, key)?;
+            ensure!(
+                found.record.phase == Phase::Uncertain,
+                "Recovery requires an explicitly retained uncertain invocation"
+            );
+            let lease = fs::lock(&found.dir, true)?
+                .ok_or_else(|| invalid("Original invocation is still owned"))?;
+            fs::same(&found.dir, &self.directory_for(l, &key.digest()?)?)?;
+            Ok(RecoveryLease { _lease: lease })
+        })
+    }
     pub fn worker_present(&self, key: &Key) -> Result<bool> {
-        self.locked(false, |l| Ok(!fs::lock(&self.required(l, key)?.dir, true)?))
+        self.locked(false, |l| {
+            Ok(fs::lock(&self.required(l, key)?.dir, true)?.is_none())
+        })
     }
     fn owned(&self, l: &Ledger, lease: &WorkerLease, expected: Phase) -> Result<Loaded> {
         ensure!(
@@ -118,10 +134,8 @@ impl Store {
                 matches!(found.record.phase, Phase::Accepted | Phase::Dispatching),
                 "Retained invocation is already terminal"
             );
-            ensure!(
-                fs::lock(&found.dir, true)?,
-                "Retained worker still owns this invocation"
-            );
+            let _lease = fs::lock(&found.dir, true)?
+                .ok_or_else(|| invalid("Retained worker still owns this invocation"))?;
             self.finish(
                 l,
                 found,

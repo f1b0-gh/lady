@@ -1,80 +1,69 @@
 use crate::{
     environment_lock,
     error::{ensure, Error, Result},
-    files, nickel,
+    files,
     openshell::Backend,
     plan,
-    request::Desired,
-    scan, sources, state,
+    request::{BrokerDesired, Desired},
+    state,
 };
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
+mod input;
 pub fn lock_path(args: &Desired) -> PathBuf {
-    args.lock.clone().unwrap_or_else(|| {
-        args.config
-            .with_extension(format!("{}.lock.json", args.mission))
-    })
+    input::Sources::from(args).lock_path()
 }
 pub fn desired(args: &Desired) -> Result<Value> {
-    let project = files::absolute(&args.project)?;
-    files::open_directory(&project)?;
-    let directory = files::absolute(&args.state)?;
-    ensure!(
-        !directory.starts_with(&project),
-        "State must reside outside the project"
-    );
-    let resources = files::absolute(&args.resources)?;
-    let evaluated = nickel::evaluate(&args.config, &args.mission, &resources)?;
-    let mut receipt = environment_lock::create(
-        evaluated.clone(),
-        &resources,
-        &args.codex,
-        &args.codex_code_mode_host,
-    )?;
-    let source_files = sources::snapshot(&project, &evaluated.config.sources, None)?;
-    let report = scan::scan(&project, &source_files, &evaluated.config)?;
-    let (inventory, digest) = crate::deps::input::verified_report(
-        &project,
-        &evaluated.config.sources,
-        &source_files,
-        args.ladybom.as_deref(),
-    )?;
-    receipt.ladybom_sha256 = digest;
-    environment_lock::verify(&lock_path(args), &receipt)?;
-    let preparation = evaluated
-        .config
-        .dependencies
-        .as_ref()
-        .map(|config| {
-            crate::deps::prepare::plan(&project, &source_files, config, &evaluated.config.tools)
-        })
-        .transpose()?;
     let runtime = std::env::current_exe()?;
-    let mut artifacts = serde_json::Map::new();
-    for (name, path) in [
-        ("codex", &args.codex),
-        ("codex-code-mode-host", &args.codex_code_mode_host),
-        ("ladyshell", &runtime),
-    ] {
-        let path = files::absolute(path)?;
-        let sha256 = if name == "ladyshell" {
-            environment_lock::artifact_hash(&path)?
-        } else {
-            receipt
-                .artifacts_sha256
-                .get(name)
-                .cloned()
-                .ok_or_else(|| invalid("Missing artifact digest".into()))?
-        };
-        artifacts.insert(name.into(), json!({"path":path,"sha256":sha256}));
-    }
-    Ok(
-        json!({"schema_version":2,"context":{"gateway":evaluated.config.sandbox.gateway,"workspace":evaluated.config.sandbox.workspace},"evaluated":evaluated,"environment_lock":receipt,"project":project,"resources":resources,"sources":source_files,"dependency_scan":report,"dependency_inventory":inventory,"dependency_preparation":preparation,"artifacts":artifacts}),
-    )
+    Ok(input::prepare(
+        input::Sources::from(args),
+        input::Artifacts::Native {
+            codex: &args.codex,
+            code_mode: &args.codex_code_mode_host,
+            runtime: &runtime,
+        },
+        true,
+    )?
+    .0)
+}
+/// Build the exact broker inputs using explicitly selected worker and receiver
+/// artifacts. This never selects the embedding application's executable.
+pub fn desired_broker(args: &BrokerDesired) -> Result<Value> {
+    Ok(input::prepare(
+        input::Sources::from(args),
+        input::Artifacts::Broker {
+            worker: &args.worker,
+            runtime: &args.runtime,
+        },
+        true,
+    )?
+    .0)
+}
+/// Explicit lock creation; a missing/mismatching lock never triggers this path
+/// from planning or apply. No sandbox or image is created here.
+pub fn lock_broker(args: &BrokerDesired) -> Result<environment_lock::EnvironmentLock> {
+    let inputs = input::Sources::from(args);
+    let path = inputs.lock_path();
+    let (_, receipt) = input::prepare(
+        inputs,
+        input::Artifacts::Broker {
+            worker: &args.worker,
+            runtime: &args.runtime,
+        },
+        false,
+    )?;
+    environment_lock::write(&path, &receipt)?;
+    Ok(receipt)
+}
+pub fn make_broker_plan(args: &BrokerDesired) -> Result<Value> {
+    plan_inputs(desired_broker(args)?, &args.state)
 }
 pub fn make_plan(args: &Desired) -> Result<Value> {
-    let desired = desired(args)?;
-    let lock = state::StateLock::acquire(&args.state)?;
+    plan_inputs(desired(args)?, &args.state)
+}
+fn plan_inputs(desired: Value, directory: &Path) -> Result<Value> {
+    let lock = state::StateLock::acquire(directory)?;
+    crate::destroy::broker::ensure_available(&lock.directory)?;
     let current = state::load(&lock.directory)?;
     let backend = Backend::new(&desired["context"])?;
     let observed = backend.observe(current.as_ref())?;
@@ -87,9 +76,44 @@ pub fn make_plan(args: &Desired) -> Result<Value> {
     Ok(result)
 }
 pub fn apply(args: &Desired) -> Result<Value> {
-    let desired = desired(args)?;
-    let lock = state::StateLock::acquire(&args.state)?;
+    apply_inputs(desired(args)?, &args.state, None)
+}
+/// Apply an explicitly locked fixed-broker plan under the ordinary state and session leases.
+pub fn apply_broker(args: &BrokerDesired) -> Result<Value> {
+    apply_inputs(desired_broker(args)?, &args.state, None)
+}
+/// Bind native provisioning to the reviewed plan under the lifecycle leases.
+pub fn apply_expected(args: &Desired, expected_plan: &state::Selection) -> Result<Value> {
+    apply_inputs(desired(args)?, &args.state, Some(expected_plan))
+}
+/// Bind broker provisioning to the reviewed plan under the same lifecycle leases.
+pub fn apply_broker_expected(
+    args: &BrokerDesired,
+    expected_plan: &state::Selection,
+) -> Result<Value> {
+    apply_inputs(desired_broker(args)?, &args.state, Some(expected_plan))
+}
+/// Retain a non-authorizing binding to a saved plan and its original directory.
+pub fn select_plan(directory: &Path) -> Result<state::Selection> {
+    let lock = state::StateLock::acquire_existing(directory)?;
+    let plan = state::read(&lock.directory.join("plan.json"))?
+        .ok_or_else(|| invalid("Run plan before selecting it".into()))?;
+    state::Selection::capture(&lock, &plan)
+}
+fn apply_inputs(
+    desired: Value,
+    directory: &Path,
+    expected_plan: Option<&state::Selection>,
+) -> Result<Value> {
+    let lock = if expected_plan.is_some() {
+        state::StateLock::acquire_existing(directory)?
+    } else {
+        state::StateLock::acquire(directory)?
+    };
     let _lease = state::SessionLock::acquire(&lock.directory, true)?;
+    if let Some(expected) = expected_plan {
+        expected.verify_directory(&lock)?;
+    }
     crate::continuous::host::execution_directory(&lock.directory)?;
     if let Some(current) = state::load(&lock.directory)? {
         ensure!(
@@ -98,11 +122,16 @@ pub fn apply(args: &Desired) -> Result<Value> {
         );
     }
     let backend = Backend::new(&desired["context"])?;
-    crate::apply::apply_with(
-        &desired,
-        &lock.directory,
-        &mut crate::apply::NativeDriver { backend },
-    )
+    let mut driver = crate::apply::NativeDriver { backend };
+    match expected_plan {
+        Some(expected) => crate::apply::apply_with_expected(
+            &desired,
+            &lock.directory,
+            &mut driver,
+            expected.digest(),
+        ),
+        None => crate::apply::apply_with(&desired, &lock.directory, &mut driver),
+    }
 }
 pub fn status(directory: &Path) -> Result<Value> {
     let lock = state::StateLock::acquire(directory)?;

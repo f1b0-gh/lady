@@ -118,6 +118,10 @@ pub enum Command {
     #[command(hide = true)]
     CsWorkerProfile,
     #[command(hide = true)]
+    BrokerStorageProbe,
+    #[command(hide = true)]
+    BrokerExport,
+    #[command(hide = true)]
     SnapshotList(Worker),
     #[command(hide = true)]
     SnapshotPreview(Worker),
@@ -131,6 +135,8 @@ pub enum Command {
         after_help = "Examples:\n  ladyshell destroy --state /path/to/state\n  ladyshell destroy --all --dry-run"
     )]
     Destroy(DestroyOptions),
+    /// Cancel an interrupted broker provisioning attempt using its original journal.
+    CancelBroker(ExistingOptions),
 }
 #[derive(Debug, Args)]
 pub struct DesiredOptions {

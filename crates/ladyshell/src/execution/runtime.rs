@@ -16,7 +16,7 @@ use crate::{
     state::{self, SessionLock, StateLock},
     sync,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
     fs::File,
@@ -123,15 +123,38 @@ fn live_inputs(
 pub fn install(state: &Path, receiver: &Path, tasks: Vec<TaskDefinition>) -> Result<Binding> {
     install_with(state, receiver, tasks, &mut Native)
 }
+/// Install only in the independently selected original environment generation.
+/// The selection is checked under the ordinary lifecycle leases before runtime
+/// observation or receiver publication. It supplies no policy authorization.
+pub fn install_pinned(
+    state: &Path,
+    receiver: &Path,
+    tasks: Vec<TaskDefinition>,
+    selected: &state::Selection,
+) -> Result<Binding> {
+    install_selected(state, receiver, tasks, &mut Native, Some(selected))
+}
 fn install_with(
     state: &Path,
     receiver: &Path,
     tasks: Vec<TaskDefinition>,
     driver: &mut impl Driver,
 ) -> Result<Binding> {
+    install_selected(state, receiver, tasks, driver, None)
+}
+fn install_selected(
+    state: &Path,
+    receiver: &Path,
+    tasks: Vec<TaskDefinition>,
+    driver: &mut impl Driver,
+    selected: Option<&state::Selection>,
+) -> Result<Binding> {
     let lock = StateLock::acquire_existing(state)?;
     let lease = SessionLock::acquire(&lock.directory, true)?;
     let current = load_inputs(&lock)?;
+    if let Some(selected) = selected {
+        selected.verify_generation(&lock, &current)?;
+    }
     let path = files::absolute(receiver)?;
     super::model::normalized(&path)?;
     let project = Path::new(state::text(&current["desired_inputs"], "project")?).canonicalize()?;
@@ -175,12 +198,32 @@ fn check_directory(dir: &File, e: &EnvironmentPin) -> Result<()> {
     );
     fence::verify_named(dir, &e.state)
 }
-fn preflight(
-    store: &Store,
+struct Prepared {
+    lock: StateLock,
+    lease: SessionLock,
+    command: Command,
+    input: Option<Vec<u8>>,
+}
+fn preflight(store: &Store, driver: &mut impl Driver, record: &Record) -> Result<Prepared> {
+    let (lock, lease, current) = preflight_environment(&record.environment, driver)?;
+    let task = store.definition(&record.invocation.task)?;
+    let cmd = run::sandbox_command(
+        &Backend::new(&current["context"])?,
+        &current,
+        &task.argv,
+        task.timeout_seconds,
+    )?;
+    Ok(Prepared {
+        lock,
+        lease,
+        command: cmd,
+        input: task.stdin_bytes(&record.invocation.intent)?,
+    })
+}
+fn preflight_environment(
+    env: &EnvironmentPin,
     driver: &mut impl Driver,
-    record: &Record,
-) -> Result<(StateLock, SessionLock, Command)> {
-    let env = &record.environment;
+) -> Result<(StateLock, SessionLock, Value)> {
     let lock = StateLock::acquire_existing(&env.state)?;
     let lease = SessionLock::acquire(&lock.directory, true)?;
     check_directory(lease.directory_file(), env)?;
@@ -200,30 +243,119 @@ fn preflight(
         source == env.source_sha256,
         "Retained working tree differs from installation"
     );
-    let task = store.definition(&record.invocation.task)?;
-    let cmd = run::sandbox_command(
+    Ok((lock, lease, current))
+}
+
+/// Correlated incoming storage receipt. This neither installs a component nor
+/// authorizes execution, proves termination, or retires a task/Promise scope.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct UploadedComponent {
+    pub component: String,
+    pub bytes: u64,
+}
+
+/// Transfer an independently admitted component to the original fixed broker.
+/// Supply the independently retained installation pin, never a guest assertion.
+/// The host must retain its exact operation before invoking this blocking I/O
+/// primitive outside host policy guards, for example in an already initiated lifecycle
+/// process. Errors remain unresolved: do not automatically repeat an upload.
+/// The broker preserves an existing partial or complete file without replacement.
+pub fn upload(
+    environment: &EnvironmentPin,
+    component: &str,
+    bytes: &[u8],
+    timeout_seconds: u32,
+) -> Result<UploadedComponent> {
+    upload_with(
+        environment,
+        component,
+        bytes,
+        timeout_seconds,
+        &mut Native,
+        capture::run_with_input,
+    )
+}
+fn upload_with(
+    environment: &EnvironmentPin,
+    component: &str,
+    bytes: &[u8],
+    timeout_seconds: u32,
+    driver: &mut impl Driver,
+    transfer: impl FnOnce(Command, Duration, usize, Option<&[u8]>) -> (ClientResult, CapturedOutputs),
+) -> Result<UploadedComponent> {
+    ensure!(
+        !bytes.is_empty()
+            && bytes.len() <= 2 * 1024 * 1024
+            && files::hash(bytes) == component
+            && (1..=86400).contains(&timeout_seconds),
+        "Invalid bounded component upload"
+    );
+    let (lock, _lease, current) = preflight_environment(environment, driver)?;
+    ensure!(
+        current["image_profile"] == "openshell-worker-v1",
+        "Component upload requires the fixed broker profile"
+    );
+    let command = run::sandbox_command(
         &Backend::new(&current["context"])?,
         &current,
-        &task.argv,
-        task.timeout_seconds,
+        &[
+            "/usr/local/bin/sandbox-worker",
+            "sandbox-upload",
+            "/var/lib/ladyshell/broker/control",
+            "/var/lib/ladyshell/broker/artifacts",
+            "/var/lib/ladyshell/broker/incoming",
+            component,
+        ],
+        timeout_seconds,
     )?;
-    Ok((lock, lease, cmd))
+    // Keep the original session lease through transport. Seal in the broker
+    // separately fences its actual writes, including after host/client death.
+    drop(lock);
+    let (result, output) = transfer(
+        command,
+        Duration::from_secs(u64::from(timeout_seconds)),
+        16384,
+        Some(bytes),
+    );
+    ensure!(
+        result == (ClientResult::Exit { code: 0 })
+            && !output.stdout.truncated
+            && !output.stderr.truncated
+            && output.stdout.bytes.len() <= 16384
+            && output.stderr.bytes.len() <= 16384,
+        "Component upload transport is unresolved; preserve original intake"
+    );
+    let reply: std::result::Result<UploadedComponent, String> =
+        serde_json::from_value(crate::json::parse(&output.stdout.bytes)?)?;
+    let receipt =
+        reply.map_err(|_| invalid("Component upload not confirmed; inspect original intake"))?;
+    ensure!(
+        receipt.component == component && receipt.bytes == bytes.len() as u64,
+        "Component upload reply differs from original bytes"
+    );
+    Ok(receipt)
 }
 /// Run only an already accepted invocation under its independent worker lease.
 pub fn worker(store: &Store, key: &Key) -> Result<Record> {
-    worker_with(store, key, &mut Native, now, capture::run)
+    worker_with(store, key, &mut Native, now, capture::run_with_input)
 }
 fn worker_with(
     store: &Store,
     key: &Key,
     driver: &mut impl Driver,
     mut clock: impl FnMut() -> Result<u64>,
-    launch: impl FnOnce(Command, Duration, usize) -> (ClientResult, CapturedOutputs),
+    launch: impl FnOnce(Command, Duration, usize, Option<&[u8]>) -> (ClientResult, CapturedOutputs),
 ) -> Result<Record> {
     let worker = store.acquire_worker(key)?;
     let record = store.inspect(key)?;
     let fence = Fence::for_record(store, &record);
-    let (lock, lease, command) = match preflight(store, driver, &record) {
+    let Prepared {
+        lock,
+        lease,
+        command,
+        input,
+    } = match preflight(store, driver, &record) {
         Ok(prepared) => prepared,
         // Native errors can contain transport diagnostics. Keep a bounded, nonsecret refusal.
         Err(_) => {
@@ -307,7 +439,7 @@ fn worker_with(
             last,
         );
     }
-    let (result, outputs) = launch(command, timeout, limit);
+    let (result, outputs) = launch(command, timeout, limit, input.as_deref());
     let receipt = store.complete(&worker, result, outputs, clock()?)?;
     if receipt.phase == Phase::Completed {
         fence.clear(&lease, &record.environment.state)?;
@@ -333,6 +465,131 @@ pub fn recover(store: &Store, key: &Key) -> Result<Record> {
         _ => Ok(record),
     }
 }
+
+/// The original fence can permit observation or irreversible sealed cleanup,
+/// never another dispatch. Keep all three leases alive through the operation.
+pub(crate) struct Recovery {
+    pub(crate) lock: StateLock,
+    pub(crate) current: Value,
+    pub(crate) record: Record,
+    _session: SessionLock,
+    _invocation: super::store::RecoveryLease,
+}
+pub(crate) fn recovery(store: &Store, key: &Key) -> Result<Recovery> {
+    let invocation = store.acquire_recovery(key)?;
+    let record = store.inspect(key)?;
+    let env = &record.environment;
+    let lock = StateLock::acquire_existing(&env.state)?;
+    let (session, present) =
+        SessionLock::for_reconciliation(&lock, &Fence::for_record(store, &record))?;
+    ensure!(present, "Original recovery fence is missing");
+    check_directory(session.directory_file(), env)?;
+    host::lifecycle_directory(&lock.directory)?;
+    let current = state::load(&lock.directory)?
+        .ok_or_else(|| invalid("Original environment state is missing"))?;
+    ensure!(
+        current["image_profile"] == "openshell-worker-v1",
+        "Fenced recovery requires the fixed broker profile"
+    );
+    ensure!(
+        current["snapshot_binary"] == sync::IMAGE_SNAPSHOT_BINARY
+            && plan::digest(&current["desired_inputs"])? == current["desired_hash"],
+        "Original recovery inputs changed"
+    );
+    ensure!(
+        &state_pin(
+            &lock,
+            &session,
+            &current,
+            env.runtime.clone(),
+            env.source_sha256.clone()
+        )? == env,
+        "Original recovery environment changed"
+    );
+    Ok(Recovery {
+        lock,
+        current,
+        record,
+        _session: session,
+        _invocation: invocation,
+    })
+}
+
+/// Ask the original worker's fixed observation entry about the original intent.
+/// The host independently admits disclosure/recovery; the worker must implement
+/// observation without replaying execution. Application bytes remain opaque here.
+/// The returned bounded bytes are evidence for the application to correlate.
+/// This never completes the receiver, clears its fence or grants task retirement.
+pub fn observe_broker(store: &Store, key: &Key) -> Result<Vec<u8>> {
+    observe_broker_with(store, key, &mut Native, capture::run_with_input)
+}
+fn observe_broker_with(
+    store: &Store,
+    key: &Key,
+    driver: &mut impl Driver,
+    transfer: impl FnOnce(Command, Duration, usize, Option<&[u8]>) -> (ClientResult, CapturedOutputs),
+) -> Result<Vec<u8>> {
+    use crate::sandbox_worker::{EXECUTE_ARGS, MAX_BYTES, OBSERVE_ARGS};
+    let held = recovery(store, key)?;
+    crate::destroy::broker::ensure_available(&held.lock.directory)?;
+    let record = &held.record;
+    let task = &record.definition;
+    ensure!(
+        task.argv == EXECUTE_ARGS
+            && task.output_limit_bytes == MAX_BYTES
+            && task.input
+                == Some(InputChannel::IntentJsonV1 {
+                    max_bytes: MAX_BYTES
+                }),
+        "Recovery requires the original fixed worker definition"
+    );
+    // No caller-supplied query, task schema or substituted digest. The adapter
+    // derives its read-only query from the exact retained application intent.
+    let input = serde_json::to_vec(&record.invocation.intent)?;
+    ensure!(
+        input.len() <= MAX_BYTES as usize,
+        "Observation exceeds its input bound"
+    );
+    let (_, source) = live_inputs(
+        &held.lock,
+        &held.current,
+        driver,
+        Some(&record.environment.runtime),
+    )?;
+    ensure!(
+        source == record.environment.source_sha256,
+        "Original recovery source changed"
+    );
+    let command = run::sandbox_command(
+        &Backend::new(&held.current["context"])?,
+        &held.current,
+        &OBSERVE_ARGS,
+        task.timeout_seconds,
+    )?;
+    let (result, output) = transfer(
+        command,
+        Duration::from_secs(u64::from(task.timeout_seconds)),
+        MAX_BYTES as usize,
+        Some(&input),
+    );
+    held.lock.verify_directory()?;
+    check_directory(held._session.directory_file(), &record.environment)?;
+    ensure!(
+        Fence::for_record(store, record).matches_or_absent(held._session.directory_file())?,
+        "Original observation fence is missing"
+    );
+    store.inspect(key)?;
+    ensure!(
+        result == (ClientResult::Exit { code: 0 })
+            && !output.stdout.truncated
+            && !output.stderr.truncated
+            && output.stdout.bytes.len() <= MAX_BYTES as usize
+            && output.stderr.bytes.len() <= MAX_BYTES as usize,
+        "Broker observation transport is unresolved"
+    );
+    Ok(output.stdout.bytes)
+}
+
 /// Record independent evidence of an operator-stopped original incarnation before releasing it.
 pub fn reconcile(store: &Store, key: &Key, reason: &str) -> Result<Record> {
     reconcile_with(store, key, reason, &mut Native)

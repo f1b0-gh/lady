@@ -68,6 +68,7 @@ pub fn verify_export(current: &Value, receipt: &Value) -> Result<()> {
     Ok(())
 }
 fn load(directory: &Path) -> Result<Value> {
+    crate::destroy::broker::ensure_available(directory)?;
     state::load(directory)?.ok_or_else(|| invalid("State is missing"))
 }
 pub(crate) fn save(directory: &Path, current: &Value) -> Result<()> {
@@ -296,6 +297,11 @@ pub fn replace_with(directory: &Path, driver: &mut impl ReplacementDriver) -> Re
 }
 
 pub fn execution_directory(directory: &Path) -> Result<()> {
+    lifecycle_directory(directory)?;
+    crate::destroy::broker::ensure_available(directory)
+}
+
+pub(crate) fn lifecycle_directory(directory: &Path) -> Result<()> {
     ensure!(
         !directory.join("continuous-staging.json").try_exists()?,
         "This is a retained provisioning state; use its stable continuous task state"

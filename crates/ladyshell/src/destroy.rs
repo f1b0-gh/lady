@@ -8,37 +8,63 @@ use crate::{
 };
 use serde_json::{json, Value};
 mod batch;
+pub(crate) mod broker;
+mod cancel;
 pub use batch::{all, all_at};
+pub use cancel::{cancel_broker, cancel_broker_pinned, select_cancellation};
 
 pub fn run(args: &Destroy) -> Result<Value> {
-    run_selected(args, None)
+    run_selected(args, None, None)
+}
+/// Delete only the selected original generation under ordinary lifecycle locks.
+/// Export progress alone does not change a generation. Policy admission remains
+/// the caller's responsibility; this selection grants no authority.
+pub fn run_pinned(args: &Destroy, selected: &state::Selection) -> Result<Value> {
+    run_selected(args, None, Some(selected))
 }
 
-pub(crate) fn run_expected(
+/// Seal, export and delete the original broker while retaining an uncertain
+/// invocation's exact execution fence. Independently admit and retain the
+/// selected generation, receiver binding and key before calling. The invocation
+/// may be Execute, Stage or a storage probe; cleanup never replays it. A busy
+/// broker seal fails closed. The original record/fence survive even successful
+/// deletion, and grant no task termination or Promise retirement authority.
+pub fn run_recovering(
     args: &Destroy,
-    expected: &crate::associations::Association,
+    selected: &state::Selection,
+    store: &crate::execution::Store,
+    key: &crate::execution::Key,
 ) -> Result<Value> {
-    run_selected(args, Some(expected))
+    with_recovery(args, selected, store, key, |lock, current| {
+        let mut driver = broker::Native::new(current)?;
+        broker::run(lock, current, &mut driver)
+    })
+}
+pub(crate) fn with_recovery(
+    args: &Destroy,
+    selected: &state::Selection,
+    store: &crate::execution::Store,
+    key: &crate::execution::Key,
+    cleanup: impl FnOnce(&state::StateLock, &Value) -> Result<Value>,
+) -> Result<Value> {
+    ensure!(
+        !args.discard_work,
+        "Fenced broker cleanup must retain its export"
+    );
+    let held = crate::execution::recovery(store, key)?;
+    ensure!(
+        crate::files::absolute(&args.state)? == held.lock.directory,
+        "Cleanup state differs from original fenced environment"
+    );
+    selected.verify_generation(&held.lock, &held.current)?;
+    ensure_ready_for_destroy(&held.lock)?;
+    // No unconditional Ready observation here: after deletion, the retained
+    // broker journal must verify the original deletion intent and absence.
+    // Before seal/export, that same driver verifies the original live runtime.
+    cleanup(&held.lock, &held.current)
 }
 
-fn run_selected(
-    args: &Destroy,
-    expected: Option<&crate::associations::Association>,
-) -> Result<Value> {
-    let lock = if expected.is_some() {
-        state::StateLock::acquire_existing(&args.state)?
-    } else {
-        state::StateLock::acquire(&args.state)?
-    };
-    let _lease = state::SessionLock::acquire(&lock.directory, true)?;
-    crate::continuous::host::execution_directory(&lock.directory)?;
-    lock.verify_directory()?;
-    let mut current = state::load(&lock.directory)?.ok_or_else(|| Error::InvalidInput {
-        message: "State is missing".into(),
-    })?;
-    if let Some(expected) = expected {
-        expected.verify(&current)?;
-    }
+fn ensure_ready_for_destroy(lock: &state::StateLock) -> Result<()> {
     if let Some(operation) = state::read(&lock.directory.join("operation.json"))? {
         ensure!(
             operation["phase"] == "complete",
@@ -49,7 +75,47 @@ fn run_selected(
         !lock.directory.join("checkout-pending.json").try_exists()?,
         "Checkout application was interrupted: resume before destroy"
     );
+    lock.verify_directory()
+}
+
+pub(crate) fn run_expected(
+    args: &Destroy,
+    expected: &crate::associations::Association,
+) -> Result<Value> {
+    run_selected(args, Some(expected), None)
+}
+
+fn run_selected(
+    args: &Destroy,
+    expected: Option<&crate::associations::Association>,
+    selected: Option<&state::Selection>,
+) -> Result<Value> {
+    let lock = if expected.is_some() || selected.is_some() {
+        state::StateLock::acquire_existing(&args.state)?
+    } else {
+        state::StateLock::acquire(&args.state)?
+    };
+    let _lease = state::SessionLock::acquire(&lock.directory, true)?;
+    crate::continuous::host::lifecycle_directory(&lock.directory)?;
     lock.verify_directory()?;
+    let mut current = state::load(&lock.directory)?.ok_or_else(|| Error::InvalidInput {
+        message: "State is missing".into(),
+    })?;
+    if let Some(expected) = expected {
+        expected.verify(&current)?;
+    }
+    if let Some(selected) = selected {
+        selected.verify_generation(&lock, &current)?;
+    }
+    ensure_ready_for_destroy(&lock)?;
+    if current["image_profile"] == "openshell-worker-v1" {
+        ensure!(
+            !args.discard_work,
+            "The broker lifecycle requires retaining records before deletion"
+        );
+        let mut driver = broker::Native::new(&current)?;
+        return broker::run(&lock, &current, &mut driver);
+    }
     let backend = Backend::new(&current["context"])?;
     let name = text(&current, "sandbox_name")?.to_owned();
     let path = lock.directory.join("destroy.json");

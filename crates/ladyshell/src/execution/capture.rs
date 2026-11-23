@@ -1,7 +1,7 @@
 //! Local OpenShell client supervision. An escaped pipe writer cannot hold a receipt open.
 use super::{CapturedOutputs, CapturedStream, ClientResult};
 use std::{
-    io::{self, Read},
+    io::{self, Read, Write},
     os::{
         fd::AsRawFd,
         unix::process::{CommandExt, ExitStatusExt},
@@ -101,14 +101,28 @@ fn observation(status: ExitStatus) -> ClientResult {
         ClientResult::IoFailure
     }
 }
+#[cfg(test)]
 pub(super) fn run(
-    mut command: Command,
+    command: Command,
     timeout: Duration,
     limit: usize,
 ) -> (ClientResult, CapturedOutputs) {
+    run_with_input(command, timeout, limit, None)
+}
+
+pub(super) fn run_with_input(
+    mut command: Command,
+    timeout: Duration,
+    limit: usize,
+    input: Option<&[u8]>,
+) -> (ClientResult, CapturedOutputs) {
     let deadline = Instant::now() + timeout;
     let Ok(mut child) = command
-        .stdin(Stdio::null())
+        .stdin(if input.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .process_group(0)
@@ -116,6 +130,9 @@ pub(super) fn run(
     else {
         return (ClientResult::SpawnFailure, CapturedOutputs::default());
     };
+    let mut stdin = child.stdin.take();
+    let input = input.unwrap_or_default();
+    let mut written = 0;
     let mut stdout = Pipe {
         reader: child.stdout.take(),
         output: CapturedStream::default(),
@@ -124,10 +141,11 @@ pub(super) fn run(
         reader: child.stderr.take(),
         output: CapturedStream::default(),
     };
-    if !stdout
-        .reader
-        .as_ref()
-        .is_some_and(|p| nonblocking(p).is_ok())
+    if stdin.as_ref().is_some_and(|p| nonblocking(p).is_err())
+        || !stdout
+            .reader
+            .as_ref()
+            .is_some_and(|p| nonblocking(p).is_ok())
         || !stderr
             .reader
             .as_ref()
@@ -146,9 +164,35 @@ pub(super) fn run(
     let mut drain_until = None;
     let mut failure = None;
     loop {
+        let mut sent = false;
+        if let Some(pipe) = stdin.as_mut() {
+            if written < input.len() {
+                let end = input.len().min(written + 8192);
+                match pipe.write(&input[written..end]) {
+                    Ok(0) => {
+                        failure.get_or_insert(ClientResult::IoFailure);
+                    }
+                    Ok(n) => {
+                        written += n;
+                        sent = true;
+                    }
+                    Err(e)
+                        if matches!(
+                            e.kind(),
+                            io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
+                        ) => {}
+                    Err(_) => {
+                        failure.get_or_insert(ClientResult::IoFailure);
+                    }
+                }
+            }
+            if written == input.len() || failure.is_some() {
+                stdin = None;
+            }
+        }
         let a = stdout.drain(limit);
         let b = stderr.drain(limit);
-        let progress = matches!(a, Ok(true)) || matches!(b, Ok(true));
+        let progress = sent || matches!(a, Ok(true)) || matches!(b, Ok(true));
         if a.is_err() || b.is_err() {
             failure.get_or_insert(ClientResult::IoFailure);
         } else if stdout.output.truncated || stderr.output.truncated {
@@ -166,11 +210,15 @@ pub(super) fn run(
                 }
             };
             if done {
+                if written != input.len() {
+                    failure.get_or_insert(ClientResult::IoFailure);
+                }
                 drain_until.get_or_insert(at + EXIT_DRAIN);
             } else if at >= deadline {
                 failure.get_or_insert(ClientResult::Timeout);
             }
             if failure.is_some() {
+                stdin = None;
                 reaped = Some(
                     terminate(&mut child)
                         .map(observation)
@@ -208,6 +256,60 @@ pub(super) fn run(
 mod tests {
     use super::*;
     use std::time::Instant;
+
+    #[test]
+    fn input_is_delivered_exactly_and_eof_follows() {
+        let input = br#"{"value":"a\nb","argv":["$(false)","--flag"]}"#;
+        let (r, o) = run_with_input(
+            Command::new("cat"),
+            Duration::from_secs(2),
+            4096,
+            Some(input),
+        );
+        assert_eq!(r, ClientResult::Exit { code: 0 });
+        assert_eq!(o.stdout.bytes, input);
+        assert!(!o.stdout.truncated);
+    }
+
+    #[test]
+    fn input_and_output_are_pumped_without_deadlock() {
+        let input = vec![b'x'; 16384];
+        let mut command = Command::new("sh");
+        command.args(["-c", "head -c 65536 /dev/zero; cat"]);
+        let (r, o) = run_with_input(command, Duration::from_secs(2), 81920, Some(&input));
+        assert_eq!(r, ClientResult::Exit { code: 0 });
+        assert_eq!(o.stdout.bytes.len(), 81920);
+        assert_eq!(&o.stdout.bytes[65536..], input);
+        assert!(!o.stdout.truncated);
+    }
+
+    #[test]
+    fn early_close_is_not_successful_input_delivery() {
+        let mut command = Command::new("sh");
+        command.args(["-c", "exec 0<&-; sleep 0.05; exit 0"]);
+        let (r, _) = run_with_input(
+            command,
+            Duration::from_secs(2),
+            32,
+            Some(&vec![b'x'; 1048576]),
+        );
+        assert_eq!(r, ClientResult::IoFailure);
+    }
+
+    #[test]
+    fn nonreading_client_does_not_block_input_deadline() {
+        let mut command = Command::new("sleep");
+        command.arg("10");
+        let start = Instant::now();
+        let (r, _) = run_with_input(
+            command,
+            Duration::from_millis(100),
+            32,
+            Some(&vec![b'x'; 1048576]),
+        );
+        assert_eq!(r, ClientResult::Timeout);
+        assert!(start.elapsed() < Duration::from_secs(2));
+    }
 
     fn shell(script: &str, millis: u64, limit: usize) -> (ClientResult, CapturedOutputs) {
         let mut command = Command::new("sh");

@@ -68,6 +68,7 @@ def main():
         assert "nickel-util" in closure
         assert not closure & {"clap", "ladyshell", "ladyshell-cli", "ladyboot", "audit-validator"}
     application = lady("ladyshell")
+    assert not {name for name in application if name.startswith(("lo-", "lo_"))}, "Application dependencies in Ladyshell"
     assert not graph_packages & lady("ladyshell", normal_only=True)
     assert {"nickel-util", "ladybom"} <= application
     assert not application & {"clap", "ladyboot", "nickel-plane", "nickel-k8s", "nickel-tf", "audit-validator"}, "Audit validation belongs to Ladyshell"
