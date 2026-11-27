@@ -61,8 +61,6 @@ pub fn run(directory: &Path, plan: &ValidationPlan) -> Result<ValidationReceipt>
             "Invalid declared check"
         );
     }
-    let provider = state::text(&config["sandbox"], "provider")?;
-    crate::config::identifier(provider)?;
     let backend = Backend::new(&current["context"])?;
     let name = state::text(&current, "sandbox_name")?;
     let exclusions = sync::exclusions(&current)?;
@@ -72,7 +70,7 @@ pub fn run(directory: &Path, plan: &ValidationPlan) -> Result<ValidationReceipt>
     );
     let verify = || -> Result<()> {
         backend.verify_execution(&current)?;
-        backend.verify_provider(provider)?;
+        crate::run::verify_provider(&backend, &current)?;
         verify_inventory(plan, &sync::observe_inventory(&current, &backend)?).map_err(Into::into)
     };
     verify()?;

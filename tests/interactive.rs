@@ -287,7 +287,7 @@ fn run_fixture(root: &Path) -> Result<std::path::PathBuf, Box<dyn std::error::Er
     fs::write(
         root.join("observed.json"),
         serde_json::to_vec(
-            &json!({"id":"id","phase":"Ready","configuration_admission":{"policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"}}),
+            &json!({"id":"id","phase":"Ready","configuration_admission":{"state":"accepted","policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"}}),
         )?,
     )?;
     fs::write(

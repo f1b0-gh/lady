@@ -43,7 +43,7 @@ impl Fixture {
         let state = json!({"schema_version":2,"sandbox_name":"test","sandbox_id":"id","policy_hash":"hash","codex_binary":binary,"owner":"owner","desired_hash":"desired","image_id":"image","project_snapshot":root.path().join("source"),"build_dir":"build","context":{"gateway":"test","workspace":"default"},"host_sources":records,"sync":{"destination":"exports"},"desired_inputs":{"project":root.path().join("host"),"evaluated":{"config":{"sources":{"include":[],"exclude":[]},"sandbox":{"provider":"test-provider"}}}}});
         let f = Self { root, state };
         f.save()?;
-        f.write("observed.json", &json!({"id":"id","phase":"Ready","configuration_admission":{"policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"}}))?;
+        f.write("observed.json", &json!({"id":"id","phase":"Ready","configuration_admission":{"state":"accepted","policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"}}))?;
         f.write(
             "policy.json",
             &json!({"policy":ladyshell::policy::native_policy(binary)?}),
@@ -228,7 +228,7 @@ fn pending_recovery_and_untrusted_sandbox_prevent_execution() -> Result {
         let f = Fixture::new()?;
         match kind {
             "pending"=>f.write("state/checkout-pending.json",&json!({}))?,
-            "identity"=>f.write("observed.json",&json!({"id":"other","phase":"Ready","configuration_admission":{"policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"}}))?,
+            "identity"=>f.write("observed.json",&json!({"id":"other","phase":"Ready","configuration_admission":{"state":"accepted","policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"}}))?,
             "provider"=>fs::write(f.root.path().join("provider"),"expired")?,
             _=>f.write("policy.json",&json!({"policy":{}}))?,
         }
@@ -243,7 +243,7 @@ fn pending_recovery_and_untrusted_sandbox_prevent_execution() -> Result {
 fn automatic_sync_refuses_replacement_or_new_recovery_after_execution() -> Result {
     for name in ["next-observed.json", "pending-after"] {
         let f = Fixture::new()?;
-        f.write(name,&json!({"id":"other","phase":"Ready","configuration_admission":{"policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"}}))?;
+        f.write(name,&json!({"id":"other","phase":"Ready","configuration_admission":{"state":"accepted","policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"}}))?;
         let out = f.run(true)?;
         assert!(!out.status.success(), "{out:?}");
         assert!(f.root.path().join("executed").exists());
@@ -273,9 +273,18 @@ fn shell_sync_uses_the_same_verified_completion() -> Result {
 
 #[test]
 fn run_publishes_exact_export_and_failed_command_never_pushes() -> Result {
+    let git = std::env::split_paths(&std::env::var_os("PATH").ok_or("PATH is missing")?)
+        .map(|directory| directory.join("git"))
+        .find(|path| {
+            path.metadata().is_ok_and(|metadata| {
+                metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
+            })
+        })
+        .ok_or("Git executable is missing from PATH")?
+        .canonicalize()?;
     for exit in ["0", "37"] {
         let f = Fixture::new()?;
-        std::os::unix::fs::symlink("/usr/bin/git", f.root.path().join("git"))?;
+        std::os::unix::fs::symlink(&git, f.root.path().join("git"))?;
         let host = f.root.path().join("host");
         let remote = f.root.path().join("knot.git");
         for args in [

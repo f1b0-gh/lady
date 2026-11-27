@@ -40,5 +40,5 @@ let StorageLimit = { bytes | Number, inodes | Number } in
   sources | { include | Array String, exclude | Array String },
   tools | { _ : Tool },
   missions | { _ : Mission },
-  sandbox | { gateway | String, workspace | String, provider | optional | String },
+  sandbox | { gateway | String, workspace | String, provider | optional | String, mode | optional | String },
 }

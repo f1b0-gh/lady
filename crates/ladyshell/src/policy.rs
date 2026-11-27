@@ -47,6 +47,41 @@ fn strings(value: &Value) -> Result<BTreeSet<&str>> {
 }
 pub fn validate_effective(actual: &Value, binary: &str) -> Result<()> {
     let expected = native_policy(binary)?;
+    validate_native_confinement(actual, &expected)?;
+    validate_provider_network(actual, binary)
+}
+
+pub fn offline_policy() -> Value {
+    json!({"version":1,"landlock":{"compatibility":"hard_requirement"},"process":{"run_as_user":"sandbox","run_as_group":"sandbox"},"filesystem_policy":{"include_workdir":false,"read_only":READ_ONLY,"read_write":READ_WRITE},"network_policies":{}})
+}
+
+pub fn validate_offline_effective(actual: &Value) -> Result<()> {
+    ensure!(
+        actual
+            .as_object()
+            .is_some_and(|fields| fields.keys().all(|key| [
+                "version",
+                "landlock",
+                "process",
+                "filesystem_policy",
+                "network_policies",
+                "network_middlewares"
+            ]
+            .contains(&key.as_str()))),
+        "Unknown offline policy field"
+    );
+    validate_native_confinement(actual, &offline_policy())?;
+    // OpenShell omits empty maps. Null and every nonempty map remain invalid.
+    ensure!(
+        actual
+            .get("network_policies")
+            .is_none_or(|v| v.as_object().is_some_and(|m| m.is_empty())),
+        "Offline network rules must be empty"
+    );
+    Ok(())
+}
+
+fn validate_native_confinement(actual: &Value, expected: &Value) -> Result<()> {
     for field in ["version", "landlock", "process"] {
         ensure!(
             actual.get(field) == expected.get(field),
@@ -80,6 +115,9 @@ pub fn validate_effective(actual: &Value, binary: &str) -> Result<()> {
             || v.as_array().is_some_and(|a| a.is_empty())),
         "Unauthorized network middleware"
     );
+    Ok(())
+}
+fn validate_provider_network(actual: &Value, binary: &str) -> Result<()> {
     let rules = actual["network_policies"]
         .as_object()
         .ok_or_else(|| invalid("Missing network rules".into()))?;

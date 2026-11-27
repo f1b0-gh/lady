@@ -305,7 +305,7 @@ fn runtime(path: &Path, stopped: bool, id: &str) -> Result {
         &path.join("observed.json"),
         &json!({
             "id":"id","phase":if stopped {"Stopped"} else {"Ready"},
-            "configuration_admission":{"policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"},
+            "configuration_admission":{"state":"accepted","policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"},
             "annotations":{"internal.openshell.ai/runtime-generation":"generation"}
         }),
     )?;

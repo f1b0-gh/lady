@@ -125,6 +125,31 @@ pub(crate) fn bound(backend: &Backend, evidence: &Value) -> Result<PinnedDocker>
     )?;
     PinnedDocker::from_identity(&evidence["backend"]["docker"])
 }
+pub(super) fn prepare_creation(
+    backend: &Backend,
+    name: &str,
+    build: &Value,
+    owner: &str,
+) -> Result<()> {
+    crate::config::identifier(name)?;
+    text(build, "image_id")?;
+    text(build, "policy_path")?;
+    let evidence = &build["storage"];
+    let mut docker = bound(backend, evidence)?;
+    ensure!(
+        evidence["backend"]["owner"] == owner,
+        "Storage owner changed"
+    );
+    ensure!(
+        !Path::new(text(evidence, "directory")?)
+            .join("binding.json")
+            .try_exists()?,
+        "Original broker runtime is missing; replacement requires a separate deployment"
+    );
+    let receipts = receipts(evidence)?;
+    check_volumes(&mut docker, &receipts)?;
+    Ok(())
+}
 pub(super) fn create(backend: &Backend, name: &str, build: &Value, owner: &str) -> Result<()> {
     let evidence = &build["storage"];
     let mut docker = bound(backend, evidence)?;

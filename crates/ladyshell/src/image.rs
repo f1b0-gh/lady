@@ -311,10 +311,18 @@ pub fn build(desired: &Value, directory: &Path, migration: Option<&Value>) -> Re
         30,
     )?;
     let policy_path = out.join("policy.yaml");
-    environment_lock::atomic_json(&policy_path, &policy::native_policy(&binary)?)?;
-    Ok(
-        json!({"image_id":image_id,"archive":archive,"policy_path":policy_path,"build_dir":out,"project_snapshot":source,"host_sources":actual,"codex_binary":binary,"dependencies":dependencies}),
-    )
+    let offline = selected.sandbox.mode == crate::config::SandboxMode::Offline;
+    let policy = if offline {
+        policy::offline_policy()
+    } else {
+        policy::native_policy(&binary)?
+    };
+    environment_lock::atomic_json(&policy_path, &policy)?;
+    let mut result = json!({"image_id":image_id,"archive":archive,"policy_path":policy_path,"build_dir":out,"project_snapshot":source,"host_sources":actual,"codex_binary":binary,"dependencies":dependencies});
+    if offline {
+        result["sandbox_mode"] = json!("offline");
+    }
+    Ok(result)
 }
 pub fn tool_version_matches(tool: &str, output: &str, expected: &str) -> bool {
     if tool == "python" || tool == "python3" {

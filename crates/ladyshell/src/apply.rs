@@ -46,6 +46,13 @@ pub trait Driver {
     fn verify_storage(&mut self, _name: &str, _evidence: &Value) -> Result<()> {
         Err(invalid("Driver does not verify mounted storage".into()))
     }
+    /// Overall readiness polling budget; native disk preparation may take minutes.
+    fn readiness_timeout(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(60)
+    }
+    fn readiness_poll_interval(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(1)
+    }
     fn observe(&mut self, state: Option<&Value>) -> Result<Value>;
     fn sandbox(&mut self, name: &str) -> Result<Option<Value>>;
     fn build(
@@ -55,6 +62,16 @@ pub trait Driver {
         migration: Option<&Value>,
     ) -> Result<Value>;
     fn capture(&mut self, state: &Value, directory: &Path) -> Result<Value>;
+    /// Perform fallible validation that cannot submit creation, before intent is journaled.
+    fn prepare_creation(
+        &mut self,
+        _name: &str,
+        _build: &Value,
+        _owner: &str,
+        _config: &Value,
+    ) -> Result<()> {
+        Ok(())
+    }
     fn create(&mut self, name: &str, build: &Value, owner: &str, provider: &str) -> Result<()>;
     fn validate(&mut self, name: &str, binary: &str) -> Result<Value>;
     /// Select a supported creation profile without inventing a native provider.
@@ -108,6 +125,10 @@ struct Operation {
     owner: String,
     sandbox_name: String,
     restore_only: bool,
+    #[serde(default)]
+    creation_started: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    observed_id: Option<String>,
     build: Option<Value>,
     result: Option<Value>,
 }
@@ -244,6 +265,8 @@ fn apply_selected(
             owner,
             sandbox_name,
             restore_only: saved["actions"] == json!(["restore_image"]),
+            creation_started: false,
+            observed_id: None,
             build: None,
             result: None,
         };
@@ -315,34 +338,80 @@ fn apply_selected(
             atomic_json(&path, &op)?;
         }
     }
-    if driver.sandbox(&op.sandbox_name)?.is_none() {
-        driver.create_profile(
+    let mut first_observation = driver.sandbox(&op.sandbox_name)?;
+    if first_observation.is_none() && !op.creation_started && op.observed_id.is_none() {
+        driver.prepare_creation(
             &op.sandbox_name,
             &build,
             &op.owner,
             &desired["evaluated"]["config"],
         )?;
+        // A lost reply does not establish that the gateway stopped preparation.
+        // Retain intent before submission; retries only observe this exact name.
+        op.creation_started = true;
+        atomic_json(&path, &op)?;
+        match driver.create_profile(
+            &op.sandbox_name,
+            &build,
+            &op.owner,
+            &desired["evaluated"]["config"],
+        ) {
+            Ok(()) | Err(Error::ProcessTimeout { .. }) => (),
+            Err(error @ Error::ProcessSpawn { .. }) => {
+                // No child was started, so no submission occurred. Keep all
+                // other errors uncertain: a reply does not prove rollback.
+                op.creation_started = false;
+                atomic_json(&path, &op)?;
+                return Err(error);
+            }
+            Err(error) => return Err(error),
+        }
     }
     let start = std::time::Instant::now();
+    let budget = driver.readiness_timeout();
     let observed = loop {
-        if let Some(observed) = driver.sandbox(&op.sandbox_name)? {
+        if start.elapsed() >= budget {
+            return Err(Error::SandboxReadinessTimeout {
+                name: op.sandbox_name.clone(),
+                timeout: budget,
+            });
+        }
+        let observation = match first_observation.take() {
+            Some(observed) => Some(observed),
+            None => driver.sandbox(&op.sandbox_name)?,
+        };
+        if let Some(observed) = observation {
             ensure!(
                 observed["labels"]["ladyshell.owner"] == op.owner,
                 "Resource with the same name is owned by another operation"
             );
+            let id = text(&observed, "id")?;
+            ensure!(
+                op.observed_id
+                    .as_deref()
+                    .is_none_or(|original| original == id),
+                "Sandbox identity changed during preparation"
+            );
+            if op.observed_id.is_none() {
+                op.observed_id = Some(id.to_owned());
+                op.creation_started = true;
+                atomic_json(&path, &op)?;
+            }
             if observed["phase"] == "Ready" {
                 break observed;
             }
             ensure!(
-                observed["phase"] != "Error",
-                "Sandbox is in an error state: inspect OpenShell before recovery"
+                !["Error", "Stopped", "Completed", "Deleting", "Stopping"]
+                    .iter()
+                    .any(|phase| observed["phase"] == *phase),
+                "Sandbox is in a terminal state: inspect OpenShell before recovery"
             );
         }
-        ensure!(
-            start.elapsed() < std::time::Duration::from_secs(60),
-            "Sandbox is not ready: apply can resume"
+        std::thread::sleep(
+            driver
+                .readiness_poll_interval()
+                .min(budget.saturating_sub(start.elapsed())),
         );
-        std::thread::sleep(std::time::Duration::from_secs(1));
     };
     if build["image_profile"] == "openshell-worker-v1" && op.phase == Phase::Built {
         // Persist before validation can create an original runtime binding. A
@@ -392,6 +461,9 @@ pub struct NativeDriver {
     pub backend: Backend,
 }
 impl Driver for NativeDriver {
+    fn readiness_timeout(&self) -> std::time::Duration {
+        crate::openshell::NATIVE_PREPARATION_TIMEOUT
+    }
     fn preflight(&mut self, desired: &Value) -> Result<()> {
         if desired["evaluated"]["config"].get("storage").is_some() {
             broker::preflight(&self.backend, desired)?;
@@ -410,6 +482,36 @@ impl Driver for NativeDriver {
     fn verify_storage(&mut self, name: &str, evidence: &Value) -> Result<()> {
         broker::verify(&self.backend, name, evidence)
     }
+    fn prepare_creation(
+        &mut self,
+        name: &str,
+        build: &Value,
+        owner: &str,
+        config: &Value,
+    ) -> Result<()> {
+        if build["image_profile"] == "openshell-worker-v1" {
+            return broker::prepare_creation(&self.backend, name, build, owner);
+        }
+        crate::config::identifier(name)?;
+        text(build, "image_id")?;
+        let policy: Value = serde_json::from_slice(&crate::files::read_limited(
+            Path::new(text(build, "policy_path")?),
+            1024 * 1024,
+        )?)?;
+        if crate::config::sandbox_mode(config)? == crate::config::SandboxMode::Offline {
+            ensure!(
+                config["sandbox"].get("provider").is_none() && build["sandbox_mode"] == "offline",
+                "Offline creation inputs differ"
+            );
+            crate::policy::validate_offline_effective(&policy)?;
+        } else {
+            ensure!(build.get("sandbox_mode").is_none(), "Unknown sandbox mode");
+            crate::policy::validate_effective(&policy, text(build, "codex_binary")?)?;
+            self.backend
+                .verify_provider(text(&config["sandbox"], "provider")?)?;
+        }
+        Ok(())
+    }
     fn create_profile(
         &mut self,
         name: &str,
@@ -419,14 +521,32 @@ impl Driver for NativeDriver {
     ) -> Result<()> {
         if build["image_profile"] == "openshell-worker-v1" {
             broker::create(&self.backend, name, build, owner)
+        } else if crate::config::sandbox_mode(config)? == crate::config::SandboxMode::Offline {
+            ensure!(
+                config["sandbox"].get("provider").is_none(),
+                "Offline mode forbids a provider"
+            );
+            ensure!(
+                build["sandbox_mode"] == "offline",
+                "Offline build mode mismatch"
+            );
+            self.backend.create_native(name, build, owner, None)
         } else {
-            self.create(name, build, owner, text(&config["sandbox"], "provider")?)
+            self.backend.create_native(
+                name,
+                build,
+                owner,
+                Some(text(&config["sandbox"], "provider")?),
+            )
         }
     }
     fn validate_profile(&mut self, name: &str, build: &Value) -> Result<Value> {
         if build["image_profile"] == "openshell-worker-v1" {
             broker::validate(&self.backend, name, build)
+        } else if build["sandbox_mode"] == "offline" {
+            self.backend.validate_offline_policy(name)
         } else {
+            ensure!(build.get("sandbox_mode").is_none(), "Unknown sandbox mode");
             self.validate(name, text(build, "codex_binary")?)
         }
     }
@@ -440,7 +560,7 @@ impl Driver for NativeDriver {
         self.backend.observe(state)
     }
     fn sandbox(&mut self, name: &str) -> Result<Option<Value>> {
-        self.backend.sandbox(name)
+        self.backend.preparing_sandbox(name)
     }
     fn build(
         &mut self,
@@ -455,26 +575,8 @@ impl Driver for NativeDriver {
     }
     fn create(&mut self, name: &str, build: &Value, owner: &str, provider: &str) -> Result<()> {
         self.backend.verify_provider(provider)?;
-        self.backend.call(&[
-            "sandbox",
-            "create",
-            "--name",
-            name,
-            "--from",
-            text(build, "image_id")?,
-            "--policy",
-            text(build, "policy_path")?,
-            "--provider",
-            provider,
-            "--no-auto-providers",
-            "--label",
-            &format!("ladyshell.owner={owner}"),
-            "--detach",
-            "--",
-            "/bin/sleep",
-            "infinity",
-        ])?;
-        Ok(())
+        self.backend
+            .create_native(name, build, owner, Some(provider))
     }
     fn validate(&mut self, name: &str, binary: &str) -> Result<Value> {
         self.backend.validate_policy(name, binary)

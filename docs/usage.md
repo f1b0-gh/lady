@@ -126,6 +126,50 @@ is also read to verify the supplied report against an independent source snapsho
 its effective policy before publishing state. Changed inputs require explicit
 reconciliation; existing states are never silently migrated.
 
+### Offline native workloads
+
+For local checks and experiments that need no model, explicitly select
+`sandbox.mode = "offline"` and omit `sandbox.provider`:
+
+```nickel
+sandbox = { gateway = "openshell", workspace = "default", mode = "offline" },
+```
+
+This mode uses the ordinary native image and `lock → plan → apply` flow. Its
+policy contains no network allow rules and retains mandatory Landlock and the
+native filesystem/process restrictions. Creation disables automatic providers
+and attaches none; publication and execution verify that provider discovery is
+complete and empty. Network permission requests, a configured provider and agent
+audits are refused. `run`, `check` and `shell` work; `chat` and session `resume`
+are refused before reading host model credentials. Default configurations still
+require a provider and the Codex network policy. Mode changes require a new lock
+and reviewed plan; an empty custom provider policy is not a substitute.
+
+The native image recipe still includes Codex executables, so its two ELF paths
+remain required lock/build inputs even in offline mode. Their presence grants
+no network or provider access. Dependency acquisition remains a separate explicit
+host preparation step; the offline workload cannot download dependencies.
+
+### Cold preparation and interrupted apply
+
+Native sandbox creation allows up to 15 minutes for OpenShell's cold image/disk
+preparation. After the create command returns or times out, readiness polling
+allows up to another 15 minutes (plus a bounded in-flight observation). A command
+timeout does not cancel gateway preparation. Repeat the same `apply` inputs to
+observe the original journaled name and owner; once observed, the resource ID
+must also remain identical. A foreign owner, replacement ID, rejected admission or terminal phase is
+refused; Ready requires accepted configuration admission, and no environment is published before effective-policy validation.
+
+Provider availability and local build/policy inputs are checked before creation
+intent is written. A failure to start the CLI clears that intent because no
+submission occurred. After an uncertain submission,
+recovery observes that exact resource without submitting creation again, even
+if it is temporarily absent. If the gateway never accepted the operation, inspect
+its diagnostics and retain the original journal; use a separately selected new
+state directory for a new operation. Do not delete journals to force a retry.
+Existing journals without the new intent field keep their previous recovery
+behavior and can adopt their original named resource.
+
 ## Run, inspect and recover work
 
 ```sh

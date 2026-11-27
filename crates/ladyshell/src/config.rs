@@ -47,10 +47,32 @@ pub struct Mission {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Sandbox {
+    #[serde(default, skip_serializing_if = "SandboxMode::is_provider")]
+    pub mode: SandboxMode,
     pub gateway: String,
     pub workspace: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provider: Option<String>,
+}
+/// Offline native workloads have neither model providers nor network grants.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SandboxMode {
+    #[default]
+    Provider,
+    Offline,
+}
+impl SandboxMode {
+    fn is_provider(&self) -> bool {
+        *self == Self::Provider
+    }
+}
+/// Read the explicit mode without treating unknown or malformed values as offline.
+pub(crate) fn sandbox_mode(config: &Value) -> Result<SandboxMode> {
+    match config["sandbox"].get("mode") {
+        Some(value) => Ok(serde_json::from_value(value.clone())?),
+        None => Ok(SandboxMode::Provider),
+    }
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -172,9 +194,17 @@ impl Config {
         if self.image == Image::broker() {
             ensure!(
                 self.storage.is_some() && self.sandbox.provider.is_none()
+                    && self.sandbox.mode == SandboxMode::Provider
                     && self.tools.is_empty() && self.dependencies.is_none() && self.audit.is_none()
                     && self.permissions.network.is_empty() && self.permissions.filesystem.is_empty(),
                 "Fixed broker requires bounded storage and no provider, tools, dependencies, audit or extra permissions"
+            );
+        } else if self.sandbox.mode == SandboxMode::Offline {
+            ensure!(
+                self.sandbox.provider.is_none()
+                    && self.permissions.network.is_empty()
+                    && self.audit.is_none(),
+                "Offline native mode forbids providers, network requests and agent audits"
             );
         } else {
             ensure!(
@@ -373,6 +403,7 @@ impl ResolvedConfig {
             .validate()?;
         ensure!(
             self.sandbox.provider.is_none()
+                && self.sandbox.mode == SandboxMode::Provider
                 && self.tools.is_empty()
                 && self.checks.is_empty()
                 && self.dependencies.is_none()

@@ -42,6 +42,8 @@ pub enum Error {
         status: ExitStatus,
         stderr: String,
     },
+    #[error("Sandbox readiness deadline exceeded for {name} ({timeout:?}); resume the original apply operation")]
+    SandboxReadinessTimeout { name: String, timeout: Duration },
     #[error("{program:?} timed out ({timeout:?})")]
     ProcessTimeout {
         program: OsString,
@@ -89,6 +91,7 @@ impl Error {
             | Self::ProcessSpawn { .. }
             | Self::ProcessExit { .. }
             | Self::ProcessTimeout { .. }
+            | Self::SandboxReadinessTimeout { .. }
             | Self::ProcessOutputLimit { .. }
             | Self::MissingPipe { .. }
             | Self::Utf8(_) => 1,

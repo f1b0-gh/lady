@@ -7,6 +7,7 @@ use crate::{
 };
 use serde_json::{json, Value};
 use std::{process::Command, time::Duration};
+pub(crate) const NATIVE_PREPARATION_TIMEOUT: Duration = Duration::from_secs(900);
 pub(crate) const SANDBOX_ENV: [&str; 6] = [
     "HOME=/sandbox",
     "CARGO_HOME=/sandbox/workspace/cache/cargo",
@@ -48,9 +49,56 @@ impl Backend {
         command
     }
     pub fn call(&self, args: &[&str]) -> Result<Vec<u8>> {
+        self.call_with_timeout(args, Duration::from_secs(120))
+    }
+    pub(crate) fn call_with_timeout(&self, args: &[&str], timeout: Duration) -> Result<Vec<u8>> {
         let mut command = self.command();
         command.args(args);
-        capture(command, Duration::from_secs(120), 8 * 1024 * 1024)
+        capture(command, timeout, 8 * 1024 * 1024)
+    }
+    pub(crate) fn create_native(
+        &self,
+        name: &str,
+        build: &Value,
+        owner: &str,
+        provider: Option<&str>,
+    ) -> Result<()> {
+        capture(
+            self.native_creation_command(name, build, owner, provider)?,
+            NATIVE_PREPARATION_TIMEOUT,
+            8 * 1024 * 1024,
+        )?;
+        Ok(())
+    }
+    fn native_creation_command(
+        &self,
+        name: &str,
+        build: &Value,
+        owner: &str,
+        provider: Option<&str>,
+    ) -> Result<Command> {
+        let label = format!("ladyshell.owner={owner}");
+        let mut args = vec![
+            "sandbox",
+            "create",
+            "--name",
+            name,
+            "--from",
+            text(build, "image_id")?,
+            "--policy",
+            text(build, "policy_path")?,
+            "--no-auto-providers",
+            "--label",
+            &label,
+            "--detach",
+        ];
+        if let Some(provider) = provider {
+            args.extend(["--provider", provider]);
+        }
+        args.extend(["--", "/bin/sleep", "infinity"]);
+        let mut command = self.command();
+        command.args(args);
+        Ok(command)
     }
     fn sandbox_document(&self, name: &str) -> Result<Option<Value>> {
         identifier(name)?;
@@ -68,12 +116,13 @@ impl Backend {
         let Some(value) = self.sandbox_document(name)? else {
             return Ok(None);
         };
-        let id = text(&value, "id")?;
-        let phase = text(&value, "phase")?;
-        let hash = text(&value["configuration_admission"], "policy_hash")?;
-        Ok(Some(
-            json!({"id":id,"phase":phase,"policy_hash":hash,"labels":value.get("labels").cloned().unwrap_or_else(||json!({}))}),
-        ))
+        sandbox_observation(&value, false).map(Some)
+    }
+    pub(crate) fn preparing_sandbox(&self, name: &str) -> Result<Option<Value>> {
+        self.sandbox_document(name)?
+            .as_ref()
+            .map(|value| sandbox_observation(value, true))
+            .transpose()
     }
     /// Runtime generation changes on stop/start even when the resource ID stays fixed.
     pub fn runtime_identity(&self, name: &str) -> Result<Option<Value>> {
@@ -147,7 +196,27 @@ impl Backend {
                 state.get("image_profile").is_none(),
                 "Unknown execution image profile"
             );
-            self.validate_policy(text(state, "sandbox_name")?, text(state, "codex_binary")?)?;
+            if crate::config::sandbox_mode(&state["desired_inputs"]["evaluated"]["config"])?
+                == crate::config::SandboxMode::Offline
+            {
+                ensure!(
+                    state["sandbox_mode"] == "offline",
+                    "Offline runtime mode mismatch"
+                );
+                ensure!(
+                    state["desired_inputs"]["evaluated"]["config"]["sandbox"]
+                        .get("provider")
+                        .is_none(),
+                    "Offline mode forbids providers"
+                );
+                self.validate_offline_policy(text(state, "sandbox_name")?)?;
+            } else {
+                ensure!(
+                    state.get("sandbox_mode").is_none(),
+                    "Unexpected runtime mode"
+                );
+                self.validate_policy(text(state, "sandbox_name")?, text(state, "codex_binary")?)?;
+            }
         }
         Ok(observed)
     }
@@ -157,6 +226,20 @@ impl Backend {
         )?;
         policy::validate_effective(&value["policy"], binary)?;
         Ok(value["policy"].clone())
+    }
+    pub(crate) fn validate_offline_policy(&self, name: &str) -> Result<Value> {
+        let value: Value = serde_json::from_slice(
+            &self.call(&["policy", "get", name, "--full", "--output", "json"])?,
+        )?;
+        policy::validate_offline_effective(&value["policy"])?;
+        self.verify_no_providers(name)?;
+        Ok(value["policy"].clone())
+    }
+    pub(crate) fn verify_no_providers(&self, name: &str) -> Result<()> {
+        let value: Value = serde_json::from_slice(
+            &self.call(&["sandbox", "provider", "list", name, "--output", "json"])?,
+        )?;
+        validate_no_providers(&value)
     }
     pub fn verify_provider(&self, name: &str) -> Result<()> {
         identifier(name)?;
@@ -174,6 +257,96 @@ impl Backend {
         Ok(())
     }
 }
+fn sandbox_observation(value: &Value, preparing: bool) -> Result<Value> {
+    let id = text(value, "id")?;
+    let phase = text(value, "phase")?;
+    let admission = &value["configuration_admission"];
+    ensure!(
+        admission["state"] != "rejected",
+        "Sandbox configuration admission rejected"
+    );
+    if phase == "Ready" {
+        ensure!(
+            admission["state"] == "accepted",
+            "Sandbox readiness requires accepted configuration admission"
+        );
+    }
+    let hash = if preparing && phase != "Ready" {
+        admission["policy_hash"].clone()
+    } else {
+        Value::String(text(admission, "policy_hash")?.to_owned())
+    };
+    Ok(
+        json!({"id":id,"phase":phase,"policy_hash":hash,"labels":value.get("labels").cloned().unwrap_or_else(||json!({}))}),
+    )
+}
 fn invalid(message: String) -> Error {
     Error::InvalidInput { message }
+}
+
+fn validate_no_providers(value: &Value) -> Result<()> {
+    ensure!(
+        *value == json!({"providers":[],"next_page_token":""}),
+        "Offline sandbox must have no providers and complete provider discovery"
+    );
+    Ok(())
+}
+
+#[cfg(test)]
+mod offline_tests {
+    use super::*;
+    #[test]
+    fn readiness_requires_accepted_admission_and_nonempty_policy_hash() -> Result<()> {
+        let good = json!({"id":"id","phase":"Ready","configuration_admission":{"state":"accepted","policy_hash":"hash"}});
+        sandbox_observation(&good, true)?;
+        for admission in [
+            json!(null),
+            json!({"state":"pending","policy_hash":"hash"}),
+            json!({"state":"rejected","policy_hash":"hash"}),
+            json!({"state":"accepted","policy_hash":""}),
+        ] {
+            let mut bad = good.clone();
+            bad["configuration_admission"] = admission;
+            assert!(sandbox_observation(&bad, true).is_err());
+        }
+        let pending =
+            json!({"id":"id","phase":"Provisioning","configuration_admission":{"state":"pending"}});
+        sandbox_observation(&pending, true)?;
+        assert!(sandbox_observation(&pending, false).is_err());
+        let rejected = json!({"id":"id","phase":"Provisioning","configuration_admission":{"state":"rejected"}});
+        assert!(sandbox_observation(&rejected, true).is_err());
+        Ok(())
+    }
+    #[test]
+    fn offline_creation_never_attaches_a_provider() -> Result<()> {
+        let backend = Backend::new(&json!({"gateway":"g","workspace":"w"}))?;
+        let build = json!({"image_id":"image", "policy_path":"policy"});
+        for provider in [None, Some("selected")] {
+            let command = backend.native_creation_command("sandbox", &build, "owner", provider)?;
+            let args: Vec<_> = command
+                .get_args()
+                .map(|arg| arg.to_string_lossy().into_owned())
+                .collect();
+            assert!(args.iter().any(|arg| arg == "--no-auto-providers"));
+            assert_eq!(
+                args.iter().any(|arg| arg == "--provider"),
+                provider.is_some()
+            );
+        }
+        assert_eq!(NATIVE_PREPARATION_TIMEOUT, Duration::from_secs(900));
+        Ok(())
+    }
+    #[test]
+    fn provider_discovery_must_be_empty_complete_and_well_formed() -> Result<()> {
+        validate_no_providers(&json!({"providers":[],"next_page_token":""}))?;
+        for bad in [
+            json!({}),
+            json!({"providers":[],"next_page_token":"next"}),
+            json!({"providers":[{"name":"dummy"}],"next_page_token":""}),
+            json!({"providers":null,"next_page_token":""}),
+        ] {
+            assert!(validate_no_providers(&bad).is_err());
+        }
+        Ok(())
+    }
 }
