@@ -10,6 +10,17 @@ It is a library and optional CLI in the Lady workspace. Use
 `nickel-util =0.1.0` dependency comes from crates.io. No sibling checkout is
 required. See the [build prerequisites](https://github.com/f1b0-gh/lady/blob/ladyboot-v0.1.0/docs/development.md).
 
+A possible integration would run Ladyshell inside a VM built from a Ladyboot
+image. Podman/Quadlet would manage infrastructure services, potentially including
+the OpenShell gateway, while Ladyshell would authorize missions and OpenShell
+would manage their execution environments. Each container would have a single
+lifecycle owner. An explicit integration contract could connect the exact image
+to a verified VM boot, mission execution, retained results and bounded cleanup,
+without a Cargo dependency between Ladyboot and Ladyshell. This remains a
+prospective workflow: the first step would be to define that contract and test
+the boot path; Podman/OpenShell compatibility and the complete mission lifecycle
+would need separate qualification.
+
 ## Install
 
 On Linux with stable Rust and a C compiler:
