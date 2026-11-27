@@ -47,3 +47,12 @@
 - Use synthetic fixtures for refusals, interruptions, limits and hostile paths.
   Do not label an audit lead a confirmed vulnerability without validation.
   Reuse evidence only when relevant inputs are unchanged; report unrun checks.
+
+## Shared skills
+
+Use [skills-dev](https://github.com/f1b0-gh/skills-dev) for relevant work:
+`skills/rust-discipline/SKILL.md` for Rust policy, `skills/rust-skills/` for
+selected Rust references, and `skills/clickhouse-sql/SKILL.md` for ClickHouse.
+Read these in the shared repository or an installed copy; project contracts,
+dependency constraints and validation commands take precedence over examples.
+Keep maintained instructions and documentation in English.

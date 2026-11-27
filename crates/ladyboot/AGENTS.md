@@ -17,3 +17,12 @@ before changing profiles or recipes.
   Bound native build concurrency and verify Nickel/Nix behavior when available.
 - Record artifact layout, direct-kernel boot and bootc installation/update/rollback
   qualification separately. Do not claim unrun lifecycle tests passed.
+
+## Shared skills
+
+Use [skills-dev](https://github.com/f1b0-gh/skills-dev) for relevant work:
+`skills/rust-discipline/SKILL.md` for Rust policy, `skills/rust-skills/` for
+selected Rust references, and `skills/clickhouse-sql/SKILL.md` for ClickHouse.
+Read these in the shared repository or an installed copy; project contracts,
+dependency constraints and validation commands take precedence over examples.
+Keep maintained instructions and documentation in English.
