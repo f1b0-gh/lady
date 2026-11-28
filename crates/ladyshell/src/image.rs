@@ -10,53 +10,14 @@ use crate::{
 use serde_json::{json, Value};
 use std::{
     fs::{self, File},
-    io::{BufRead, BufReader, Read},
+    io::Read,
     path::Path,
     process::Command,
     time::Duration,
 };
+mod archive;
 mod broker;
-fn archive_reader(path: &Path) -> Result<Box<dyn Read>> {
-    let mut file = BufReader::new(files::open_regular(path)?);
-    let gzip = file.fill_buf()?.starts_with(&[0x1f, 0x8b]);
-    if gzip {
-        Ok(Box::new(flate2::read::GzDecoder::new(file)))
-    } else {
-        Ok(Box::new(file))
-    }
-}
-fn member(path: &Path, name: &str) -> Result<Vec<u8>> {
-    relative_path(name)?;
-    let mut archive = tar::Archive::new(archive_reader(path)?.take(8 * 1024 * 1024 * 1024));
-    let mut result = None;
-    for (index, entry) in archive.entries()?.enumerate() {
-        ensure!(index < 100000, "Image archive has too many members");
-        let mut entry = entry?;
-        if entry.path()?.as_ref() == Path::new(name) {
-            ensure!(result.is_none(), "Duplicate image member");
-            ensure!(
-                entry.header().entry_type().is_file() && entry.size() <= 16 * 1024 * 1024,
-                "Invalid image metadata"
-            );
-            let mut bytes = Vec::new();
-            entry.read_to_end(&mut bytes)?;
-            result = Some(bytes);
-        }
-    }
-    result.ok_or_else(|| invalid(format!("Missing image member: {name}")))
-}
-pub fn archive_image_id(path: &Path) -> Result<String> {
-    let manifest: Value = serde_json::from_slice(&member(path, "manifest.json")?)?;
-    let rows = manifest
-        .as_array()
-        .ok_or_else(|| invalid("Invalid image manifest".into()))?;
-    ensure!(rows.len() == 1, "Exactly one image is required");
-    let row = rows
-        .first()
-        .ok_or_else(|| invalid("Empty image manifest".into()))?;
-    let name = text(row, "Config")?;
-    Ok(format!("sha256:{}", files::hash(&member(path, name)?)))
-}
+pub use archive::archive_image_id;
 fn run(args: &[&str], timeout: u64) -> Result<String> {
     let (name, rest) = args
         .split_first()

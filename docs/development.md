@@ -27,6 +27,28 @@ preparation. Nix vendors registry crates using the checksums in that lockfile
 and builds the runtime from source. Follow the
 [dependency policy](dependencies.md#dependency-maintenance) when updating pins.
 
+## Native image archive identity
+
+Ladyshell derives the Docker image ID from the exact configuration member named
+by the single manifest row. Plain and gzip archives are scanned once in forward
+order. The scan retains only names and streamed small-file digests until it sees
+the manifest, then releases unrelated metadata. Layer payloads are never cached.
+Manifest and selected configuration members must be unique regular files of at
+most 16 MiB. The existing 8 GiB archive-read and 100,000-member bounds remain;
+the pre-manifest metadata index additionally permits at most 16 MiB of path names.
+Absolute or parent-relative selected configuration paths are refused. GNU
+long-name/link, PAX and sparse records are unsupported and rejected from raw
+headers before their payloads can allocate memory. The byte bound returns an
+error rather than apparent EOF, and trailing padding is scanned through real EOF
+so it cannot hide duplicate metadata. Concatenated gzip members are decoded
+as one stream; extra compressed members cannot bypass the byte limit or hide
+later metadata, and malformed compressed trailing data is refused.
+
+The focused Rust test `image::archive::tests::large_compressed_layer_is_streamed_once_without_payload_retention`
+reports compressed bytes, decompressed bytes and elapsed milliseconds with
+`--nocapture`. It uses a synthetic 32 MiB layer to check one-pass byte consumption;
+its timing is not a claim about cold production image throughput.
+
 ## Required checks
 
 ```sh
