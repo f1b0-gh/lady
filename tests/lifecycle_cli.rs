@@ -69,7 +69,7 @@ fn session_cli_checks_policy_and_preserves_child_exit() -> Result<(), Box<dyn st
     let binary = "/nix/store/00000000000000000000000000000000-ladyshell-codex/bin/codex";
     let state = serde_json::json!({"schema_version":2,"sandbox_name":"test","sandbox_id":"id","policy_hash":"hash","codex_binary":binary,"owner":"owner","desired_hash":"desired","image_id":"image","project_snapshot":"snapshot","build_dir":"build","context":{"gateway":"test","workspace":"default"},"desired_inputs":{"evaluated":{"config":{"sandbox":{"provider":"test-provider"}}}}});
     fs::write(directory.join("state.json"), serde_json::to_vec(&state)?)?;
-    fs::write(root.path().join("observed.json"), br#"{"id":"id","phase":"Ready","configuration_admission":{"policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"}}"#)?;
+    fs::write(root.path().join("observed.json"), br#"{"id":"id","phase":"Ready","configuration_admission":{"state":"accepted","policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"}}"#)?;
     fs::write(
         root.path().join("policy.json"),
         serde_json::to_vec(

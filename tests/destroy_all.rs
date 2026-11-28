@@ -30,7 +30,7 @@ set -euo pipefail
 shift 6
 printf '%s\n' "$*" >> "$FIXTURE/calls"
 if [[ "$1 $2" == 'sandbox get' && "$3" == "${REBIND_AFTER_FIRST:-}" && ! -f "$FIXTURE/rebound" ]]; then
- /usr/bin/python3 - "$FIXTURE/$REBIND_OTHER/state.json" <<'PYCODE'
+ "$FIXTURE_PYTHON" - "$FIXTURE/$REBIND_OTHER/state.json" <<'PYCODE'
 import json,sys
 p=sys.argv[1]
 with open(p) as f: state=json.load(f)
@@ -52,7 +52,7 @@ case "$1 $2" in
   name="$3"
   if [[ -f "$FIXTURE/deleted-$name" ]]; then echo 'sandbox not found' >&2; exit 1; fi
   id="id-$name"; if [[ "${WRONG_ID:-}" == "$name" ]]; then id=wrong; fi
-  printf '{"id":"%s","phase":"Ready","configuration_admission":{"policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"}}' "$id" ;;
+  printf '{"id":"%s","phase":"Ready","configuration_admission":{"state":"accepted","policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"}}' "$id" ;;
  'policy get') /bin/cat "$FIXTURE/policy.json" ;;
  'sandbox exec') echo '{}' ;;
  'sandbox delete') [[ -f "$FIXTURE/$3/destroy.json" ]]; /bin/touch "$FIXTURE/deleted-$3" ;;
@@ -167,6 +167,15 @@ fn bulk_flags_are_explicit_and_busy_sessions_are_preserved() -> Result {
 
 #[test]
 fn state_rebound_after_inventory_is_refused_before_provider_access() -> Result {
+    let python = std::env::split_paths(&std::env::var_os("PATH").ok_or("PATH is missing")?)
+        .map(|directory| directory.join("python3"))
+        .find(|path| {
+            path.metadata().is_ok_and(|metadata| {
+                metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
+            })
+        })
+        .ok_or("Python3 executable is missing from PATH")?
+        .canonicalize()?;
     let root = tempfile::tempdir()?;
     seed(root.path(), "one")?;
     seed(root.path(), "two")?;
@@ -179,6 +188,7 @@ fn state_rebound_after_inventory_is_refused_before_provider_access() -> Result {
         .as_str()
         .ok_or("second missing")?;
     let output = command(root.path(), &["--all"])
+        .env("FIXTURE_PYTHON", python)
         .env("REBIND_AFTER_FIRST", first)
         .env("REBIND_OTHER", second)
         .output()?;

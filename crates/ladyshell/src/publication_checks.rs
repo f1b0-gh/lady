@@ -237,10 +237,13 @@ impl Native {
 impl Driver for Native {
     fn create(&mut self, _: &Value, _: &Path) -> Result<Value> {
         let policy_path = self.directory.join(format!("{}-policy.json", self.name));
-        atomic_json(
-            &policy_path,
-            &crate::policy::native_policy(state::text(&self.current, "codex_binary")?)?,
-        )?;
+        let offline = self.current["sandbox_mode"] == "offline";
+        let policy = if offline {
+            crate::policy::offline_policy()
+        } else {
+            crate::policy::native_policy(state::text(&self.current, "codex_binary")?)?
+        };
+        atomic_json(&policy_path, &policy)?;
         let intent = json!({"schema_version":1,"sandbox_name":self.name,"owner":self.owner,"context":self.current["context"],"deleted":false});
         let journal = self.directory.join(format!("{}.json", self.name));
         atomic_json(&journal, &intent)?;
@@ -267,7 +270,12 @@ impl Driver for Native {
             .backend
             .sandbox(&self.name)?
             .ok_or_else(|| invalid("Verifier was not created".into()))?;
-        let identity = json!({"sandbox_name":self.name,"sandbox_id":observed["id"],"owner":self.owner,"context":self.current["context"],"policy_hash":observed["policy_hash"],"codex_binary":self.current["codex_binary"],"image_id":self.current["image_id"],"desired_inputs":{"evaluated":{"config":{"sources":{"exclude":[]}}}}});
+        let mut identity = json!({"sandbox_name":self.name,"sandbox_id":observed["id"],"owner":self.owner,"context":self.current["context"],"policy_hash":observed["policy_hash"],"codex_binary":self.current["codex_binary"],"image_id":self.current["image_id"],"desired_inputs":{"evaluated":{"config":{"sources":{"exclude":[]}}}}});
+        if offline {
+            identity["sandbox_mode"] = json!("offline");
+            identity["desired_inputs"]["evaluated"]["config"]["sandbox"] =
+                json!({"mode":"offline"});
+        }
         self.identity = Some(identity.clone());
         self.verified()?;
         atomic_json(&journal, &identity)?;

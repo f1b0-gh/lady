@@ -31,15 +31,13 @@ pub fn run(directory: &Path) -> Result<i32> {
             "Each check requires a list of nonempty arguments"
         );
     }
-    let provider = state::text(&config["sandbox"], "provider")?;
-    crate::config::identifier(provider)?;
     let backend = Backend::new(&current["context"])?;
     let name = state::text(&current, "sandbox_name")?;
     // A shared session lease prevents apply/destroy while allowing sync to capture.
     drop(lock);
     for args in checks {
         backend.verify_execution(&current)?;
-        backend.verify_provider(provider)?;
+        crate::run::verify_provider(&backend, &current)?;
         let mut command = backend.command();
         command.args([
             "sandbox",

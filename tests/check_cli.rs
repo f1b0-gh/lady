@@ -24,7 +24,7 @@ impl Fixture {
         let state = json!({"schema_version":2,"sandbox_name":"test","sandbox_id":"id","policy_hash":"hash","codex_binary":binary,"owner":"owner","desired_hash":"desired","image_id":"image","project_snapshot":"snapshot","build_dir":"build","context":{"gateway":"test","workspace":"default"},"desired_inputs":{"evaluated":{"config":{"checks":checks,"sandbox":{"provider":"test-provider"}}}}});
         let fixture = Self { root, state };
         fixture.save()?;
-        fixture.write("observed.json", &json!({"id":"id","phase":"Ready","configuration_admission":{"policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"}}))?;
+        fixture.write("observed.json", &json!({"id":"id","phase":"Ready","configuration_admission":{"state":"accepted","policy_hash":"hash"},"labels":{"ladyshell.owner":"owner"}}))?;
         fixture.write(
             "policy.json",
             &json!({"policy":ladyshell::policy::native_policy(binary)?}),
@@ -42,6 +42,7 @@ case "$1 $2" in
   'sandbox get') /bin/cat "$FIXTURE/observed.json" ;;
   'policy get') /bin/cat "$FIXTURE/policy.json" ;;
   'provider get') [[ "$3" == test-provider ]]; /bin/cat "$FIXTURE/provider" ;;
+  'sandbox provider') [[ "$3 $4" == 'list test' ]]; /bin/cat "$FIXTURE/providers.json" ;;
   'sandbox exec')
     if [[ "${@: -2:1}" == /usr/local/bin/ladyshell && "${@: -1}" == snapshot-list ]]; then /bin/cat "$FIXTURE/inventory.json"; exit; fi
     count=0
@@ -240,7 +241,7 @@ fn checks_revalidate_between_commands() -> Result {
         let text = match drift {
             "provider" => "expired",
             "policy.json" => "{\"policy\":{}}",
-            _ => "{\"id\":\"replacement\",\"phase\":\"Ready\",\"configuration_admission\":{\"policy_hash\":\"hash\"},\"labels\":{\"ladyshell.owner\":\"owner\"}}",
+            _ => "{\"id\":\"replacement\",\"phase\":\"Ready\",\"configuration_admission\":{\"state\":\"accepted\",\"policy_hash\":\"hash\"},\"labels\":{\"ladyshell.owner\":\"owner\"}}",
         };
         fs::write(fixture.root.path().join(format!("next-{drift}")), text)?;
         let output = fixture.command().output()?;
@@ -440,5 +441,56 @@ fn pruning_validation_requires_an_exclusive_session_lease() -> Result {
     assert!(!output.status.success());
     assert!(fixture.no_execution());
     assert!(output.stdout.is_empty());
+    Ok(())
+}
+
+#[test]
+fn offline_checks_need_no_provider_and_reject_provider_or_network_drift() -> Result {
+    for drift in ["none", "provider", "pagination", "network"] {
+        let mut fixture = Fixture::new(json!([["fixture-pass"]]))?;
+        fixture.state["sandbox_mode"] = json!("offline");
+        fixture.state["desired_inputs"]["evaluated"]["config"]["sandbox"] =
+            json!({"mode":"offline"});
+        fixture.save()?;
+        fs::remove_file(fixture.root.path().join("provider"))?;
+        let mut policy = ladyshell::policy::offline_policy();
+        if drift == "network" {
+            policy["network_policies"] = json!({"unexpected":{"endpoints":[],"binaries":[]}});
+        }
+        fixture.write("policy.json", &json!({"policy":policy}))?;
+        fixture.write("providers.json", &json!({
+            "providers": if drift == "provider" { json!([{"name":"unexpected"}]) } else { json!([]) },
+            "next_page_token": if drift == "pagination" { "next" } else { "" }
+        }))?;
+        let output = fixture.command().output()?;
+        assert_eq!(
+            output.status.success(),
+            drift == "none",
+            "{drift}: {output:?}"
+        );
+        assert_eq!(fixture.no_execution(), drift != "none");
+    }
+    Ok(())
+}
+
+#[test]
+fn offline_dependency_validation_needs_no_model_provider() -> Result {
+    let mut fixture = Fixture::new(json!([["fixture-pass"]]))?;
+    fixture.state["sandbox_mode"] = json!("offline");
+    fixture.state["desired_inputs"]["evaluated"]["config"]["sandbox"] = json!({"mode":"offline"});
+    fixture.save()?;
+    fs::remove_file(fixture.root.path().join("provider"))?;
+    fixture.write(
+        "policy.json",
+        &json!({"policy":ladyshell::policy::offline_policy()}),
+    )?;
+    fixture.write(
+        "providers.json",
+        &json!({"providers":[],"next_page_token":""}),
+    )?;
+    let plan = pruning_plan(&fixture)?;
+    let output = prune_command(&fixture, &plan).output()?;
+    assert!(output.status.success(), "{output:?}");
+    assert!(!fixture.no_execution());
     Ok(())
 }

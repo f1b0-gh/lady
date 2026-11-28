@@ -27,6 +27,15 @@ pub(crate) fn verify_provider(backend: &Backend, current: &Value) -> Result<()> 
             serde_json::from_value(current["desired_inputs"]["evaluated"]["config"].clone())?;
         return config.validate_broker();
     }
+    if crate::config::sandbox_mode(&current["desired_inputs"]["evaluated"]["config"])?
+        == crate::config::SandboxMode::Offline
+    {
+        ensure!(
+            current["sandbox_mode"] == "offline",
+            "Offline runtime mode mismatch"
+        );
+        return backend.verify_no_providers(state::text(current, "sandbox_name")?);
+    }
     backend.verify_provider(state::text(
         &current["desired_inputs"]["evaluated"]["config"]["sandbox"],
         "provider",

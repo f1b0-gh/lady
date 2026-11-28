@@ -112,7 +112,7 @@ fn identity_observation_accepts_unadmitted_error_provisioning_and_ready() -> Tes
     for phase in ["Error", "Provisioning", "Ready"] {
         probe(
             json!({"id":"resource-id","phase":phase,"labels":{"ladyshell.audit.owner":"owner"},
-            "configuration_admission":{"policy_hash":""},
+            "configuration_admission":{"state":"accepted","policy_hash":""},
             "conditions":[{"type":"Ready","status":"False","reason":"DriverError","message":"synthetic mount refusal"}]}),
             "unadmitted",
             "ok",
@@ -124,7 +124,7 @@ fn identity_observation_accepts_unadmitted_error_provisioning_and_ready() -> Tes
 #[test]
 fn strict_observation_still_requires_the_ready_policy_hash() -> TestResult {
     probe(
-        json!({"id":"resource-id","phase":"Ready","labels":{"ladyshell.audit.owner":"owner"},"configuration_admission":{"policy_hash":"hash"}}),
+        json!({"id":"resource-id","phase":"Ready","labels":{"ladyshell.audit.owner":"owner"},"configuration_admission":{"state":"accepted","policy_hash":"hash"}}),
         "ready",
         "ok",
     )
@@ -154,7 +154,7 @@ fn missing_resource_is_distinguished_from_transport_failure() -> TestResult {
 #[test]
 fn broker_execution_requires_its_original_storage_binding() -> TestResult {
     probe(
-        json!({"id":"resource-id","phase":"Ready","labels":{"ladyshell.owner":"owner"},"configuration_admission":{"policy_hash":"hash"}}),
+        json!({"id":"resource-id","phase":"Ready","labels":{"ladyshell.owner":"owner"},"configuration_admission":{"state":"accepted","policy_hash":"hash"}}),
         "broker-storage",
         "ok",
     )

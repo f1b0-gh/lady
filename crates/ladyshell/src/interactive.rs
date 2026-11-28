@@ -28,6 +28,9 @@ pub fn command(
     kind: Kind,
     account: Option<&str>,
 ) -> Result<Command> {
+    if kind != Kind::Shell && state["sandbox_mode"] == "offline" {
+        return Err(invalid("Offline workloads do not support chat or resume"));
+    }
     let name = state::text(state, "sandbox_name")?;
     crate::config::identifier(name)?;
     let mut command = backend.command();
@@ -95,6 +98,9 @@ pub fn run_with_options(
     let state = state::load(directory)?.ok_or_else(|| {
         invalid("State is missing; apply an environment before starting a session")
     })?;
+    if kind != Kind::Shell && state["sandbox_mode"] == "offline" {
+        return Err(invalid("Offline workloads do not support chat or resume"));
+    }
     let backend = Backend::new(&state["context"])?;
     crate::continuous::native::admit(&state)?;
     if sync_back {

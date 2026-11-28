@@ -21,7 +21,7 @@ shift 6
 case "$1 $2" in
  'sandbox get')
   if [[ -f "$FIXTURE/deleted" ]]; then echo 'sandbox not found' >&2; exit 1; fi
-  printf '{"id":"%s","phase":"Ready","configuration_admission":{"policy_hash":"hash"},"labels":{"ladyshell.owner":"%s"}}' "${TEST_ID:-id}" "${TEST_OWNER:-owner}" ;;
+  printf '{"id":"%s","phase":"Ready","configuration_admission":{"state":"accepted","policy_hash":"hash"},"labels":{"ladyshell.owner":"%s"}}' "${TEST_ID:-id}" "${TEST_OWNER:-owner}" ;;
  'policy get') /bin/cat "$FIXTURE/policy.json" ;;
  'sandbox exec') [[ ${FAIL_EXPORT:-0} == 0 ]] || exit 23; echo '{}' ;;
  'sandbox delete')

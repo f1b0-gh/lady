@@ -63,3 +63,9 @@ observed clock rollback refuse initiation. This bound grants no authority and
 does not cancel an already started transfer. The existing transfer timeout,
 verified runtime/storage checks and retained partial-intake rules still apply.
 The existing `upload` signature and behavior remain available.
+
+Native configurations may explicitly select `sandbox.mode = "offline"` and omit
+`provider` for workloads without model access. The effective network policy and
+provider list must both be empty; normal native configurations retain their
+provider requirement. See the [offline workload and recovery guide](https://github.com/f1b0-gh/lady/blob/main/docs/usage.md#offline-native-workloads)
+for image inputs, supported commands and bounded cold-start recovery.
