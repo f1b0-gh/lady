@@ -47,10 +47,10 @@ fn qualified_gateway(value: &Value) -> Result<()> {
         .map_err(|_| invalid("Invalid gateway URL".into()))?;
     ensure!(
         value["status"] == "healthy"
-            && value["version"] == "0.1.4"
+            && value["version"] == "0.1.10"
             && server.scheme() == "https"
             && matches!(server.host_str(), Some("127.0.0.1" | "[::1]")),
-        "Broker requires qualified local OpenShell 0.1.4"
+        "Broker requires qualified local OpenShell 0.1.10"
     );
     let drivers = value["compute_drivers"]
         .as_array()
@@ -59,7 +59,7 @@ fn qualified_gateway(value: &Value) -> Result<()> {
         drivers.len() == 1
             && drivers[0]["name"] == "docker"
             && drivers[0]["capabilities"]["driver_name"] == "docker"
-            && drivers[0]["capabilities"]["driver_version"] == "0.1.4",
+            && drivers[0]["capabilities"]["driver_version"] == "0.1.10",
         "Unqualified OpenShell compute driver"
     );
     Ok(())
@@ -485,16 +485,37 @@ mod tests {
     }
     #[test]
     fn backend_selection_refuses_unqualified_versions_and_remote_gateways() {
-        let original = json!({"status":"healthy","version":"0.1.4","server":"https://127.0.0.1:17670",
-            "compute_drivers":[{"name":"docker","capabilities":{"driver_name":"docker","driver_version":"0.1.4"}}]});
+        let original = json!({"status":"healthy","version":"0.1.10","server":"https://127.0.0.1:17670",
+            "compute_drivers":[{"name":"docker","capabilities":{"driver_name":"docker","driver_version":"0.1.10"}}]});
         assert!(qualified_gateway(&original).is_ok());
         for (key, value) in [
-            ("version", json!("0.1.5")),
+            ("version", json!("0.1.4")),
+            ("version", json!("0.1.11")),
+            ("status", json!("unhealthy")),
+            ("server", json!("http://127.0.0.1:17670")),
             ("server", json!("https://remote.example")),
             ("compute_drivers", json!([])),
         ] {
             let mut changed = original.clone();
             changed[key] = value;
+            assert!(qualified_gateway(&changed).is_err());
+        }
+        for version in ["0.1.4", "0.1.11", "0.1.10+unqualified"] {
+            let mut changed = original.clone();
+            changed["compute_drivers"][0]["capabilities"]["driver_version"] = json!(version);
+            assert!(qualified_gateway(&changed).is_err());
+        }
+        let mut old = original.clone();
+        old["version"] = json!("0.1.4");
+        old["compute_drivers"][0]["capabilities"]["driver_version"] = json!("0.1.4");
+        assert!(qualified_gateway(&old).is_err());
+        for field in ["name", "capabilities"] {
+            let mut changed = original.clone();
+            changed["compute_drivers"][0][field] = if field == "name" {
+                json!("vm")
+            } else {
+                json!({"driver_name":"vm","driver_version":"0.1.10"})
+            };
             assert!(qualified_gateway(&changed).is_err());
         }
     }
