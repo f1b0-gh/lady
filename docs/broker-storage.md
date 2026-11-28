@@ -15,7 +15,11 @@ mount and filesystem observations. This is an optional capability. Ordinary
 `app::lock_broker`, `app::make_broker_plan` and `app::apply_broker` accept an
 explicit `BrokerDesired` with independently selected worker and Ladyshell runtime
 ELFs. Native provisioning supports the closed `openshell-worker-v1` profile on the
-qualified local OpenShell 0.1.4 Docker backend. Ordinary `destroy` seals the broker,
+qualified local OpenShell 0.1.10 Docker backend with Docker driver 0.1.10.
+Create a fresh environment using a matching CLI. Gateway and Docker driver
+versions other than exactly 0.1.10 are refused; existing state is not migrated.
+The Docker driver must permit the broker's controlled volume configuration; resource-label
+admission remains enabled. Ordinary `destroy` seals the broker,
 retains a verified storage archive and removes the original sandbox and volumes.
 `--discard-work` refuses broker state. `destroy::cancel_broker` handles interrupted
 provisioning against the original operation. The governed retained-receiver bridge
@@ -89,8 +93,8 @@ the archive/image identity before loading. It reads image metadata without
 spawning temporary probe containers. The operation-owned OpenShell sandbox runs
 UID, binary-path, runtime and broker protocol checks before publication.
 
-OpenShell 0.1.4 [validates the working directory before launching the workload](https://github.com/NVIDIA/OpenShell/blob/v0.1.4/crates/openshell-sandbox/src/delegated.rs)
-and [requires a temporary write there](https://github.com/NVIDIA/OpenShell/blob/v0.1.4/crates/openshell-sandbox/src/process.rs).
+OpenShell 0.1.10 [validates the working directory before launching the workload](https://github.com/ai-openshell/openshell/blob/v0.1.10/crates/openshell-sandbox/src/delegated.rs)
+and [requires a temporary write there](https://github.com/ai-openshell/openshell/blob/v0.1.10/crates/openshell-sandbox/src/process.rs).
 The image therefore gives UID 10001 POSIX write access to the project directory;
 Landlock permits only reads there when the workload runs. Source files remain
 read-only. Publication must verify that writes to both the project and `/tmp`
@@ -124,9 +128,9 @@ volatile volumes.
 `policy::broker_policy()` requires Landlock, permits no network rules, and allows
 writes only to the three roots and `/dev/null`. It grants no ambient filesystem
 capabilities to WASI components. The effective-policy verifier accepts the
-omitted empty map used by OpenShell 0.1.4; it refuses nonempty rules and null.
-OpenShell's [schema](https://github.com/NVIDIA/OpenShell/blob/v0.1.4/crates/openshell-policy-schema/src/lib.rs)
-omits empty maps, and its [network policy](https://github.com/NVIDIA/OpenShell/blob/v0.1.4/crates/openshell-supervisor-network/data/sandbox-policy.rego)
+omitted empty map used by OpenShell 0.1.10; it refuses nonempty rules and null.
+OpenShell's [schema](https://github.com/ai-openshell/openshell/blob/v0.1.10/crates/openshell-policy-schema/src/lib.rs)
+omits empty maps, and its [network policy](https://github.com/ai-openshell/openshell/blob/v0.1.10/crates/openshell-supervisor-network/data/sandbox-policy.rego)
 defaults to denial.
 
 Disk caps do not bound the broker compiler's memory, CPU, process count or elapsed
